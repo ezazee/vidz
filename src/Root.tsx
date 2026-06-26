@@ -1,6 +1,6 @@
 import { Composition } from 'remotion'
-import { StoryZVideo } from '@/lib/remotion/StoryZVideo'
-import { storyboardFixture } from '@/lib/remotion/storyboard-fixture'
+import { StoryZVideo } from '../lib/remotion/StoryZVideo'
+import { storyboardFixture } from '../lib/remotion/storyboard-fixture'
 
 const fps = 30
 const durationInFrames = storyboardFixture.scenes.reduce(

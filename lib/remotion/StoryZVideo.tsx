@@ -7,8 +7,8 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
-import type { SceneJSON, StoryboardJSON } from '@/lib/pipeline/types'
-import { storyboardFixture } from '@/lib/remotion/storyboard-fixture'
+import type { SceneJSON, StoryboardJSON } from '../pipeline/types'
+import { storyboardFixture } from './storyboard-fixture'
 
 interface SceneProps {
   scene: SceneJSON

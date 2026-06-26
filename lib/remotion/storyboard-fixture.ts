@@ -1,4 +1,4 @@
-import type { StoryboardJSON } from '@/lib/pipeline/types'
+import type { StoryboardJSON } from '../pipeline/types'
 
 export const storyboardFixture: StoryboardJSON = {
   project_id: 'demo',
