@@ -88,6 +88,7 @@ export interface SceneJSON {
   duration: number
   narration: string
   subtitle: string
+  image_prompt: string
   image_url: string
   voice_url: string
   camera: CameraMovement

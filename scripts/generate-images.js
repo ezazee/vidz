@@ -10,7 +10,7 @@ async function main() {
 
   if (!baseUrl || !apiKey) throw new Error('AI_BASE_URL and AI_API_KEY required')
 
-  await fs.mkdir('output/images', { recursive: true })
+  await fs.mkdir('public/images', { recursive: true })
 
   for (const scene of storyboard.scenes) {
     console.log(`Generating image for scene ${scene.order_index + 1}...`)
@@ -49,18 +49,19 @@ async function main() {
       continue
     }
 
-    const localPath = `output/images/scene-${scene.order_index}.jpg`
+    const localPath = `public/images/scene-${scene.order_index}.jpg`
+    const publicPath = `images/scene-${scene.order_index}.jpg`
     await fs.writeFile(localPath, buffer)
 
     // update scene in storyboard json
-    scene.image_url = localPath
+    scene.image_url = publicPath
 
     // update DB via API
     if (apiBaseUrl && apiSecret && projectId) {
       await fetch(`${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}/image`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-api-secret': apiSecret },
-        body: JSON.stringify({ image_url: localPath, image_status: 'completed' }),
+        body: JSON.stringify({ image_url: publicPath, image_status: 'completed' }),
       }).catch(() => {})
     }
 

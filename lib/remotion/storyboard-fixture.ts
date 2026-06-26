@@ -50,6 +50,7 @@ export const storyboardFixture: StoryboardJSON = {
       duration: 5,
       narration: 'StoryZ turns a topic into a structured documentary video pipeline.',
       subtitle: 'From topic to documentary pipeline',
+      image_prompt: 'StoryZ demo image prompt',
       image_url: '',
       voice_url: '',
       camera: 'zoom_in',

@@ -64,6 +64,7 @@ export async function GET(_request: Request, context: RouteContext) {
       duration: Number(scene.duration ?? 6),
       narration: scene.narration ?? '',
       subtitle: scene.subtitle ?? scene.narration ?? '',
+      image_prompt: scene.image_prompt ?? '',
       image_url: scene.image_url ?? '',
       voice_url: scene.voice_url ?? '',
       camera: (scene.camera ?? 'static') as CameraMovement,

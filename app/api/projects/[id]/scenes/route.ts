@@ -29,9 +29,17 @@ export async function POST(_request: Request, context: RouteContext) {
 
   let orderOffset = 0
   const allScenes = []
+  const generatedNarrationSoFar: string[] = []
 
   for (const section of outline.sections) {
-    const scenes = await generateScenes({ section, topic: projects[0].topic, director, orderOffset })
+    const scenes = await generateScenes({
+      section,
+      topic: projects[0].topic,
+      director,
+      orderOffset,
+      fullOutline: outline.sections,
+      previousNarration: generatedNarrationSoFar
+    })
 
     for (const scene of scenes) {
       const row = await sql`
@@ -44,6 +52,9 @@ export async function POST(_request: Request, context: RouteContext) {
         RETURNING *
       `
       allScenes.push(row[0])
+      if (scene.narration) {
+        generatedNarrationSoFar.push(scene.narration)
+      }
     }
 
     orderOffset += scenes.length

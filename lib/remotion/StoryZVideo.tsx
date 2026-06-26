@@ -1,9 +1,11 @@
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   Img,
   interpolate,
   Sequence,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
@@ -37,7 +39,7 @@ function SceneImage({ scene }: SceneProps) {
 
   return (
     <Img
-      src={scene.image_url}
+      src={scene.image_url.startsWith('http') ? scene.image_url : staticFile(scene.image_url)}
       style={{
         height: '100%',
         objectFit: 'cover',
@@ -88,6 +90,11 @@ function StoryScene({ scene }: SceneProps) {
         />
       ) : null}
       <SceneSubtitle scene={scene} />
+      {scene.voice_url && (
+        <Audio
+          src={scene.voice_url.startsWith('http') ? scene.voice_url : staticFile(scene.voice_url)}
+        />
+      )}
     </AbsoluteFill>
   )
 }
@@ -102,6 +109,17 @@ export function StoryZVideo({ storyboard = storyboardFixture }: StoryZVideoProps
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#111827' }}>
+      {storyboard.audio?.background_music_url && (
+        <Audio
+          src={
+            storyboard.audio.background_music_url.startsWith('http')
+              ? storyboard.audio.background_music_url
+              : staticFile(storyboard.audio.background_music_url)
+          }
+          volume={storyboard.audio.background_music_volume ?? 0.2}
+          loop
+        />
+      )}
       {storyboard.scenes.map((scene) => {
         const durationInFrames = Math.max(1, Math.round(scene.duration * fps))
         const sequence = (

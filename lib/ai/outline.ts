@@ -17,8 +17,8 @@ export async function generateOutline(topic: string, summary: string): Promise<O
       role: 'system',
       content: `Kamu adalah penulis dokumenter. Balas HANYA JSON valid.
 Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "order": number, "description": string }] }
-- 1 intro, 4-6 chapter, 1 ending
-- Setiap chapter fokus pada satu aspek/periode`,
+- 1 intro, 8-10 chapter, 1 ending
+- Setiap chapter fokus pada satu aspek/periode sejarah/kronologi kejadian yang sangat spesifik untuk mendukung durasi video panjang (10-15 menit)`,
     },
     {
       role: 'user',
