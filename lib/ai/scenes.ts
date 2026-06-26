@@ -25,13 +25,20 @@ export interface SceneDraft {
 function repairJson(json: string): string {
   let repaired = json.trim()
 
-  // 1. Perbaiki objek adegan yang tidak ditutup dengan } sebelum koma: , { -> }, {
+  // 1. Bersihkan teks sampah/halusinasi di antara objek adegan (misal: Tapi", atau kata sambung lain)
+  // Pola: dari "duration": X sampai ke pembuka objek berikutnya {"order_index"
+  repaired = repaired.replace(/"duration"\s*:\s*(\d+)([\s\S]*?)(?=\s*\{\s*["']order_index["'])/g, '"duration": $1\n    },\n    ')
+
+  // 2. Bersihkan teks sampah/halusinasi di akhir objek terakhir sebelum penutup array: dari "duration": X sampai ke penutup array ]}
+  repaired = repaired.replace(/"duration"\s*:\s*(\d+)([\s\S]*?)(?=\s*\]\s*\})/g, '"duration": $1\n    }')
+
+  // 3. Perbaiki objek adegan yang tidak ditutup dengan } sebelum koma: , { -> }, {
   repaired = repaired.replace(/([^}\]\s])\s*,\s*\{/g, '$1},\n{')
 
-  // 2. Perbaiki koma yang hilang di antara objek adegan: } { -> }, {
+  // 4. Perbaiki koma yang hilang di antara objek adegan: } { -> }, {
   repaired = repaired.replace(/}\s*\{/g, '},\n{')
 
-  // 3. Bersihkan koma menggantung (trailing commas) sebelum penutup bracket/brace
+  // 5. Bersihkan koma menggantung (trailing commas) sebelum penutup bracket/brace
   repaired = repaired.replace(/,\s*([\]}])/g, '$1')
 
   return repaired
