@@ -70,7 +70,6 @@ function SceneImage({ scene }: SceneProps) {
   )
 }
 
-// 2. Premium Word-by-Word Animated Subtitles (Vox / Johnny Harris Style)
 function SceneSubtitle({ scene }: SceneProps) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -80,41 +79,65 @@ function SceneSubtitle({ scene }: SceneProps) {
 
   const words = text.split(' ')
   
-  // Hitung durasi per kata secara dinamis agar pas dengan durasi suara narasi adegan
-  // Kita ingin seluruh kata selesai muncul pada 85% durasi adegan agar penonton sempat membaca kalimat lengkap
+  // Group words into chunks of 5 for 1-line dynamic display
+  const wordsPerChunk = 5
+  const chunks: string[][] = []
+  for (let i = 0; i < words.length; i += wordsPerChunk) {
+    chunks.push(words.slice(i, i + wordsPerChunk))
+  }
+
+  // Hitung durasi per chunk
   const totalFrames = Math.max(1, Math.round(scene.duration * fps))
-  const availableFrames = totalFrames * 0.85
-  const durationPerWord = Math.max(1, availableFrames / words.length)
+  const availableFrames = totalFrames * 0.92 // leave a tiny bit of empty time at the end
+  const durationPerChunk = Math.max(1, availableFrames / chunks.length)
+
+  const activeChunkIndex = Math.floor(frame / durationPerChunk)
+  
+  // Jika frame sudah melebihi waktu bicara, hilangkan teks
+  if (activeChunkIndex >= chunks.length || frame > availableFrames) return null
+
+  const activeChunk = chunks[activeChunkIndex]
+  const chunkStartFrame = activeChunkIndex * durationPerChunk
+  const durationPerWord = Math.max(1, durationPerChunk / activeChunk.length)
 
   return (
     <div
       style={{
         alignSelf: 'center',
-        bottom: 100,
+        bottom: 120, // slightly higher to balance the 1-line height
         color: '#fdfdfa', // Warm paper-white
         fontFamily: "'Georgia', 'Garamond', 'Times New Roman', serif", // High-end editorial serif
-        fontSize: 46,
+        fontSize: 56, // larger since it's just one line now
         fontStyle: 'italic', // Soft narrative italic
-        fontWeight: 500,
+        fontWeight: 600,
         left: 120,
-        lineHeight: 1.45,
+        lineHeight: 1.3,
         maxWidth: 1680,
         position: 'absolute',
         right: 120,
         textAlign: 'center',
-        textShadow: '1px 1px 3px rgba(0, 0, 0, 0.9), 0px 4px 18px rgba(0, 0, 0, 0.6)', // Soft realistic drop shadow
-        letterSpacing: '-0.1px',
+        textShadow: '1px 1px 4px rgba(0, 0, 0, 0.9), 0px 5px 20px rgba(0, 0, 0, 0.8)', // stronger realistic drop shadow
+        letterSpacing: '-0.2px',
+        display: 'flex',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
       }}
     >
-      {words.map((word, index) => {
+      {activeChunk.map((word, index) => {
         // Tentukan frame mulai untuk setiap kata secara proporsional
-        const startFrame = index * durationPerWord
-        const fadeDuration = Math.min(8, durationPerWord) // Durasi animasi fade-in yang responsif
+        const startFrame = chunkStartFrame + (index * durationPerWord)
+        const fadeDuration = Math.min(6, durationPerWord) // quick fade-in
         
         const wordOpacity = interpolate(frame, [startFrame, startFrame + fadeDuration], [0, 1], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
           easing: Easing.bezier(0.25, 1, 0.5, 1),
+        })
+
+        // Highlight animation (scale up slightly when active)
+        const scale = interpolate(frame, [startFrame, startFrame + fadeDuration], [0.95, 1], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
         })
 
         // Check if word is a "keyword" to highlight (contains numbers, starts with capital letter, or is long)
@@ -125,13 +148,14 @@ function SceneSubtitle({ scene }: SceneProps) {
 
         return (
           <span
-            key={index}
+            key={`${activeChunkIndex}-${index}`}
             style={{
               opacity: wordOpacity,
               color,
               display: 'inline-block',
-              marginRight: '12px',
-              transition: 'color 0.3s ease',
+              marginRight: '14px',
+              transform: `scale(${scale})`,
+              transition: 'color 0.2s ease',
             }}
           >
             {word}

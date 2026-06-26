@@ -54,9 +54,11 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const scenesResults = await Promise.all(scenesPromises)
   const allScenes = []
+  let globalOrderIndex = 0
 
   for (const scenes of scenesResults) {
     for (const scene of scenes) {
+      scene.order_index = globalOrderIndex++
       const row = await sql`
         INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, camera, effect, emotion, transition, duration, image_status, voice_status)
         VALUES (
@@ -69,9 +71,6 @@ export async function POST(_request: Request, context: RouteContext) {
       allScenes.push(row[0])
     }
   }
-
-  // Urutkan adegan berdasarkan order_index untuk memastikan integritas urutan storyboard
-  allScenes.sort((a, b) => a.order_index - b.order_index)
 
   // Gabungkan seluruh teks narasi untuk input generasi SEO
   const narrationText = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')

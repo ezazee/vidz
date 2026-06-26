@@ -22,6 +22,7 @@ export async function chat(messages: Message[], json = true): Promise<string> {
       model,
       messages,
       stream: false,
+      max_tokens: 8192,
       ...(json && { response_format: { type: 'json_object' } }),
     }),
   })
