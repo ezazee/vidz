@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
-import { del } from '@vercel/blob'
+import { deleteFromR2 } from '@/lib/r2'
 import { env } from '@/lib/env'
 
 export async function GET(
@@ -88,20 +88,21 @@ export async function DELETE(
     `
 
     const urlsToDelete: string[] = []
+    const r2PublicDomain = (process.env.R2_PUBLIC_URL || '').replace(/^https?:\/\//, '')
     
-    // Tambahkan URL gambar dan suara scene
+    // Tambahkan URL gambar dan suara scene (mendukung Vercel Blob lama & Cloudflare R2 baru)
     for (const scene of scenes) {
-      if (scene.image_url && scene.image_url.includes('vercel-storage.com')) {
+      if (scene.image_url && (scene.image_url.includes('vercel-storage.com') || (r2PublicDomain && scene.image_url.includes(r2PublicDomain)))) {
         urlsToDelete.push(scene.image_url)
       }
-      if (scene.voice_url && scene.voice_url.includes('vercel-storage.com')) {
+      if (scene.voice_url && (scene.voice_url.includes('vercel-storage.com') || (r2PublicDomain && scene.voice_url.includes(r2PublicDomain)))) {
         urlsToDelete.push(scene.voice_url)
       }
     }
 
     // Tambahkan URL video hasil render
     for (const job of renderJobs) {
-      if (job.video_url && job.video_url.includes('vercel-storage.com')) {
+      if (job.video_url && (job.video_url.includes('vercel-storage.com') || (r2PublicDomain && job.video_url.includes(r2PublicDomain)))) {
         urlsToDelete.push(job.video_url)
       }
     }
@@ -135,14 +136,23 @@ export async function DELETE(
       }
     }
 
-    // 4. Hapus berkas dari Vercel Blob jika token dikonfigurasi dan ada URL
-    if (env.BLOB_READ_WRITE_TOKEN && urlsToDelete.length > 0) {
-      console.log(`Deleting ${urlsToDelete.length} assets from Vercel Blob for project ${id}...`)
+    // 4. Hapus berkas dari Cloudflare R2 & Vercel Blob jika ada URL
+    if (urlsToDelete.length > 0) {
+      console.log(`Deleting ${urlsToDelete.length} assets from cloud storage for project ${id}...`)
       try {
-        await del(urlsToDelete)
-        console.log('Vercel Blob assets deleted successfully')
+        // Hapus dari Cloudflare R2
+        await deleteFromR2(urlsToDelete)
+        
+        // Bersihkan sisa Vercel Blob lama jika token dikonfigurasi
+        if (env.BLOB_READ_WRITE_TOKEN) {
+          const vercelUrls = urlsToDelete.filter(u => u.includes('vercel-storage.com'))
+          if (vercelUrls.length > 0) {
+            const { del } = await import('@vercel/blob')
+            await del(vercelUrls)
+          }
+        }
       } catch (blobErr) {
-        console.error('Failed to delete assets from Vercel Blob:', blobErr)
+        console.error('Failed to delete assets from cloud storage:', blobErr)
       }
     }
 

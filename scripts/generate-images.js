@@ -1,5 +1,5 @@
 const fs = require('fs/promises')
-const { put } = require('@vercel/blob')
+const { uploadToR2 } = require('./r2-upload')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -55,20 +55,17 @@ async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseU
       const localPath = `public/images/scene-${scene.order_index}.jpg`
       await fs.writeFile(localPath, buffer)
 
-      // 2. Unggah gambar ke Vercel Blob jika token tersedia
+      // 2. Unggah gambar ke Cloudflare R2 jika kredensial tersedia
       let publicPath = `images/scene-${scene.order_index}.jpg`
-      if (process.env.BLOB_READ_WRITE_TOKEN) {
+      if (process.env.R2_ACCESS_KEY_ID) {
         try {
-          console.log(`Uploading image for scene ${scene.order_index + 1} to Vercel Blob...`)
-          const blobFilename = `projects/${projectId}/images/scene-${scene.order_index}.jpg`
-          const blob = await put(blobFilename, buffer, {
-            access: 'public',
-            contentType: 'image/jpeg',
-          })
-          publicPath = blob.url
-          console.log(`Uploaded image to: ${publicPath}`)
+          console.log(`Uploading image for scene ${scene.order_index + 1} to Cloudflare R2...`)
+          const r2Filename = `projects/${projectId}/images/scene-${scene.order_index}.jpg`
+          const r2Url = await uploadToR2(r2Filename, buffer, 'image/jpeg')
+          publicPath = r2Url
+          console.log(`Uploaded image to R2: ${publicPath}`)
         } catch (uploadErr) {
-          console.error(`Failed to upload scene ${scene.order_index + 1} image to Vercel Blob: ${uploadErr.message}. Using local path fallback.`)
+          console.error(`Failed to upload scene ${scene.order_index + 1} image to Cloudflare R2: ${uploadErr.message}. Using local path fallback.`)
         }
       }
 

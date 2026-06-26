@@ -1,24 +1,19 @@
 const fs = require('fs/promises')
-const { put } = require('@vercel/blob')
+const { uploadToR2 } = require('./r2-upload')
 
 async function main() {
-  const token = process.env.BLOB_READ_WRITE_TOKEN
-  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN required')
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  if (!accessKeyId) throw new Error('R2 credentials required (R2_ACCESS_KEY_ID)')
 
   const videoPath = 'output/final.mp4'
   const buffer = await fs.readFile(videoPath)
-  const filename = `videos/${Date.now()}-final.mp4`
+  const projectId = process.env.PROJECT_ID || 'global'
+  const filename = `projects/${projectId}/videos/${Date.now()}-final.mp4`
 
-  console.log(`Uploading ${videoPath} to Vercel Blob using official SDK...`)
+  console.log(`Uploading final video ${videoPath} to Cloudflare R2 using SDK...`)
 
-  // Menggunakan SDK resmi @vercel/blob untuk menangani multipart upload file besar secara otomatis
-  const blob = await put(filename, buffer, {
-    access: 'public',
-    token: token,
-    contentType: 'video/mp4',
-  })
-
-  const videoUrl = blob.url
+  // Mengunggah video final ke Cloudflare R2
+  const videoUrl = await uploadToR2(filename, buffer, 'video/mp4')
   console.log(`VIDEO_URL=${videoUrl}`)
 
   // Tulis URL ke file agar langkah pipeline berikutnya di GitHub Actions dapat membacanya
@@ -26,6 +21,6 @@ async function main() {
 }
 
 main().catch(e => {
-  console.error('Blob upload failed:', e.message)
+  console.error('R2 Video upload failed:', e.message)
   process.exit(1)
 })
