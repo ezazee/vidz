@@ -21,7 +21,7 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     emotionLower.includes('mysterious')
   ) {
     return {
-      url: 'https://www.chosic.com/wp-content/uploads/2020/06/Unsolved-Mystery.mp3', // Unsolved Mystery - Tense & Dark
+      url: 'audio/unsolved-mystery.mp3', // Unsolved Mystery - Tense & Dark (Lokal)
       volume: 0.10,
     }
   }
@@ -34,7 +34,7 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     genreLower.includes('futuristic')
   ) {
     return {
-      url: 'https://www.chosic.com/wp-content/uploads/2021/05/Light-In-The-Darkness.mp3', // Light in the Darkness - Ambient Synth
+      url: 'audio/light-in-the-darkness.mp3', // Light in the Darkness - Ambient Synth (Lokal)
       volume: 0.12,
     }
   }
@@ -47,14 +47,14 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     emotionLower.includes('emotional')
   ) {
     return {
-      url: 'https://www.chosic.com/wp-content/uploads/2021/07/Rain-and-Tears-Sad-Piano-Music.mp3', // Sad Piano
+      url: 'audio/rain-and-tears.mp3', // Sad Piano (Lokal)
       volume: 0.12,
     }
   }
 
   // 4. Default: Sejarah / Dokumenter Klasik / Epik / Narasi Umum
   return {
-    url: 'https://www.chosic.com/wp-content/uploads/2021/09/Warm-Light.mp3', // Warm Light - Beautiful Cinematic Orchestral
+    url: 'audio/warm-light.mp3', // Warm Light - Beautiful Cinematic Orchestral (Lokal)
     volume: 0.12,
   }
 }
