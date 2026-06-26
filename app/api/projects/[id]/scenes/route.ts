@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateScenes } from '@/lib/ai/scenes'
+import { generateSeoMetadata } from '@/lib/ai/seo'
 import { getSql } from '@/lib/db/client'
 import type { OutlineSection } from '@/lib/ai/outline'
 import type { DirectorOutput } from '@/lib/pipeline/types'
@@ -20,6 +21,9 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const directorRows = await sql`SELECT * FROM director WHERE project_id = ${id} ORDER BY created_at DESC LIMIT 1`
   if (!directorRows[0]) return NextResponse.json({ error: 'Director must be completed first' }, { status: 409 })
+
+  const researchRows = await sql`SELECT summary FROM research WHERE project_id = ${id} ORDER BY created_at DESC LIMIT 1`
+  const summary = researchRows[0]?.summary ?? ''
 
   const outline = outlineRows[0].structure as { sections: OutlineSection[] }
   const director = directorRows[0] as DirectorOutput
@@ -68,6 +72,36 @@ export async function POST(_request: Request, context: RouteContext) {
 
   // Urutkan adegan berdasarkan order_index untuk memastikan integritas urutan storyboard
   allScenes.sort((a, b) => a.order_index - b.order_index)
+
+  // Gabungkan seluruh teks narasi untuk input generasi SEO
+  const narrationText = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')
+
+  // Bersihkan SEO lama jika ada
+  await sql`DELETE FROM seo_metadata WHERE project_id = ${id}`
+
+  // Hasilkan metadata SEO secara paralel/asinkron tanpa menunda respons adegan
+  try {
+    const seo = await generateSeoMetadata({
+      topic: projects[0].topic,
+      summary,
+      narrationText,
+    })
+
+    await sql`
+      INSERT INTO seo_metadata (project_id, title, description, tags, hashtags, status)
+      VALUES (
+        ${id},
+        ${seo.title},
+        ${seo.description},
+        ${JSON.stringify(seo.tags)}::jsonb,
+        ${JSON.stringify(seo.hashtags)}::jsonb,
+        'completed'
+      )
+    `
+    console.log(`SEO Metadata successfully generated for project ${id}`)
+  } catch (seoErr) {
+    console.error('Gagal memproses AI SEO Metadata:', seoErr)
+  }
 
   return NextResponse.json({ scenes: allScenes, count: allScenes.length })
 }

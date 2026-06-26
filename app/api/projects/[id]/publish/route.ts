@@ -27,15 +27,27 @@ export async function POST(
       return NextResponse.json({ error: 'Koneksi YouTube belum diaktifkan. Silakan hubungkan YouTube di tab Integrasi.' }, { status: 400 })
     }
 
-    // 2. Ambil detail proyek dan tautan video MP4
+    // 2. Ambil detail proyek, tautan video MP4, dan metadata SEO
     const projects = await sql`
-      SELECT p.id, p.topic, rj.video_url 
+      SELECT 
+        p.id, 
+        p.topic, 
+        rj.video_url,
+        seo.title as seo_title,
+        seo.description as seo_description,
+        seo.hashtags as seo_hashtags
       FROM projects p
       LEFT JOIN LATERAL (
         SELECT video_url FROM render_jobs 
         WHERE project_id = p.id AND status = 'completed' 
         ORDER BY created_at DESC LIMIT 1
       ) rj ON true
+      LEFT JOIN LATERAL (
+        SELECT title, description, hashtags 
+        FROM seo_metadata 
+        WHERE project_id = p.id 
+        ORDER BY created_at DESC LIMIT 1
+      ) seo ON true
       WHERE p.id = ${id}
     `
 
@@ -48,26 +60,36 @@ export async function POST(
       return NextResponse.json({ error: 'Video belum selesai dirender. Tunggu hingga status render selesai.' }, { status: 400 })
     }
 
-    // 3. Ambil seluruh adegan storyboard untuk menyusun deskripsi video yang kaya informasi
+    // 3. Ambil seluruh adegan storyboard untuk menyusun deskripsi video cadangan (fallback)
     const scenes = await sql`
       SELECT narration FROM scenes 
       WHERE project_id = ${id} 
       ORDER BY order_index ASC
     `
     
-    // Susun deskripsi video otomatis dari naskah sejarah adegan
-    let videoDescription = `Video dokumenter otomatis tentang: ${project.topic}\n\n`
-    if (scenes.length > 0) {
-      videoDescription += "--- NARASI VIDEO ---\n"
-      const combinedNarration = scenes.map(s => s.narration).filter(Boolean).join('\n\n')
-      // Potong deskripsi jika terlalu panjang (batas YouTube sekitar 5000 karakter)
-      videoDescription += combinedNarration.slice(0, 4000)
-      if (combinedNarration.length > 4000) {
-        videoDescription += '\n... (naskah dipotong karena batas karakter)'
+    // Susun deskripsi & judul teroptimasi SEO AI
+    const finalTitle = (project.seo_title || project.topic).slice(0, 100) // Batas karakter judul YouTube adalah 100
+    let finalDescription = ''
+
+    if (project.seo_description) {
+      finalDescription = project.seo_description
+      if (project.seo_hashtags && Array.isArray(project.seo_hashtags) && project.seo_hashtags.length > 0) {
+        finalDescription += '\n\n' + project.seo_hashtags.join(' ')
       }
-      videoDescription += '\n\n'
+    } else {
+      // Fallback jika data SEO AI belum terbuat
+      finalDescription = `Video dokumenter otomatis tentang: ${project.topic}\n\n`
+      if (scenes.length > 0) {
+        finalDescription += "--- NARASI VIDEO ---\n"
+        const combinedNarration = scenes.map(s => s.narration).filter(Boolean).join('\n\n')
+        finalDescription += combinedNarration.slice(0, 4000)
+        if (combinedNarration.length > 4000) {
+          finalDescription += '\n... (naskah dipotong karena batas karakter)'
+        }
+        finalDescription += '\n\n'
+      }
+      finalDescription += "Dihasilkan secara otomatis menggunakan kecerdasan buatan (AI) di StoryZ Studio."
     }
-    videoDescription += "Dihasilkan secara otomatis menggunakan kecerdasan buatan (AI) di StoryZ Studio."
 
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
@@ -80,8 +102,8 @@ export async function POST(
       },
       body: JSON.stringify({
         accountId: config.youtube_account_id,
-        title: project.topic,
-        body: videoDescription,
+        title: finalTitle,
+        body: finalDescription,
         videoUrl: project.video_url,
         publishNow: true
       }),

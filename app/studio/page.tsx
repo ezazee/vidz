@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import {
@@ -9,7 +10,8 @@ import {
   XCircle,
   WandSparkles,
   Video,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react'
 
 type StageStatus = 'idle' | 'running' | 'done' | 'error'
@@ -128,6 +130,25 @@ export default function StudioPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const logTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // AI Topic Recommendations States
+  const [recommendations, setRecommendations] = useState<string[]>([])
+  const [loadingRecs, setLoadingRecs] = useState(false)
+
+  const fetchRecommendations = async () => {
+    setLoadingRecs(true)
+    try {
+      const res = await fetch('/api/topics/recommendations')
+      if (res.ok) {
+        const data = await res.json()
+        setRecommendations(data.topics || [])
+      }
+    } catch (e) {
+      console.error('Gagal mengambil rekomendasi topik', e)
+    } finally {
+      setLoadingRecs(false)
+    }
+  }
+
   // cycling log messages per stage
   function startLogCycle(key: string) {
     const messages = STAGE_LOGS[key] ?? []
@@ -140,7 +161,11 @@ export default function StudioPage() {
     }, 2500)
   }
 
-  // polling render job
+  // polling render job and fetching initial recommendations on mount
+  useEffect(() => {
+    fetchRecommendations()
+  }, [])
+
   useEffect(() => {
     if (!renderJobId || renderStatus === 'completed' || renderStatus === 'failed') return
     pollRef.current = setInterval(async () => {
@@ -168,7 +193,7 @@ export default function StudioPage() {
 
   // Helper to set stage patch
   function setStage(key: string, patch: Partial<Stage>) {
-    setStages(s => s.map(st => st.key === key ? { ...st, ...patch } : st))
+    setStages((s: Stage[]) => s.map((st: Stage) => st.key === key ? { ...st, ...patch } : st))
   }
 
   async function generate() {
@@ -231,8 +256,8 @@ export default function StudioPage() {
     setRunning(false)
   }
 
-  const hasStarted = stages.some(s => s.status !== 'idle')
-  const pipelineDone = stages.every(s => s.status === 'done')
+  const hasStarted = stages.some((s: Stage) => s.status !== 'idle')
+  const pipelineDone = stages.every((s: Stage) => s.status === 'done')
   const sb = storyboard as {
     title?: string
     director?: Record<string, unknown>
@@ -299,6 +324,43 @@ export default function StudioPage() {
                   Generate
                 </button>
               </div>
+
+              {/* AI Recommendations */}
+              <div className="space-y-2.5 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    ✨ Rekomendasi Topik AI (Viral & Clickbait)
+                  </span>
+                  <button
+                    onClick={fetchRecommendations}
+                    disabled={loadingRecs || running}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 disabled:opacity-50 transition-all"
+                  >
+                    {loadingRecs ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                    Generate Ulang
+                  </button>
+                </div>
+                
+                {loadingRecs && recommendations.length === 0 ? (
+                  <div className="flex items-center gap-2 text-xs text-slate-400 py-2.5 animate-pulse font-medium">
+                    <Loader2 className="size-3.5 animate-spin text-indigo-600" />
+                    Memikirkan topik-topik viral terpanas...
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {recommendations.map((rec: string, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setTopic(rec)}
+                        disabled={running}
+                        className="text-xs bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all font-medium text-left shadow-sm"
+                      >
+                        {rec}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* pipeline progress */}
@@ -310,7 +372,7 @@ export default function StudioPage() {
                 </div>
                 
                 <div className="px-6 py-3 divide-y divide-slate-100">
-                  {stages.map(stage => <StageRow key={stage.key} stage={stage} />)}
+                  {stages.map((stage: Stage) => <StageRow key={stage.key} stage={stage} />)}
 
                   {/* render row */}
                   {pipelineDone && renderStatus !== 'idle' && (

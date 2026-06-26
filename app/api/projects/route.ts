@@ -32,7 +32,8 @@ export async function GET() {
         p.created_at,
         rj.status as render_status,
         rj.video_url,
-        rj.error
+        rj.error,
+        COALESCE(t.image_url, s.image_url) as thumbnail_url
       FROM projects p
       LEFT JOIN LATERAL (
         SELECT status, video_url, error 
@@ -41,6 +42,20 @@ export async function GET() {
         ORDER BY created_at DESC 
         LIMIT 1
       ) rj ON true
+      LEFT JOIN LATERAL (
+        SELECT image_url 
+        FROM thumbnails 
+        WHERE project_id = p.id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      ) t ON true
+      LEFT JOIN LATERAL (
+        SELECT image_url 
+        FROM scenes 
+        WHERE project_id = p.id AND image_url IS NOT NULL AND image_url != '' 
+        ORDER BY order_index ASC 
+        LIMIT 1
+      ) s ON true
       ORDER BY p.created_at DESC
     `
 

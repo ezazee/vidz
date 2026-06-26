@@ -11,7 +11,7 @@ export async function GET(
   const sql = getSql()
 
   try {
-    // Ambil data proyek, gabungkan dengan pekerjaan render terbaru dan status unggahan YouTube terbaru
+    // Ambil data proyek, gabungkan dengan pekerjaan render terbaru, status unggahan YouTube terbaru, dan metadata SEO
     const rows = await sql`
       SELECT 
         p.id, 
@@ -22,7 +22,11 @@ export async function GET(
         rj.video_url,
         rj.error,
         u.youtube_url,
-        u.status as upload_status
+        u.status as upload_status,
+        seo.title as seo_title,
+        seo.description as seo_description,
+        seo.tags as seo_tags,
+        seo.hashtags as seo_hashtags
       FROM projects p
       LEFT JOIN LATERAL (
         SELECT status, video_url, error 
@@ -38,6 +42,13 @@ export async function GET(
         ORDER BY created_at DESC 
         LIMIT 1
       ) u ON true
+      LEFT JOIN LATERAL (
+        SELECT title, description, tags, hashtags 
+        FROM seo_metadata 
+        WHERE project_id = p.id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      ) seo ON true
       WHERE p.id = ${id}
     `
 

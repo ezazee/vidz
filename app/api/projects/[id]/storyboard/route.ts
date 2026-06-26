@@ -6,6 +6,59 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
+function getBackgroundMusic(genre: string, emotion: string): { url: string; volume: number } {
+  const genreLower = genre.toLowerCase()
+  const emotionLower = emotion.toLowerCase()
+
+  // 1. Misteri / Tense / True Crime / Ketegangan
+  if (
+    genreLower.includes('mystery') ||
+    genreLower.includes('crime') ||
+    genreLower.includes('conspiracy') ||
+    emotionLower.includes('suspense') ||
+    emotionLower.includes('tense') ||
+    emotionLower.includes('dark') ||
+    emotionLower.includes('mysterious')
+  ) {
+    return {
+      url: 'https://www.chosic.com/wp-content/uploads/2020/06/Unsolved-Mystery.mp3', // Unsolved Mystery - Tense & Dark
+      volume: 0.10,
+    }
+  }
+
+  // 2. Sains / Ruang Angkasa / Teknologi
+  if (
+    genreLower.includes('science') ||
+    genreLower.includes('space') ||
+    genreLower.includes('tech') ||
+    genreLower.includes('futuristic')
+  ) {
+    return {
+      url: 'https://www.chosic.com/wp-content/uploads/2021/05/Light-In-The-Darkness.mp3', // Light in the Darkness - Ambient Synth
+      volume: 0.12,
+    }
+  }
+
+  // 3. Tragedi / Kisah Sedih / Emosional
+  if (
+    emotionLower.includes('sad') ||
+    emotionLower.includes('tragedy') ||
+    emotionLower.includes('melancholy') ||
+    emotionLower.includes('emotional')
+  ) {
+    return {
+      url: 'https://www.chosic.com/wp-content/uploads/2021/07/Rain-and-Tears-Sad-Piano-Music.mp3', // Sad Piano
+      volume: 0.12,
+    }
+  }
+
+  // 4. Default: Sejarah / Dokumenter Klasik / Epik / Narasi Umum
+  return {
+    url: 'https://www.chosic.com/wp-content/uploads/2021/09/Warm-Light.mp3', // Warm Light - Beautiful Cinematic Orchestral
+    volume: 0.12,
+  }
+}
+
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params
   const sql = getSql()
@@ -53,6 +106,10 @@ export async function GET(_request: Request, context: RouteContext) {
   `
 
   const director = directors[0]
+  const genre = director?.genre ?? 'documentary'
+  const emotion = director?.emotion ?? 'curious'
+  const music = getBackgroundMusic(genre, emotion)
+
   const storyboard = {
     project_id: projects[0].id,
     title: projects[0].title,
@@ -63,9 +120,9 @@ export async function GET(_request: Request, context: RouteContext) {
       camera_bible: director?.camera_bible ?? {},
       motion_bible: director?.motion_bible ?? {},
       thumbnail_bible: director?.thumbnail_bible ?? {},
-      genre: director?.genre ?? 'documentary',
+      genre,
       visual_style: director?.visual_style ?? 'cinematic documentary',
-      emotion: director?.emotion ?? 'curious',
+      emotion,
       lighting: director?.lighting ?? 'natural light',
       color_palette: director?.color_palette ?? [],
       thumbnail_style: director?.thumbnail_style ?? 'documentary',
@@ -89,7 +146,8 @@ export async function GET(_request: Request, context: RouteContext) {
       emotion: scene.emotion ?? 'neutral',
     })),
     audio: {
-      background_music_volume: 0.2,
+      background_music_url: music.url,
+      background_music_volume: music.volume,
     },
   }
 

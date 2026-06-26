@@ -11,7 +11,8 @@ import {
   Trash2,
   Loader2,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  XCircle
 } from 'lucide-react'
 
 interface Project {
@@ -22,6 +23,7 @@ interface Project {
   render_status?: 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
   video_url?: string | null
   error?: string | null
+  thumbnail_url?: string | null
 }
 
 export default function LibraryPage() {
@@ -50,7 +52,17 @@ export default function LibraryPage() {
   }
 
   useEffect(() => {
+    const checkTab = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const tab = params.get('tab')
+        if (tab === 'library') {
+          // Keep normal behavior
+        }
+      }
+    }
     fetchProjects()
+    checkTab()
   }, [])
 
   const handleDeleteProject = async (projectId: string) => {
@@ -207,62 +219,91 @@ export default function LibraryPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {filteredProjects.map(project => (
                   <div
                     key={project.id}
                     onClick={() => inspectProject(project)}
-                    className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 p-5 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
+                    className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 p-4 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
                   >
-                    <div className="space-y-2">
-                      {/* status badges & actions */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                        
-                        <div className="flex items-center gap-1.5">
-                          {/* Status render badge */}
+                    <div className="space-y-3.5">
+                      {/* Beautiful 16:9 Thumbnail Cover */}
+                      <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-950 relative shadow-sm shrink-0">
+                        {project.thumbnail_url ? (
+                          <img
+                            src={project.thumbnail_url.startsWith('http') ? project.thumbnail_url : '/' + project.thumbnail_url}
+                            alt={project.topic}
+                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                          />
+                        ) : project.render_status === 'pending' || project.render_status === 'processing' ? (
+                          // Rendering dynamic placeholder
+                          <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-slate-950 flex flex-col items-center justify-center text-slate-400 gap-2.5 animate-pulse">
+                            <Loader2 className="size-6 animate-spin text-indigo-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rendering Video & Cover...</span>
+                          </div>
+                        ) : project.render_status === 'failed' ? (
+                          // Failed placeholder
+                          <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-slate-500 gap-1">
+                            <XCircle className="size-6 text-rose-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Render Gagal</span>
+                          </div>
+                        ) : (
+                          // Draft placeholder
+                          <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-1">
+                            <Video className="size-6 text-slate-300" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Draf Storyboard</span>
+                          </div>
+                        )}
+
+                        {/* Floating Status Badges Overlaid on top-left of the cover */}
+                        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-10">
                           {project.render_status === 'completed' && (
-                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-100">Ready</span>
+                            <span className="text-[9px] bg-emerald-500 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Ready</span>
                           )}
                           {project.project_status === 'uploaded' && (
-                            <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold border border-red-100 flex items-center gap-1">
-                              <Youtube className="size-2.5" /> Published
+                            <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md flex items-center gap-1">
+                              <Youtube className="size-3 fill-white" /> Published
                             </span>
                           )}
                           {(project.render_status === 'pending' || project.render_status === 'processing') && (
-                            <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold border border-indigo-100 animate-pulse">Rendering</span>
+                            <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
                           )}
                           {project.render_status === 'failed' && (
-                            <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full font-bold border border-rose-100">Failed</span>
+                            <span className="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Failed</span>
                           )}
                           {!project.render_status && (
-                            <span className="text-[10px] bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full font-bold border border-slate-200">Draft</span>
+                            <span className="text-[9px] bg-slate-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Draft</span>
                           )}
-
-                          {/* Delete Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteProject(project.id)
-                            }}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Hapus Proyek"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
                         </div>
+
+                        {/* Floating Delete Button on top-right of the cover */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteProject(project.id)
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-slate-950/70 hover:bg-rose-600 hover:text-white text-slate-300 rounded-lg transition-all z-20 shadow-md backdrop-blur-sm"
+                          title="Hapus Proyek"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
-                      
-                      <h3 className="font-bold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
-                        {project.topic}
-                      </h3>
+
+                      {/* Info & Title */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">
+                          {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        <h3 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+                          {project.topic}
+                        </h3>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-50 text-xs">
-                      <span className="text-slate-400 font-mono text-[10px]">ID: {project.id.slice(0, 8)}...</span>
-                      <span className="text-indigo-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-semibold">
+                    {/* Footer link details */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                      <span className="text-slate-400 font-mono text-[9px] font-bold">ID: {project.id.slice(0, 8)}...</span>
+                      <span className="text-indigo-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-extrabold uppercase tracking-wide text-[10px]">
                         Buka Halaman Detail <ChevronRight className="size-3.5" />
                       </span>
                     </div>
