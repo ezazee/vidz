@@ -29,6 +29,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
 
       - name: Generate images
         run: node scripts/generate-images.js

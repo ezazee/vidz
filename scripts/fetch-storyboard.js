@@ -9,7 +9,12 @@ async function main() {
     throw new Error('API_BASE_URL, PROJECT_ID, and API_SECRET are required')
   }
 
-  const response = await fetch(`${baseUrl}/api/projects/${projectId}/storyboard`, {
+  const runId = process.env.GITHUB_RUN_ID
+  const url = runId 
+    ? `${baseUrl}/api/projects/${projectId}/storyboard?run_id=${runId}`
+    : `${baseUrl}/api/projects/${projectId}/storyboard`
+
+  const response = await fetch(url, {
     headers: {
       'x-api-secret': apiSecret,
     },

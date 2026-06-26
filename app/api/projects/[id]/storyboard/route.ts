@@ -10,6 +10,22 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params
   const sql = getSql()
 
+  // Ambil dan simpan GITHUB_RUN_ID jika dikirimkan oleh runner
+  const { searchParams } = new URL(_request.url)
+  const runId = searchParams.get('run_id')
+  if (runId) {
+    console.log(`Linking GitHub Action run ID ${runId} to project ${id} render job...`)
+    try {
+      await sql`
+        UPDATE render_jobs 
+        SET github_run_id = ${runId}
+        WHERE project_id = ${id} AND status IN ('pending', 'processing')
+      `
+    } catch (dbErr) {
+      console.error('Failed to link GitHub run ID in database:', dbErr)
+    }
+  }
+
   const projects = await sql`
     SELECT id, COALESCE(title, topic) AS title
     FROM projects

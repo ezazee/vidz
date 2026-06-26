@@ -1,6 +1,8 @@
 'use client'
 import { use, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import Sidebar from '@/components/Sidebar'
 import {
   Film,
   Loader2,
@@ -16,7 +18,8 @@ import {
   RefreshCw,
   AlertCircle,
   Activity,
-  Youtube
+  Youtube,
+  Trash2
 } from 'lucide-react'
 
 type RenderStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
@@ -129,6 +132,7 @@ function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: Render
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Data States
@@ -236,6 +240,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  const handleDeleteProject = async () => {
+    if (!confirm('Apakah Anda yakin ingin menghapus proyek ini beserta seluruh asetnya (gambar, audio, video di cloud) secara permanen dan membatalkan proses render yang sedang berjalan?')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(`Gagal menghapus proyek: ${data.error || 'Terjadi kesalahan'}`)
+        return
+      }
+
+      router.push('/?tab=library')
+    } catch (err) {
+      console.error('Error deleting project:', err)
+      alert('Gagal menghubungi server untuk menghapus proyek')
+    }
+  }
+
   const sb = storyboard as {
     title?: string
     director?: Record<string, unknown>
@@ -256,115 +283,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 bg-slate-900 text-slate-100 flex-col justify-between shrink-0 border-r border-slate-800">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-800 bg-slate-950/40">
-            <div className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
-              <Film className="size-5" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold leading-none tracking-wide text-white">StoryZ</h1>
-              <p className="text-xs text-slate-400 mt-1">AI Video Studio</p>
-            </div>
-          </div>
-          
-          <nav className="flex-1 px-4 py-6 space-y-1.5">
-            <Link
-              href="/?tab=studio"
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-all duration-200"
-            >
-              <WandSparkles className="size-4" />
-              AI Video Studio
-            </Link>
-            <Link
-              href="/?tab=library"
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-600/20 transition-all duration-200"
-            >
-              <Library className="size-4" />
-              Video Library
-            </Link>
-            <Link
-              href="/?tab=analytics"
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-all duration-200"
-            >
-              <LayoutDashboard className="size-4" />
-              Analytics Dashboard
-            </Link>
-          </nav>
-        </div>
-
-        <div className="p-4 border-t border-slate-800 bg-slate-950/20">
-          <div className="rounded-lg bg-slate-800/40 p-3.5 border border-slate-800/80">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block">Render Engine</span>
-            <span className="text-xs font-semibold text-slate-200 mt-1 block">GitHub Parallel Matrix</span>
-            <div className="mt-2.5 flex items-center gap-2">
-              <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] text-slate-400">8 runner active</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Sidebar - Mobile drawer */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden bg-slate-950/60 backdrop-blur-sm">
-          <aside className="w-64 bg-slate-900 text-slate-100 flex-col justify-between h-full shadow-2xl flex">
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-950/40">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-white shadow-lg">
-                    <Film className="size-5" />
-                  </div>
-                  <div>
-                    <h1 className="text-base font-bold leading-none tracking-wide text-white">StoryZ</h1>
-                    <p className="text-xs text-slate-400 mt-1">AI Video Studio</p>
-                  </div>
-                </div>
-                <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-white">
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              <nav className="px-4 py-6 space-y-1.5">
-                <Link
-                  href="/?tab=studio"
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800/60 transition-all"
-                >
-                  <WandSparkles className="size-4" />
-                  AI Video Studio
-                </Link>
-                <Link
-                  href="/?tab=library"
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-indigo-600 text-white shadow-md transition-all"
-                >
-                  <Library className="size-4" />
-                  Video Library
-                </Link>
-                <Link
-                  href="/?tab=analytics"
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800/60 transition-all"
-                >
-                  <LayoutDashboard className="size-4" />
-                  Analytics Dashboard
-                </Link>
-              </nav>
-            </div>
-            
-            <div className="p-4 border-t border-slate-800 bg-slate-950/20">
-              <div className="rounded-lg bg-slate-800/40 p-3.5 border border-slate-800/80">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block">Render Engine</span>
-                <span className="text-xs font-semibold text-slate-200 mt-1 block">GitHub Parallel Matrix</span>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[11px] text-slate-400">8 runner active</span>
-                </div>
-              </div>
-            </div>
-          </aside>
-          <div className="flex-1" onClick={() => setSidebarOpen(false)} />
-        </div>
-      )}
+      {/* Sidebar Desktop & Mobile */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -460,13 +380,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 >
                   &larr; Kembali ke Daftar Pustaka
                 </Link>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {project.project_status === 'uploaded' && (
                     <span className="text-[10px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-bold border border-red-100 flex items-center gap-1">
                       <Youtube className="size-3" /> YouTube Published
                     </span>
                   )}
                   <span className="text-xs text-slate-400 font-mono">ID: {project.id}</span>
+                  
+                  {/* Tombol Hapus */}
+                  <button
+                    onClick={handleDeleteProject}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all shadow-sm"
+                    title="Hapus Proyek Secara Permanen"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Hapus Proyek
+                  </button>
                 </div>
               </div>
 
