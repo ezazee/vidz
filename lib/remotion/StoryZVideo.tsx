@@ -352,10 +352,7 @@ function StoryScene({ scene }: SceneProps & { index: number }) {
         }}
       />
 
-      {/* Option 4: Dynamic Scribble & Sketch Overlays (Alternate per scene) */}
-      {index % 3 === 0 && <HandDrawnCircle />}
-      {index % 3 === 1 && <TacticalReticle />}
-      {index % 3 === 2 && <StabiloHighlight />}
+      {/* Removed Scribble & Sketch Overlays per user request */}
 
       {/* Real Film Overlays & Light Leaks */}
       <FilmOverlay />

@@ -47,6 +47,7 @@ interface Scene {
   duration: number
   image_url?: string
   voice_url?: string
+  updated_at?: string
 }
 
 const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? 'ezazee/vidz'
@@ -61,8 +62,9 @@ const RENDER_LOGS: Record<string, string> = {
 function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: RenderStatus }) {
   const getImageUrl = (url?: string) => {
     if (!url) return ''
-    if (url.startsWith('http')) return url
-    return '/' + url
+    const base = url.startsWith('http') ? url : '/' + url
+    const ts = scene.updated_at ? new Date(scene.updated_at).getTime() : Date.now()
+    return `${base}?t=${ts}`
   }
 
   const getVoiceUrl = (url?: string) => {
@@ -717,6 +719,10 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null)
+  const [thumbnailPrompt, setThumbnailPrompt] = useState(defaultText || '')
+  const [generating, setGenerating] = useState(false)
+  
   // Find all scenes that have valid image URLs
   const validScenes = scenes.filter(s => s.image_url && s.image_url.trim() !== '')
 
@@ -895,26 +901,32 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
     }
 
     // Load background image
-    if (validScenes.length > 0 && selectedSceneIdx < validScenes.length) {
-      const activeScene = validScenes[selectedSceneIdx]
-      const imgUrl = activeScene.image_url || ''
-      const fullUrl = imgUrl.startsWith('http') ? imgUrl : '/' + imgUrl
+    const bgUrl = customImageUrl || (validScenes.length > 0 && selectedSceneIdx < validScenes.length ? validScenes[selectedSceneIdx].image_url : '')
+    
+    if (bgUrl) {
+      const fullUrl = bgUrl.startsWith('http') ? bgUrl : '/' + bgUrl
+      let srcUrl = fullUrl
+      
+      // Only apply cache busting for scene images to prevent constant reloading of generated thumbnails
+      if (!customImageUrl && validScenes.length > 0 && selectedSceneIdx < validScenes.length) {
+        const activeScene = validScenes[selectedSceneIdx]
+        const ts = activeScene.updated_at ? new Date(activeScene.updated_at).getTime() : Date.now()
+        srcUrl = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${ts}`
+      }
 
       const img = new Image()
       img.crossOrigin = 'anonymous'
-      img.src = fullUrl
+      img.src = srcUrl
       img.onload = () => {
         drawThumbnailElements(img)
       }
       img.onerror = () => {
-        // Fallback to gradient if image fails to load (CORS or network)
         drawThumbnailElements()
       }
     } else {
       drawThumbnailElements()
     }
-
-  }, [selectedSceneIdx, text, style, validScenes])
+  }, [selectedSceneIdx, text, style, validScenes, customImageUrl])
 
   const handleDownload = () => {
     const canvas = canvasRef.current
@@ -925,6 +937,41 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
     link.download = `thumbnail-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`
     link.href = dataUrl
     link.click()
+  }
+
+  const handleGenerateAIBackground = async () => {
+    setGenerating(true)
+    setSaveMessage(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/thumbnail/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: thumbnailPrompt })
+      })
+
+      const data = await res.json()
+      if (res.ok && data.imageUrl) {
+        setCustomImageUrl(data.imageUrl)
+        setSaveMessage({
+          type: 'success',
+          text: 'Gambar latar thumbnail baru berhasil digenerate oleh AI!'
+        })
+      } else {
+        setSaveMessage({
+          type: 'error',
+          text: data.error || 'Gagal generate gambar latar kustom.'
+        })
+      }
+    } catch (e) {
+      setSaveMessage({
+        type: 'error',
+        text: 'Terjadi kesalahan jaringan saat generate gambar latar.'
+      })
+    } finally {
+      setGenerating(false)
+    }
   }
 
   const handleSaveToCloud = async () => {
@@ -1009,10 +1056,23 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
           {/* Background Scene */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-slate-500 uppercase block">Gambar Latar (Adegan)</label>
-            {validScenes.length > 0 ? (
+            {customImageUrl ? (
+              <div className="flex items-center justify-between bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg text-[10px] text-red-700 font-bold shadow-sm">
+                <span>✨ Latar Kustom AI Aktif</span>
+                <button
+                  onClick={() => setCustomImageUrl(null)}
+                  className="bg-white border border-red-200 px-2 py-0.5 rounded text-[9px] hover:bg-red-100 transition-all"
+                >
+                  Kembali ke Adegan
+                </button>
+              </div>
+            ) : validScenes.length > 0 ? (
               <select
                 value={selectedSceneIdx}
-                onChange={e => setSelectedSceneIdx(parseInt(e.target.value, 10))}
+                onChange={e => {
+                  setCustomImageUrl(null)
+                  setSelectedSceneIdx(parseInt(e.target.value, 10))
+                }}
                 className="w-full bg-white border border-slate-200 px-3 py-2 rounded-lg outline-none focus:border-red-500 font-medium text-slate-700 shadow-sm transition-all"
               >
                 {validScenes.map((s, idx) => (
@@ -1053,6 +1113,40 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
                 Viral Bold Caps
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* AI Background Generator Section */}
+        <div className="bg-slate-100/60 border border-slate-200/40 p-4 rounded-xl space-y-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+            <WandSparkles className="size-3.5 text-red-500 animate-pulse" />
+            <span>Generate Latar Baru via AI (Stable Diffusion)</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={thumbnailPrompt}
+              onChange={e => setThumbnailPrompt(e.target.value)}
+              placeholder="Masukkan prompt gambar thumbnail..."
+              className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-lg outline-none focus:border-red-500 text-xs font-medium text-slate-700 shadow-sm"
+            />
+            <button
+              onClick={handleGenerateAIBackground}
+              disabled={generating || !thumbnailPrompt.trim()}
+              className="bg-slate-850 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin animate-infinite" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <WandSparkles className="size-3.5" />
+                  <span>Generate</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 

@@ -41,13 +41,25 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
         }
       }
 
-      // 2. Update scene in storyboard json
-      scene.voice_url = publicPath
+      // 2. Hitung durasi suara audio secara dinamis menggunakan remotion media-utils
+      let duration = 10 // default fallback
+      try {
+        const { getAudioDurationInSeconds } = require('@remotion/media-utils')
+        const exactDuration = await getAudioDurationInSeconds(finalPath)
+        duration = parseFloat(exactDuration.toFixed(2))
+        console.log(`✓ Calculated voice duration for scene ${scene.order_index + 1}: ${duration}s`)
+      } catch (durationErr) {
+        console.error(`Failed to calculate audio duration for scene ${scene.order_index + 1}: ${durationErr.message}`)
+      }
 
-      // 3. Update database via new unified PATCH API
+      // 3. Update scene in storyboard json
+      scene.voice_url = publicPath
+      scene.duration = duration
+
+      // 4. Update database via new unified PATCH API
       if (apiBaseUrl && apiSecret && projectId) {
         const updateUrl = `${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`
-        console.log(`Updating DB for scene ${scene.order_index + 1} voice...`)
+        console.log(`Updating DB for scene ${scene.order_index + 1} voice & duration...`)
         const patchRes = await fetch(updateUrl, {
           method: 'PATCH',
           headers: { 
@@ -56,7 +68,8 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
           },
           body: JSON.stringify({ 
             voice_url: publicPath, 
-            voice_status: 'completed' 
+            voice_status: 'completed',
+            duration: duration
           }),
         })
         if (!patchRes.ok) {

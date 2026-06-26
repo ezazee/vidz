@@ -163,7 +163,7 @@ jobs:
           cat concat_list.txt
           ffmpeg -f concat -safe 0 -i concat_list.txt -c copy output/final.mp4
 
-      - name: Upload video to Blob storage
+      - name: Upload video to Cloudflare R2
         run: node scripts/upload.js
         env:
           PROJECT_ID: ${{ github.event.client_payload.project_id }}

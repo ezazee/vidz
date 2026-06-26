@@ -144,6 +144,7 @@ export async function GET(_request: Request, context: RouteContext) {
       effect: (scene.effect ?? 'none') as SceneEffect,
       transition: (scene.transition ?? 'fade') as TransitionType,
       emotion: scene.emotion ?? 'neutral',
+      updated_at: scene.updated_at,
     })),
     audio: {
       background_music_url: music.url,

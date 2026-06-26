@@ -20,7 +20,7 @@ export async function PATCH(
 
   try {
     const body = await request.json()
-    const { image_url, image_status, voice_url, voice_status } = body
+    const { image_url, image_status, voice_url, voice_status, duration } = body
 
     // Perbarui fields di tabel scenes secara kondisional
     const rows = await sql`
@@ -30,6 +30,7 @@ export async function PATCH(
         image_status = COALESCE(${image_status ?? null}, image_status),
         voice_url = COALESCE(${voice_url ?? null}, voice_url),
         voice_status = COALESCE(${voice_status ?? null}, voice_status),
+        duration = COALESCE(${duration !== undefined ? Number(duration) : null}, duration),
         updated_at = now()
       WHERE id = ${sceneId} AND project_id = ${id}
       RETURNING *

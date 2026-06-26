@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { uploadToR2 } from '@/lib/r2'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -20,37 +21,14 @@ export async function POST(
       return NextResponse.json({ error: 'Format gambar Base64 PNG diperlukan' }, { status: 400 })
     }
 
-    // 1. Dapatkan Vercel Blob Token
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) {
-      return NextResponse.json({ error: 'BLOB_READ_WRITE_TOKEN tidak terkonfigurasi di server.' }, { status: 500 })
-    }
-
-    // 2. Decode Base64 image
+    // 1. Decode Base64 image
     const base64Data = image.replace(/^data:image\/png;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
 
-    // 3. Kirim ke Vercel Blob Storage secara langsung via HTTP PUT
-    const filename = `thumbnails/${id}-${Date.now()}.png`
-    console.log(`Uploading customized thumbnail for project ${id} to Vercel Blob: ${filename}...`)
-
-    const blobRes = await fetch(`https://blob.vercel-storage.com/${filename}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'image/png',
-        'x-content-type': 'image/png',
-      },
-      body: buffer,
-    })
-
-    if (!blobRes.ok) {
-      const errDetail = await blobRes.text().catch(() => '')
-      throw new Error(`Blob upload failed: ${blobRes.status} ${blobRes.statusText}. Detail: ${errDetail}`)
-    }
-
-    const blobData = await blobRes.json()
-    const imageUrl = blobData.url
+    // 2. Kirim ke Cloudflare R2 secara langsung
+    const filename = `projects/${id}/thumbnails/${Date.now()}.png`
+    console.log(`Uploading customized thumbnail for project ${id} to Cloudflare R2: ${filename}...`)
+    const imageUrl = await uploadToR2(filename, buffer, 'image/png')
 
     // 4. Simpan ke tabel thumbnails di database
     await sql`
