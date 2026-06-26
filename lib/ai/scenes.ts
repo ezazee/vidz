@@ -22,6 +22,21 @@ export interface SceneDraft {
   duration: number
 }
 
+function repairJson(json: string): string {
+  let repaired = json.trim()
+
+  // 1. Perbaiki objek adegan yang tidak ditutup dengan } sebelum koma: , { -> }, {
+  repaired = repaired.replace(/([^}\]\s])\s*,\s*\{/g, '$1},\n{')
+
+  // 2. Perbaiki koma yang hilang di antara objek adegan: } { -> }, {
+  repaired = repaired.replace(/}\s*\{/g, '},\n{')
+
+  // 3. Bersihkan koma menggantung (trailing commas) sebelum penutup bracket/brace
+  repaired = repaired.replace(/,\s*([\]}])/g, '$1')
+
+  return repaired
+}
+
 export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
   const outlineContext = input.fullOutline
     ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
@@ -74,8 +89,8 @@ Buatlah tepat ${input.section.type === 'intro' || input.section.type === 'ending
       cleaned = cleaned.substring(startCurly, endCurly + 1)
     }
     
-    // 3. Bersihkan trailing commas (koma gantung sebelum kurung tutup)
-    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1')
+    // 3. Bersihkan dan perbaiki kesalahan struktur JSON dari AI
+    cleaned = repairJson(cleaned)
 
     const parsed = JSON.parse(cleaned) as { scenes: SceneDraft[] }
     return parsed.scenes
