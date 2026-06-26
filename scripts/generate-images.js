@@ -15,6 +15,7 @@ async function main() {
   for (const scene of storyboard.scenes) {
     console.log(`Generating image for scene ${scene.order_index + 1}...`)
 
+    const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
     const res = await fetch(`${baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
@@ -22,6 +23,7 @@ async function main() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        model: modelName,
         prompt: scene.image_prompt,
         n: 1,
         size: '1792x1024',
@@ -30,17 +32,23 @@ async function main() {
     })
 
     if (!res.ok) {
-      console.error(`Failed scene ${scene.order_index + 1}: ${res.status} ${res.statusText}`)
+      const errorBody = await res.text().catch(() => '')
+      console.error(`Failed scene ${scene.order_index + 1}: ${res.status} ${res.statusText}. Error: ${errorBody}`)
       continue
     }
 
     const data = await res.json()
-    const imageUrl = data.data?.[0]?.url
-    if (!imageUrl) { console.error(`No URL for scene ${scene.order_index + 1}`); continue }
+    let buffer
+    if (data.data?.[0]?.b64_json) {
+      buffer = Buffer.from(data.data[0].b64_json, 'base64')
+    } else if (data.data?.[0]?.url) {
+      const imgRes = await fetch(data.data[0].url)
+      buffer = Buffer.from(await imgRes.arrayBuffer())
+    } else {
+      console.error(`No image data in response for scene ${scene.order_index + 1}:`, JSON.stringify(data))
+      continue
+    }
 
-    // download image
-    const imgRes = await fetch(imageUrl)
-    const buffer = Buffer.from(await imgRes.arrayBuffer())
     const localPath = `output/images/scene-${scene.order_index}.jpg`
     await fs.writeFile(localPath, buffer)
 

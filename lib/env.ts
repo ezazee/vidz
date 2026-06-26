@@ -15,6 +15,7 @@ const envSchema = z.object({
   AI_BASE_URL: optionalUrl,
   AI_API_KEY: optionalString,
   AI_MODEL: optionalString,
+  IMAGE_MODEL: optionalString,
   ELEVENLABS_API_KEY: optionalString,
   TTS_VOICE: optionalString,
 })
