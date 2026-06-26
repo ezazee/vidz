@@ -1,5 +1,5 @@
 const fs = require('fs/promises')
-const path = require('path')
+const { put } = require('@vercel/blob')
 
 async function main() {
   const token = process.env.BLOB_READ_WRITE_TOKEN
@@ -9,25 +9,23 @@ async function main() {
   const buffer = await fs.readFile(videoPath)
   const filename = `videos/${Date.now()}-final.mp4`
 
-  // Vercel Blob PUT upload
-  const res = await fetch(`https://blob.vercel-storage.com/${filename}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'video/mp4',
-      'x-content-type': 'video/mp4',
-    },
-    body: buffer,
+  console.log(`Uploading ${videoPath} to Vercel Blob using official SDK...`)
+
+  // Menggunakan SDK resmi @vercel/blob untuk menangani multipart upload file besar secara otomatis
+  const blob = await put(filename, buffer, {
+    access: 'public',
+    token: token,
+    contentType: 'video/mp4',
   })
 
-  if (!res.ok) throw new Error(`Blob upload failed: ${res.status} ${res.statusText}`)
-
-  const data = await res.json()
-  const videoUrl = data.url
+  const videoUrl = blob.url
   console.log(`VIDEO_URL=${videoUrl}`)
 
-  // write to file so next step can read it
+  // Tulis URL ke file agar langkah pipeline berikutnya di GitHub Actions dapat membacanya
   await fs.writeFile('output/video_url.txt', videoUrl)
 }
 
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch(e => {
+  console.error('Blob upload failed:', e.message)
+  process.exit(1)
+})
