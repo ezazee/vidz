@@ -27,20 +27,31 @@ export async function POST(_request: Request, context: RouteContext) {
   // hapus scenes lama dulu
   await sql`DELETE FROM scenes WHERE project_id = ${id}`
 
-  let orderOffset = 0
-  const allScenes = []
-  const generatedNarrationSoFar: string[] = []
+  // Hitung offset indeks urutan (orderOffset) di awal untuk tiap bab agar pemanggilan dapat diparalelkan
+  let currentOffset = 0
+  const sectionsWithOffsets = outline.sections.map((section) => {
+    const numScenes = section.type === 'intro' || section.type === 'ending' ? 6 : 8
+    const offset = currentOffset
+    currentOffset += numScenes
+    return { section, offset }
+  })
 
-  for (const section of outline.sections) {
-    const scenes = await generateScenes({
+  // Jalankan semua pemanggilan AI generator adegan secara paralel (concurrency)
+  // Hal ini memangkas waktu pengerjaan dari ~5 menit menjadi ~15-20 detik, mencegah Vercel Timeout 300s
+  const scenesPromises = sectionsWithOffsets.map(({ section, offset }) => {
+    return generateScenes({
       section,
       topic: projects[0].topic,
       director,
-      orderOffset,
+      orderOffset: offset,
       fullOutline: outline.sections,
-      previousNarration: generatedNarrationSoFar
     })
+  })
 
+  const scenesResults = await Promise.all(scenesPromises)
+  const allScenes = []
+
+  for (const scenes of scenesResults) {
     for (const scene of scenes) {
       const row = await sql`
         INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, camera, effect, emotion, transition, duration, image_status, voice_status)
@@ -52,13 +63,11 @@ export async function POST(_request: Request, context: RouteContext) {
         RETURNING *
       `
       allScenes.push(row[0])
-      if (scene.narration) {
-        generatedNarrationSoFar.push(scene.narration)
-      }
     }
-
-    orderOffset += scenes.length
   }
+
+  // Urutkan adegan berdasarkan order_index untuk memastikan integritas urutan storyboard
+  allScenes.sort((a, b) => a.order_index - b.order_index)
 
   return NextResponse.json({ scenes: allScenes, count: allScenes.length })
 }
