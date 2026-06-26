@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 45 29% 97%;
+  --foreground: 222 22% 12%;
+  --muted: 210 22% 93%;
+  --muted-foreground: 216 12% 40%;
+  --border: 214 20% 84%;
+  --primary: 174 72% 28%;
+  --primary-foreground: 0 0% 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}

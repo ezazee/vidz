@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+build
+coverage
+.vercel
+# .env
+# .env.local
+# .env.*.local
+storyboard.json
+output
+tmp
+*.log
+.DS_Store
