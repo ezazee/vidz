@@ -25,5 +25,24 @@ Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "o
       content: `Buat outline video dokumenter YouTube tentang: "${topic}"\n\nRingkasan:\n${summary}`,
     },
   ])
-  return JSON.parse(content) as OutlineOutput
+  try {
+    let cleaned = content.trim()
+    // 1. Hapus pembungkus markdown
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim()
+    
+    // 2. Ambil hanya bagian JSON yang valid (antara kurung kurawal pertama dan terakhir)
+    const startCurly = cleaned.indexOf('{')
+    const endCurly = cleaned.lastIndexOf('}')
+    if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+      cleaned = cleaned.substring(startCurly, endCurly + 1)
+    }
+    
+    // 3. Bersihkan trailing commas
+    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1')
+
+    return JSON.parse(cleaned) as OutlineOutput
+  } catch (err) {
+    console.error('Gagal mem-parse outline JSON. Konten asli:', content)
+    throw new Error(`Format JSON Outline dari AI tidak valid: ${(err as Error).message}`)
+  }
 }

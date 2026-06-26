@@ -62,6 +62,25 @@ Panduan Gaya Sutradara:
 Buatlah tepat ${input.section.type === 'intro' || input.section.type === 'ending' ? '6' : '8'} scene detail untuk bab ini.`,
     },
   ])
-  const parsed = JSON.parse(content) as { scenes: SceneDraft[] }
-  return parsed.scenes
+  try {
+    let cleaned = content.trim()
+    // 1. Hapus pembungkus markdown
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim()
+    
+    // 2. Ambil hanya bagian JSON yang valid (antara kurung kurawal pertama dan terakhir)
+    const startCurly = cleaned.indexOf('{')
+    const endCurly = cleaned.lastIndexOf('}')
+    if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+      cleaned = cleaned.substring(startCurly, endCurly + 1)
+    }
+    
+    // 3. Bersihkan trailing commas (koma gantung sebelum kurung tutup)
+    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1')
+
+    const parsed = JSON.parse(cleaned) as { scenes: SceneDraft[] }
+    return parsed.scenes
+  } catch (err) {
+    console.error('Gagal mem-parse scenes JSON. Konten asli:', content)
+    throw new Error(`Format JSON Adegan dari AI tidak valid: ${(err as Error).message}`)
+  }
 }
