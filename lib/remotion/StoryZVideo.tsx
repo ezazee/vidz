@@ -52,9 +52,14 @@ function SceneImage({ scene }: SceneProps) {
     )
   }
 
+  const useLocalAssets = process.env.REMOTION_LOCAL_ASSETS === 'true'
+  const imageSrc = useLocalAssets
+    ? staticFile(`images/scene-${scene.order_index}.jpg`)
+    : (scene.image_url.startsWith('http') ? scene.image_url : staticFile(scene.image_url))
+
   return (
     <Img
-      src={scene.image_url.startsWith('http') ? scene.image_url : staticFile(scene.image_url)}
+      src={imageSrc}
       style={{
         height: '100%',
         objectFit: 'cover',
@@ -68,12 +73,18 @@ function SceneImage({ scene }: SceneProps) {
 // 2. Premium Word-by-Word Animated Subtitles (Vox / Johnny Harris Style)
 function SceneSubtitle({ scene }: SceneProps) {
   const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
   
   const text = (scene.subtitle || '').trim()
   if (!text) return null
 
   const words = text.split(' ')
-  const durationPerWord = 7 // frames
+  
+  // Hitung durasi per kata secara dinamis agar pas dengan durasi suara narasi adegan
+  // Kita ingin seluruh kata selesai muncul pada 85% durasi adegan agar penonton sempat membaca kalimat lengkap
+  const totalFrames = Math.max(1, Math.round(scene.duration * fps))
+  const availableFrames = totalFrames * 0.85
+  const durationPerWord = Math.max(1, availableFrames / words.length)
 
   return (
     <div
@@ -96,9 +107,11 @@ function SceneSubtitle({ scene }: SceneProps) {
       }}
     >
       {words.map((word, index) => {
-        // Calculate organic fade-in for each word based on its index
+        // Tentukan frame mulai untuk setiap kata secara proporsional
         const startFrame = index * durationPerWord
-        const wordOpacity = interpolate(frame, [startFrame, startFrame + 9], [0, 1], {
+        const fadeDuration = Math.min(8, durationPerWord) // Durasi animasi fade-in yang responsif
+        
+        const wordOpacity = interpolate(frame, [startFrame, startFrame + fadeDuration], [0, 1], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
           easing: Easing.bezier(0.25, 1, 0.5, 1),
@@ -366,7 +379,11 @@ function StoryScene({ scene }: SceneProps & { index: number }) {
       {/* Audio Narration */}
       {scene.voice_url && (
         <Audio
-          src={scene.voice_url.startsWith('http') ? scene.voice_url : staticFile(scene.voice_url)}
+          src={
+            process.env.REMOTION_LOCAL_ASSETS === 'true'
+              ? staticFile(`voices/scene-${scene.order_index}.mp3`)
+              : (scene.voice_url.startsWith('http') ? scene.voice_url : staticFile(scene.voice_url))
+          }
         />
       )}
     </AbsoluteFill>

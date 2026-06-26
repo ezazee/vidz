@@ -23,6 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install FFmpeg
+        run: |
+          if ! command -v ffmpeg &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          else
+            echo "FFmpeg is already installed: $(ffmpeg -version | head -n 1)"
+          fi
+
       - name: Fetch storyboard
         run: node scripts/fetch-storyboard.js
         env:
@@ -112,6 +120,7 @@ jobs:
           npx remotion render src/index.ts StoryZVideo output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
+          REMOTION_LOCAL_ASSETS: 'true'
 
       - name: Upload chunk artifact
         uses: actions/upload-artifact@v4
@@ -151,17 +160,7 @@ jobs:
           path: .
 
       - name: Merge video chunks
-        run: |
-          mkdir -p output
-          echo "" > concat_list.txt
-          for i in $(seq 1 20); do
-            if [ -f "video-part-$i/part-$i.mp4" ]; then
-              echo "file 'video-part-$i/part-$i.mp4'" >> concat_list.txt
-            fi
-          done
-          echo "Concat list:"
-          cat concat_list.txt
-          ffmpeg -f concat -safe 0 -i concat_list.txt -c copy output/final.mp4
+        run: node scripts/merge-chunks.js
 
       - name: Upload video to Cloudflare R2
         run: node scripts/upload.js
