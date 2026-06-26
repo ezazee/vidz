@@ -5,10 +5,11 @@ on:
     types: [render_video]
 
 jobs:
-  render:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,9 +22,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Fetch storyboard
         run: node scripts/fetch-storyboard.js
@@ -40,18 +38,112 @@ jobs:
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
 
       - name: Generate voices
         run: node scripts/generate-voices.js
         env:
           TTS_VOICE: ${{ secrets.TTS_VOICE }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET: ${{ secrets.API_SECRET }}
+          PROJECT_ID: ${{ github.event.client_payload.project_id }}
 
-      - name: Render video
+      - name: Prepare chunks
+        id: set-matrix
+        run: node scripts/prepare-chunks.js
+
+      - name: Upload assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: |
+            public/
+            storyboard.json
+          retention-days: 1
+
+  render:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install FFmpeg
+        run: |
+          if ! command -v ffmpeg &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          else
+            echo "FFmpeg is already installed: $(ffmpeg -version | head -n 1)"
+          fi
+
+      - name: Download assets
+        uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: .
+
+      - name: Render video chunk
         run: |
           mkdir -p output
-          npx remotion render src/index.ts StoryZVideo output/final.mp4 --props=storyboard.json --concurrency=2
+          npx remotion render src/index.ts StoryZVideo output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Upload chunk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-part-${{ matrix.chunk.part }}
+          path: output/part-${{ matrix.chunk.part }}.mp4
+          retention-days: 1
+
+  merge:
+    needs: [prepare, render]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          if ! command -v ffmpeg &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          else
+            echo "FFmpeg is already installed: $(ffmpeg -version | head -n 1)"
+          fi
+
+      - name: Download all video parts
+        uses: actions/download-artifact@v4
+        with:
+          path: .
+
+      - name: Merge video chunks
+        run: |
+          mkdir -p output
+          echo "" > concat_list.txt
+          for i in $(seq 1 20); do
+            if [ -f "video-part-$i/part-$i.mp4" ]; then
+              echo "file 'video-part-$i/part-$i.mp4'" >> concat_list.txt
+            fi
+          done
+          echo "Concat list:"
+          cat concat_list.txt
+          ffmpeg -f concat -safe 0 -i concat_list.txt -c copy output/final.mp4
 
       - name: Upload video to Blob storage
         run: node scripts/upload.js
@@ -59,7 +151,6 @@ jobs:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
 
       - name: Update job completed
-        if: success()
         run: |
           VIDEO_URL=$(cat output/video_url.txt)
           node scripts/update-job.js --status=completed --video-url="$VIDEO_URL"
@@ -68,9 +159,15 @@ jobs:
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
 
+  status-failure:
+    runs-on: ubuntu-latest
+    needs: [prepare, render, merge]
+    if: always() && (needs.prepare.result == 'failure' || needs.prepare.result == 'cancelled' || needs.render.result == 'failure' || needs.render.result == 'cancelled' || needs.merge.result == 'failure' || needs.merge.result == 'cancelled')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Update job failed
-        if: failure()
-        run: node scripts/update-job.js --status=failed --error="Render failed. Check Actions logs."
+        run: node scripts/update-job.js --status=failed --error="Pipeline failed or was cancelled. Check Actions logs."
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}

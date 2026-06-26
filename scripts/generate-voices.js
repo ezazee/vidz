@@ -1,10 +1,11 @@
 const fs = require('fs/promises')
 const path = require('path')
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts')
+const { put } = require('@vercel/blob')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-async function generateVoiceForScene(scene, voice) {
+async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projectId) {
   if (!scene.narration) return
   const maxRetries = 3
   let attempt = 0
@@ -13,7 +14,6 @@ async function generateVoiceForScene(scene, voice) {
     try {
       console.log(`Generating voice for scene ${scene.order_index + 1} (Attempt ${attempt + 1}/${maxRetries})...`)
       
-      // Buat instance MsEdgeTTS baru untuk setiap scene agar aman secara paralel (thread-safe)
       const tts = new MsEdgeTTS()
       await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
 
@@ -23,11 +23,50 @@ async function generateVoiceForScene(scene, voice) {
       await tts.toFile(tmpDir, scene.narration)
 
       const finalPath = `public/voices/scene-${scene.order_index}.mp3`
-      const publicPath = `voices/scene-${scene.order_index}.mp3`
       await fs.rename(`${tmpDir}/audio.mp3`, finalPath)
       await fs.rm(tmpDir, { recursive: true })
 
+      // 1. Unggah berkas audio ke Vercel Blob jika token tersedia
+      let publicPath = `voices/scene-${scene.order_index}.mp3`
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        try {
+          console.log(`Uploading voice for scene ${scene.order_index + 1} to Vercel Blob...`)
+          const audioBuffer = await fs.readFile(finalPath)
+          const blobFilename = `projects/${projectId}/voices/scene-${scene.order_index}.mp3`
+          const blob = await put(blobFilename, audioBuffer, {
+            access: 'public',
+            contentType: 'audio/mpeg',
+          })
+          publicPath = blob.url
+          console.log(`Uploaded voice to: ${publicPath}`)
+        } catch (uploadErr) {
+          console.error(`Failed to upload scene ${scene.order_index + 1} voice to Vercel Blob: ${uploadErr.message}. Using local path fallback.`)
+        }
+      }
+
+      // 2. Update scene in storyboard json
       scene.voice_url = publicPath
+
+      // 3. Update database via new unified PATCH API
+      if (apiBaseUrl && apiSecret && projectId) {
+        const updateUrl = `${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`
+        console.log(`Updating DB for scene ${scene.order_index + 1} voice...`)
+        const patchRes = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'x-api-secret': apiSecret 
+          },
+          body: JSON.stringify({ 
+            voice_url: publicPath, 
+            voice_status: 'completed' 
+          }),
+        })
+        if (!patchRes.ok) {
+          console.error(`Failed to update DB for scene ${scene.order_index + 1} voice: ${patchRes.status} ${patchRes.statusText}`)
+        }
+      }
+
       console.log(`Scene ${scene.order_index + 1} voice done.`)
       return // Success!
     } catch (e) {
@@ -46,16 +85,18 @@ async function generateVoiceForScene(scene, voice) {
 async function main() {
   const storyboard = JSON.parse(await fs.readFile('storyboard.json', 'utf8')).storyboard
   const voice = process.env.TTS_VOICE || 'id-ID-ArdiNeural'
+  const apiSecret = process.env.API_SECRET
+  const apiBaseUrl = process.env.API_BASE_URL
+  const projectId = process.env.PROJECT_ID
 
   await fs.mkdir('public/voices', { recursive: true })
 
   // Proses suara dalam kelompok (batch) isi 5 secara paralel
-  // Ini menghemat waktu pembuatan audio hingga 80% tanpa memicu kegagalan WebSocket
   const batchSize = 5
   for (let i = 0; i < storyboard.scenes.length; i += batchSize) {
     const batch = storyboard.scenes.slice(i, i + batchSize)
     console.log(`Processing voice batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(storyboard.scenes.length / batchSize)}...`)
-    await Promise.all(batch.map(scene => generateVoiceForScene(scene, voice)))
+    await Promise.all(batch.map(scene => generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projectId)))
   }
 
   await fs.writeFile('storyboard.json', JSON.stringify({ storyboard }, null, 2))

@@ -1,4 +1,5 @@
 const fs = require('fs/promises')
+const { put } = require('@vercel/blob')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -50,20 +51,48 @@ async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseU
         continue
       }
 
+      // 1. Simpan gambar secara lokal (untuk proses rendering lokal oleh Remotion di runner)
       const localPath = `public/images/scene-${scene.order_index}.jpg`
-      const publicPath = `images/scene-${scene.order_index}.jpg`
       await fs.writeFile(localPath, buffer)
 
-      // update scene in storyboard json
+      // 2. Unggah gambar ke Vercel Blob jika token tersedia
+      let publicPath = `images/scene-${scene.order_index}.jpg`
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        try {
+          console.log(`Uploading image for scene ${scene.order_index + 1} to Vercel Blob...`)
+          const blobFilename = `projects/${projectId}/images/scene-${scene.order_index}.jpg`
+          const blob = await put(blobFilename, buffer, {
+            access: 'public',
+            contentType: 'image/jpeg',
+          })
+          publicPath = blob.url
+          console.log(`Uploaded image to: ${publicPath}`)
+        } catch (uploadErr) {
+          console.error(`Failed to upload scene ${scene.order_index + 1} image to Vercel Blob: ${uploadErr.message}. Using local path fallback.`)
+        }
+      }
+
+      // 3. Update scene in storyboard json
       scene.image_url = publicPath
 
-      // update DB via API
+      // 4. Update database via new unified PATCH API
       if (apiBaseUrl && apiSecret && projectId) {
-        await fetch(`${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}/image`, {
+        const updateUrl = `${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`
+        console.log(`Updating DB for scene ${scene.order_index + 1} image...`)
+        const patchRes = await fetch(updateUrl, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-api-secret': apiSecret },
-          body: JSON.stringify({ image_url: publicPath, image_status: 'completed' }),
-        }).catch(() => {})
+          headers: { 
+            'Content-Type': 'application/json', 
+            'x-api-secret': apiSecret 
+          },
+          body: JSON.stringify({ 
+            image_url: publicPath, 
+            image_status: 'completed' 
+          }),
+        })
+        if (!patchRes.ok) {
+          console.error(`Failed to update DB for scene ${scene.order_index + 1} image: ${patchRes.status} ${patchRes.statusText}`)
+        }
       }
 
       console.log(`Scene ${scene.order_index + 1} image done.`)
@@ -91,7 +120,6 @@ async function main() {
   await fs.mkdir('public/images', { recursive: true })
 
   // Proses gambar dalam kelompok (batch) isi 5 secara paralel
-  // Ini menghemat waktu pembuatan gambar hingga 85% tanpa memicu rate limit
   const batchSize = 5
   for (let i = 0; i < storyboard.scenes.length; i += batchSize) {
     const batch = storyboard.scenes.slice(i, i + batchSize)
