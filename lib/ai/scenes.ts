@@ -27,16 +27,17 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
     ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
     : ''
 
-  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 8
+  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 5 : 6
 
   const content = await chat([
     {
       role: 'system',
       content: `Kamu adalah penulis naskah dokumenter profesional. Balas HANYA JSON valid.
-Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
+Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "pexels_query": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
 - narration: narasi panjang, mendalam, dan kaya informasi untuk voiceover (3-5 kalimat detail). Gunakan bahasa Indonesia yang baku, dramatis, dan mengalir seperti dokumenter profesional.
 - subtitle: versi pendek narration (max 10 kata)
 - image_prompt: prompt bahasa Inggris detail untuk image AI, sesuai visual_style. Jelaskan objek, komposisi, pencahayaan, dan detail visual secara spesifik.
+- pexels_query: 1-2 kata bahasa Inggris (kata benda/suasana umum) untuk mencari stock video (contoh: "space", "sad man", "ancient ruins", "ocean"). Kosongkan jika konsepnya terlalu abstrak.
 - duration: 15-20 detik per scene (sesuai panjang narasi yang dibacakan)
 - order_index mulai dari ${input.orderOffset}`,
     },

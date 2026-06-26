@@ -8,6 +8,7 @@ import {
   staticFile,
   useCurrentFrame,
   useVideoConfig,
+  Video,
 } from 'remotion'
 import type { SceneJSON, StoryboardJSON } from '../pipeline/types'
 import { storyboardFixture } from './storyboard-fixture'
@@ -16,7 +17,7 @@ interface SceneProps {
   scene: SceneJSON
 }
 
-// 1. Slow, Organic Ken Burns Camera Drift + Handheld Camera Shake
+// 1. Slow, Organic Ken Burns + 2.5D Fake Parallax
 function SceneImage({ scene }: SceneProps) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -57,6 +58,48 @@ function SceneImage({ scene }: SceneProps) {
     ? staticFile(`images/scene-${scene.order_index}.jpg`)
     : (scene.image_url.startsWith('http') ? scene.image_url : staticFile(scene.image_url))
 
+  // 50% chance of using Parallax vs Fullscreen Ken Burns for visual variety
+  const isParallax = (scene.order_index ?? 0) % 2 === 1
+
+  if (isParallax) {
+    return (
+      <AbsoluteFill style={{ overflow: 'hidden' }}>
+        {/* Layer 1: Blurred Background (Moves slow, scaled up massively) */}
+        <Img
+          src={imageSrc}
+          style={{
+            position: 'absolute',
+            inset: '-20%',
+            height: '140%',
+            width: '140%',
+            objectFit: 'cover',
+            filter: 'blur(35px) brightness(0.4)',
+            transform: `scale(${scale * 1.1}) translateX(${translateX * 0.2}px) translateY(${translateY * 0.2}px)`,
+          }}
+        />
+        {/* Layer 2: Sharp Foreground Floating Photo (Moves fast, has drop shadow) */}
+        <Img
+          src={imageSrc}
+          style={{
+            position: 'absolute',
+            top: '8%',
+            bottom: '8%',
+            left: '8%',
+            right: '8%',
+            height: '84%',
+            width: '84%',
+            objectFit: 'cover',
+            borderRadius: '16px',
+            border: '2px solid rgba(255, 255, 255, 0.05)',
+            boxShadow: '0 40px 80px rgba(0,0,0,0.9), 0 0 100px rgba(0,0,0,0.6)',
+            transform: `scale(${scale}) translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg)`,
+          }}
+        />
+      </AbsoluteFill>
+    )
+  }
+
+  // Fallback Fullscreen Ken Burns
   return (
     <Img
       src={imageSrc}
@@ -367,8 +410,16 @@ function StoryScene({ scene }: SceneProps & { index: number }) {
   
   return (
     <AbsoluteFill>
-      {/* Background Image / Motion */}
-      <SceneImage scene={scene} />
+      {/* Background Image / Motion / Video */}
+      {scene.pexels_video_url ? (
+        <Video
+          src={scene.pexels_video_url}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          muted // we provide our own voiceover and music
+        />
+      ) : (
+        <SceneImage scene={scene} />
+      )}
 
       {/* Cinematic Vignette Overlay (Warm charcoal edges) */}
       <AbsoluteFill
@@ -388,8 +439,6 @@ function StoryScene({ scene }: SceneProps & { index: number }) {
           zIndex: 3,
         }}
       />
-
-      {/* Removed Scribble & Sketch Overlays per user request */}
 
       {/* Real Film Overlays & Light Leaks */}
       <FilmOverlay />

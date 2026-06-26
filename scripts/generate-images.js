@@ -4,6 +4,11 @@ const { uploadToR2 } = require('./r2-upload')
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
+  if (scene.pexels_video_url) {
+    console.log(`Skipping AI image generation for scene ${scene.order_index + 1} because a Pexels video was found.`)
+    return
+  }
+
   const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
   const maxRetries = 3
   let attempt = 0

@@ -89,6 +89,8 @@ export interface SceneJSON {
   narration: string
   subtitle: string
   image_prompt: string
+  pexels_query?: string
+  pexels_video_url?: string
   image_url: string
   voice_url: string
   camera: CameraMovement
