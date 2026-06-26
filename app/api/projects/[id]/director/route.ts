@@ -16,7 +16,7 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   const researchRows = await sql`
-    SELECT summary, facts, timeline, references
+    SELECT summary, facts, timeline, "references"
     FROM research
     WHERE project_id = ${id}
     ORDER BY created_at DESC

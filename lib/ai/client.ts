@@ -21,12 +21,33 @@ export async function chat(messages: Message[], json = true): Promise<string> {
     body: JSON.stringify({
       model,
       messages,
+      stream: false,
       ...(json && { response_format: { type: 'json_object' } }),
     }),
   })
 
   if (!res.ok) throw new Error(`AI request failed: ${res.status} ${res.statusText}`)
 
+  const contentType = res.headers.get('content-type') ?? ''
+
+  // beberapa gateway kembalikan SSE meski stream:false — collect semua chunk
+  if (contentType.includes('text/event-stream')) {
+    const text = await res.text()
+    let content = ''
+    for (const line of text.split('\n')) {
+      if (!line.startsWith('data:')) continue
+      const raw = line.slice(5).trim()
+      if (raw === '[DONE]') break
+      const chunk = JSON.parse(raw)
+      content += chunk.choices?.[0]?.delta?.content ?? ''
+    }
+    return stripMarkdown(content)
+  }
+
   const data = await res.json()
-  return data.choices[0].message.content
+  return stripMarkdown(data.choices[0].message.content)
+}
+
+function stripMarkdown(s: string): string {
+  return s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 }

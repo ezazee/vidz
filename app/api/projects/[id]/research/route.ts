@@ -18,7 +18,7 @@ export async function POST(_request: Request, context: RouteContext) {
   const output = await generateResearch(projects[0].topic)
 
   const rows = await sql`
-    INSERT INTO research (project_id, summary, facts, timeline, references, status)
+    INSERT INTO research (project_id, summary, facts, timeline, "references", status)
     VALUES (
       ${id},
       ${output.summary},

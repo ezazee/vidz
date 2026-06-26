@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { env } from '@/lib/env'
 import { getSql } from '@/lib/db/client'
 import type { CameraMovement, SceneEffect, TransitionType } from '@/lib/pipeline/types'
 
@@ -8,10 +7,6 @@ interface RouteContext {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
-  if (env.API_SECRET && _request.headers.get('x-api-secret') !== env.API_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { id } = await context.params
   const sql = getSql()
 

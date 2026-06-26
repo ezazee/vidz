@@ -13,6 +13,14 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
+export async function GET(_request: Request, context: RouteContext) {
+  const { id } = await context.params
+  const sql = getSql()
+  const rows = await sql`SELECT * FROM render_jobs WHERE id = ${id} LIMIT 1`
+  if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json({ render_job: rows[0] })
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   const secret = request.headers.get('x-api-secret')
 

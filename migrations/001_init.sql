@@ -28,7 +28,7 @@ CREATE TABLE research (
   summary TEXT,
   facts JSONB,
   timeline JSONB,
-  references JSONB,
+  "references" JSONB,
   status pipeline_status NOT NULL DEFAULT 'idle',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

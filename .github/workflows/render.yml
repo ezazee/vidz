@@ -31,29 +31,46 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
-          JOB_ID: ${{ github.event.client_payload.job_id }}
-          MODE: ${{ github.event.client_payload.mode }}
-          SCENE_IDS: ${{ toJson(github.event.client_payload.scene_ids) }}
+
+      - name: Generate images
+        run: node scripts/generate-images.js
+        env:
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          PROJECT_ID: ${{ github.event.client_payload.project_id }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET: ${{ secrets.API_SECRET }}
+
+      - name: Generate voices
+        run: node scripts/generate-voices.js
+        env:
+          TTS_VOICE: ${{ secrets.TTS_VOICE }}
 
       - name: Render video
-        run: npx remotion render src/index.ts StoryZVideo output/final.mp4 --props=storyboard.json --concurrency=2
+        run: |
+          mkdir -p output
+          npx remotion render src/index.ts StoryZVideo output/final.mp4 --props=storyboard.json --concurrency=2
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
       - name: Upload video to Blob storage
         run: node scripts/upload.js
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
 
-      - name: Update database completed
+      - name: Update job completed
         if: success()
-        run: node scripts/update-job.js --status=completed --video-url="${VIDEO_URL:-https://example.com/video-placeholder.mp4}"
+        run: |
+          VIDEO_URL=$(cat output/video_url.txt)
+          node scripts/update-job.js --status=completed --video-url="$VIDEO_URL"
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
 
-      - name: Update database failed
+      - name: Update job failed
         if: failure()
-        run: node scripts/update-job.js --status=failed --error="Render job failed. Check GitHub Actions logs."
+        run: node scripts/update-job.js --status=failed --error="Render failed. Check Actions logs."
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
