@@ -75,7 +75,7 @@ function SceneSubtitle({ scene }: SceneProps) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   
-  const text = (scene.subtitle || '').trim()
+  const text = (scene.narration || scene.subtitle || '').trim()
   if (!text) return null
 
   const words = text.split(' ')

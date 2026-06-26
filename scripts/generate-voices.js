@@ -41,15 +41,21 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
         }
       }
 
-      // 2. Hitung durasi suara audio secara dinamis menggunakan remotion media-utils
+      // 2. Hitung durasi suara audio secara dinamis menggunakan ffprobe
       let duration = 10 // default fallback
       try {
-        const { getAudioDurationInSeconds } = require('@remotion/media-utils')
-        const exactDuration = await getAudioDurationInSeconds(finalPath)
-        duration = parseFloat(exactDuration.toFixed(2))
-        console.log(`✓ Calculated voice duration for scene ${scene.order_index + 1}: ${duration}s`)
+        const { execSync } = require('child_process')
+        const output = execSync(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${finalPath}"`)
+        const exactDuration = parseFloat(output.toString().trim())
+        if (!isNaN(exactDuration) && exactDuration > 0) {
+          // Tambahkan sedikit buffer (0.4 detik) agar kata terakhir dan transisi tidak terpotong tiba-tiba
+          duration = parseFloat((exactDuration + 0.4).toFixed(2)) 
+          console.log(`✓ Calculated voice duration for scene ${scene.order_index + 1}: ${duration}s`)
+        } else {
+          throw new Error('ffprobe returned invalid number')
+        }
       } catch (durationErr) {
-        console.error(`Failed to calculate audio duration for scene ${scene.order_index + 1}: ${durationErr.message}`)
+        console.error(`Failed to calculate audio duration for scene ${scene.order_index + 1}: ${durationErr.message}. Fallback to 10s.`)
       }
 
       // 3. Update scene in storyboard json
