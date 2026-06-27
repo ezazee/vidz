@@ -4,14 +4,13 @@ async function main() {
   const storyboard = JSON.parse(await fs.readFile('storyboard.json', 'utf8')).storyboard
   const fps = 30
   
-  // Hitung total durasi video
-  let totalDuration = 0
+  // Hitung total durasi video dengan logika yang persis sama dengan Root.tsx
+  let totalFrames = 0
   for (const scene of storyboard.scenes) {
-    totalDuration += Number(scene.duration || 6)
+    const sceneDuration = Number(scene.duration || 6)
+    totalFrames += Math.max(1, Math.round(sceneDuration * fps))
   }
   
-  const totalFrames = Math.max(1, Math.round(totalDuration * fps))
-  console.log(`Total duration: ${totalDuration} seconds`)
   console.log(`Total frames: ${totalFrames}`)
   
   // Bagi menjadi 8 potongan (chunks) seimbang
