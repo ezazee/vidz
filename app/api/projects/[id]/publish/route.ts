@@ -132,6 +132,7 @@ export async function POST(
       body: JSON.stringify({
         title: finalTitle,
         content: finalDescription,
+        post: finalDescription, // Ayrshare standard uses 'post'
         platforms: [{ 
           platform: 'youtube', 
           accountId: config.youtube_account_id,
