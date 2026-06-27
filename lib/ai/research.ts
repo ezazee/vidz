@@ -36,3 +36,4 @@ Schema: { "summary": string, "facts": string[], "timeline": [{ "year": string, "
     console.error('Gagal mem-parse research JSON. Konten asli:', content)
     throw new Error(`Format JSON Research dari AI tidak valid: ${(err as Error).message}`)
   }
+}
