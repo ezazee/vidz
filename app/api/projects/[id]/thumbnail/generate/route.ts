@@ -52,10 +52,11 @@ OUTPUT EXCLUSIVELY A RAW JSON OBJECT with these 4 keys. DO NOT wrap in markdown 
       const result = await Promise.race([enhancePromise, timeoutPromise])
       if (result) {
         try {
-          // Remove potential markdown formatting (```json ... ```)
           let cleanStr = result.trim()
-          if (cleanStr.startsWith('```')) {
-            cleanStr = cleanStr.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '')
+          const startCurly = cleanStr.indexOf('{')
+          const endCurly = cleanStr.lastIndexOf('}')
+          if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+            cleanStr = cleanStr.substring(startCurly, endCurly + 1)
           }
           
           const parsed = JSON.parse(cleanStr.trim())

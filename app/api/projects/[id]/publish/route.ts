@@ -134,13 +134,17 @@ export async function POST(
           accountId: config.youtube_account_id,
           options: {
             privacyStatus: 'public',
-            ...(project.thumbnail_url ? { thumbnailUrl: project.thumbnail_url } : {})
+            ...(project.thumbnail_url ? { thumbnailUrl: project.thumbnail_url, thumbNail: project.thumbnail_url } : {})
           }
         }],
         mediaItems: mediaItems,
         publishNow: true,
         // Fallback backward compatibility for Ayrshare-like API schemas
         youtubeOptions: {
+          privacyStatus: 'public',
+          ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
+        },
+        youTubeOptions: {
           privacyStatus: 'public',
           ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
         }

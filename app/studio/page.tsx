@@ -16,7 +16,8 @@ import {
   MoonStar,
   Rocket,
   HelpCircle,
-  Swords
+  Swords,
+  Plus
 } from 'lucide-react'
 
 const THEMES = [
@@ -270,6 +271,20 @@ export default function StudioPage() {
     }
   }
 
+  
+  const resetStudio = () => {
+    setTopic('')
+    setRunning(false)
+    setProjectId(null)
+    setStoryboard(null)
+    setRenderJobId(null)
+    setRenderStatus('idle')
+    setRenderLog('')
+    setVideoUrl(null)
+    setStages(buildStages())
+    localStorage.removeItem('activeProjectId')
+  }
+
   const hasStarted = stages.some((s: Stage) => s.status !== 'idle')
   const pipelineDone = stages.every((s: Stage) => s.status === 'done')
   const sb = storyboard as {
@@ -311,9 +326,12 @@ export default function StudioPage() {
         </header>
 
         {/* Content Container */}
+        
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* input card */}
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            {/* Kiri: Form & Storyboard */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* input card */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-slate-700">Pilih Tema & Topik Utama</h3>
@@ -423,7 +441,95 @@ export default function StudioPage() {
               </div>
             </div>
 
-            {/* pipeline progress */}
+            
+              {/* storyboard scenes */}
+            {sb && (sb.scenes ?? []).length > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg">{sb.title}</h3>
+                    <p className="text-xs text-slate-400 mt-1">Daftar skrip adegan ({(sb.scenes ?? []).length} adegan) yang disusun untuk visualisasi.</p>
+                  </div>
+                  {projectId && (
+                    <button
+                      onClick={() => router.push(`/projects/${projectId}`)}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                    >
+                      Buka Detail Adegan &rarr;
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-3 gap-3 text-xs border border-slate-100 bg-slate-50/50 p-3.5 rounded-lg">
+                  {(['genre', 'visual_style', 'voice_style'] as const).map(k => (
+                    <div key={k} className="space-y-0.5">
+                      <span className="text-slate-400 block capitalize font-medium">{k.replace('_', ' ')}</span>
+                      <span className="font-semibold text-slate-700 block">{String((sb.director as Record<string, unknown>)?.[k] ?? 'Standard')}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-slate-50/20">
+                  {(sb.scenes ?? []).map((scene) => (
+                    <div key={scene.id} className="p-4 flex gap-4 text-xs">
+                      <span className="font-bold text-indigo-600 shrink-0">#{scene.order_index + 1}</span>
+                      <div className="space-y-1">
+                        <p className="text-slate-700 font-medium leading-relaxed">{scene.narration}</p>
+                        <p className="text-[10px] text-slate-400 font-mono italic">Prompt: {scene.image_prompt}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            </div>
+            
+
+            {/* Kanan: Progress & Result (Sticky) */}
+            <div className="lg:col-span-5 space-y-6 sticky top-6">
+              {/* video result */}
+            {videoUrl && (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
+                      <Video className="size-4" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800">Hasil Video Siap Ditonton</h3>
+                  </div>
+                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 font-medium">Rendered successfully</span>
+                </div>
+                
+                <video src={videoUrl} controls className="w-full rounded-lg bg-black shadow-inner aspect-video" />
+                
+                <div className="flex gap-3">
+                  <a
+                    href={videoUrl}
+                    download
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-5 py-2.5 text-sm font-medium hover:bg-slate-800 transition-all shadow-sm"
+                  >
+                    Download MP4
+                  </a>
+                  {projectId && (
+                    <button
+                      onClick={() => router.push(`/projects/${projectId}`)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-5 py-2.5 text-sm font-medium transition-all shadow-sm"
+                    >
+                      Buka Detail & Publish Storyboard
+                    </button>
+                  )}
+                </div>
+                  <button
+                    onClick={resetStudio}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-5 py-3 text-sm font-bold transition-all border border-indigo-200 shadow-sm"
+                  >
+                    <Plus className="size-4" /> Bikin Video Topik Baru
+                  </button>
+              </div>
+            )}
+
+            
+              {/* pipeline progress */}
             {hasStarted && (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
                 <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between">
@@ -467,83 +573,11 @@ export default function StudioPage() {
               </div>
             )}
 
-            {/* video result */}
-            {videoUrl && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
-                      <Video className="size-4" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800">Hasil Video Siap Ditonton</h3>
-                  </div>
-                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 font-medium">Rendered successfully</span>
-                </div>
-                
-                <video src={videoUrl} controls className="w-full rounded-lg bg-black shadow-inner aspect-video" />
-                
-                <div className="flex gap-3">
-                  <a
-                    href={videoUrl}
-                    download
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-5 py-2.5 text-sm font-medium hover:bg-slate-800 transition-all shadow-sm"
-                  >
-                    Download MP4
-                  </a>
-                  {projectId && (
-                    <button
-                      onClick={() => router.push(`/projects/${projectId}`)}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-5 py-2.5 text-sm font-medium transition-all shadow-sm"
-                    >
-                      Buka Detail & Publish Storyboard
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* storyboard scenes */}
-            {sb && (sb.scenes ?? []).length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-lg">{sb.title}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Daftar skrip adegan ({(sb.scenes ?? []).length} adegan) yang disusun untuk visualisasi.</p>
-                  </div>
-                  {projectId && (
-                    <button
-                      onClick={() => router.push(`/projects/${projectId}`)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                    >
-                      Buka Detail Adegan &rarr;
-                    </button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-3 gap-3 text-xs border border-slate-100 bg-slate-50/50 p-3.5 rounded-lg">
-                  {(['genre', 'visual_style', 'voice_style'] as const).map(k => (
-                    <div key={k} className="space-y-0.5">
-                      <span className="text-slate-400 block capitalize font-medium">{k.replace('_', ' ')}</span>
-                      <span className="font-semibold text-slate-700 block">{String((sb.director as Record<string, unknown>)?.[k] ?? 'Standard')}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-slate-50/20">
-                  {(sb.scenes ?? []).map((scene) => (
-                    <div key={scene.id} className="p-4 flex gap-4 text-xs">
-                      <span className="font-bold text-indigo-600 shrink-0">#{scene.order_index + 1}</span>
-                      <div className="space-y-1">
-                        <p className="text-slate-700 font-medium leading-relaxed">{scene.narration}</p>
-                        <p className="text-[10px] text-slate-400 font-mono italic">Prompt: {scene.image_prompt}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            
+            </div>
           </div>
         </main>
+
       </div>
     </div>
   )
