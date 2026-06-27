@@ -5,9 +5,6 @@ import { generateOutline } from '../lib/ai/outline'
 import { generateScenes } from '../lib/ai/scenes'
 import { generateSeoMetadata } from '../lib/ai/seo'
 
-// Fix missing env vars simulation since next/server env isn't fully loaded
-process.env.TZ = 'UTC'
-
 async function runPipeline() {
   const id = process.argv[2]
   if (!id) {
@@ -28,8 +25,15 @@ async function runPipeline() {
     await sql`DELETE FROM research WHERE project_id = ${id}`
     const research = await generateResearch(topic)
     await sql`
-      INSERT INTO research (project_id, summary, facts, timeline, references_list, status)
-      VALUES (${id}, ${research.summary}, ${JSON.stringify(research.facts)}::jsonb, ${JSON.stringify(research.timeline)}::jsonb, ${JSON.stringify(research.references)}::jsonb, 'completed')
+      INSERT INTO research (project_id, summary, facts, timeline, "references", status)
+      VALUES (
+        ${id},
+        ${research.summary},
+        ${JSON.stringify(research.facts)}::jsonb,
+        ${JSON.stringify(research.timeline)}::jsonb,
+        ${JSON.stringify(research.references)}::jsonb,
+        'completed'
+      )
     `
     console.log('[Pipeline] Research completed.')
 
@@ -38,8 +42,20 @@ async function runPipeline() {
     await sql`DELETE FROM director WHERE project_id = ${id}`
     const director = await generateDirector({ topic, research })
     await sql`
-      INSERT INTO director (project_id, visual_style, voice_style, image_style, camera_style, transition, emotion, status)
-      VALUES (${id}, ${director.visual_style}, ${director.voice_style}, ${director.image_style}, ${director.camera_style}, ${director.transition}, ${director.emotion}, 'completed')
+      INSERT INTO director (
+        project_id, genre, visual_style, emotion, lighting, color_palette,
+        thumbnail_style, voice_style, camera_style, transition, image_style,
+        visual_bible, character_bible, environment_bible, camera_bible,
+        motion_bible, thumbnail_bible, status
+      )
+      VALUES (
+        ${id}, ${director.genre ?? ''}, ${director.visual_style}, ${director.emotion}, ${director.lighting ?? ''},
+        ${JSON.stringify(director.color_palette ?? [])}::jsonb, ${director.thumbnail_style ?? ''}, ${director.voice_style},
+        ${director.camera_style}, ${director.transition}, ${director.image_style},
+        ${JSON.stringify(director.visual_bible ?? {})}::jsonb, ${JSON.stringify(director.character_bible ?? {})}::jsonb,
+        ${JSON.stringify(director.environment_bible ?? {})}::jsonb, ${JSON.stringify(director.camera_bible ?? {})}::jsonb,
+        ${JSON.stringify(director.motion_bible ?? {})}::jsonb, ${JSON.stringify(director.thumbnail_bible ?? {})}::jsonb, 'completed'
+      )
     `
     console.log('[Pipeline] Director completed.')
 
@@ -53,17 +69,17 @@ async function runPipeline() {
     `
     console.log('[Pipeline] Outline completed.')
 
-    // 4. Scenes (Chunked to prevent AI rate limits)
+    // 4. Scenes
     console.log('[Pipeline] Running Scenes...')
     await sql`DELETE FROM scenes WHERE project_id = ${id}`
     await sql`DELETE FROM seo_metadata WHERE project_id = ${id}`
     
-    const allScenes = []
+    const allScenes: any[] = []
     let currentOffset = 0
     let globalOrderIndex = 0
 
     for (const section of outline.sections) {
-      console.log(`[Pipeline] Generating scenes for section: ${section.type}...`)
+      console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
       const numScenes = section.type === 'intro' || section.type === 'ending' ? 6 : 8
       
       const scenes = await generateScenes({
@@ -90,7 +106,7 @@ async function runPipeline() {
       
       currentOffset += numScenes
     }
-    console.log('[Pipeline] Scenes completed.')
+    console.log(`[Pipeline] Scenes completed. Total: ${allScenes.length} scenes.`)
 
     // 5. SEO
     console.log('[Pipeline] Running SEO...')
@@ -102,11 +118,15 @@ async function runPipeline() {
     })
     await sql`
       INSERT INTO seo_metadata (project_id, title, description, tags, hashtags, status)
-      VALUES (${id}, ${seo.title}, ${seo.description}, ${JSON.stringify(seo.tags)}::jsonb, ${JSON.stringify(seo.hashtags)}::jsonb, 'completed')
+      VALUES (
+        ${id}, ${seo.title}, ${seo.description},
+        ${JSON.stringify(seo.tags)}::jsonb, ${JSON.stringify(seo.hashtags)}::jsonb,
+        'completed'
+      )
     `
     console.log('[Pipeline] SEO completed.')
 
-    console.log('[Pipeline] All AI stages completed successfully!')
+    console.log('[Pipeline] ✅ All AI stages completed successfully!')
     process.exit(0)
   } catch (err) {
     console.error('[Pipeline] Error:', err)
