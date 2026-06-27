@@ -34,7 +34,7 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
       role: 'system',
       content: `Kamu adalah penulis naskah dokumenter profesional kelas dunia. Balas HANYA JSON valid.
 Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "pexels_query": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
-- narration: SANGAT KRITIKAL! Tulis narasi yang *visceral*, emosional, dan penuh ketegangan (3-5 kalimat). JANGAN PERNAH gunakan kalimat klise/generik seperti "Halo semuanya", "Pada suatu hari", atau "Selamat datang di video ini". Gunakan teknik "Show, Don't Tell". Langsung tembak dengan fakta gila atau kalimat misterius! Gunakan bahasa Indonesia yang baku namun dramatis seperti dokumenter Netflix.
+- narration: SANGAT KRITIKAL! Tulis narasi yang *visceral*, emosional, dan penuh ketegangan. WAJIB PENDEK DAN PADAT (Maksimal 20-35 kata, sekitar 1-2 kalimat per scene). Durasi baca TTS harus tepat 12-15 detik! JANGAN PERNAH gunakan kalimat klise/generik. Gunakan teknik "Show, Don't Tell". Langsung tembak dengan fakta gila! Gunakan bahasa Indonesia baku namun dramatis seperti dokumenter Netflix.
 - subtitle: versi pendek narration (max 10 kata)
 - image_prompt: prompt bahasa Inggris detail untuk image AI, sesuai visual_style. Jelaskan objek, komposisi, pencahayaan, dan detail visual secara spesifik.
 - pexels_query: SANGAT KRITIKAL! Ini digunakan untuk mencari video stok (video dunia nyata dari Pexels).
