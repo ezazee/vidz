@@ -23,7 +23,7 @@ Kamu harus mengembalikan data HANYA dalam format JSON valid tanpa penjelasan tam
 
 Skema JSON yang harus dikembalikan:
 {
-  "title": "Judul YouTube yang sangat teroptimasi SEO, berwibawa, mengandung kata kunci utama yang sering dicari, namun tetap memiliki tingkat CTR tinggi (menarik perhatian) tanpa terkesan clickbait murahan.",
+  "title": "Judul YouTube teroptimasi SEO. MAKSIMAL 80 HURUF! JANGAN LEBIH DARI 80 KARAKTER! Menarik dan tidak clickbait murahan.",
   "description": "Deskripsi YouTube premium yang panjang dan kaya informasi. Harus mencakup: 1. Paragraf pembuka yang memikat dan penuh kata kunci relevan. 2. Ringkasan poin-poin penting dari video secara naratif dan edukatif. 3. Daftar kata kunci terkait dalam konteks kalimat alami untuk membantu algoritma pencarian. Harap gunakan bahasa Indonesia yang baku, menarik, dan profesional.",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "minimal 10 tag pencarian spesifik dan relevan"],
   "hashtags": ["#tag1", "#tag2", "#tag3", "3-5 hashtag populer yang relevan"]

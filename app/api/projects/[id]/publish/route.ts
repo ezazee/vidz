@@ -74,7 +74,12 @@ export async function POST(
     `
     
     // Susun deskripsi & judul teroptimasi SEO AI
-    const finalTitle = (project.seo_title || project.topic).slice(0, 100) // Batas karakter judul YouTube adalah 100
+    let rawTitle = (project.seo_title || project.topic).trim();
+    // Hapus kutip ganda/tunggal di awal dan akhir yang mungkin di-generate AI
+    rawTitle = rawTitle.replace(/^["']|["']$/g, '').trim();
+    
+    // Batas karakter judul YouTube adalah 100
+    const finalTitle = rawTitle.length > 100 ? rawTitle.slice(0, 97) + '...' : rawTitle;
     let finalDescription = ''
 
     if (project.seo_description) {
@@ -108,13 +113,10 @@ export async function POST(
 
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
-    // Siapkan Media Items untuk Zernio
+    // Siapkan Media Items untuk Zernio (hanya video)
     const mediaItems = []
     if (project.video_url) {
       mediaItems.push({ url: project.video_url, type: 'video' })
-    }
-    if (project.thumbnail_url) {
-      mediaItems.push({ url: project.thumbnail_url, type: 'image' })
     }
 
     // 4. Kirim permintaan posting/upload ke Zernio API
@@ -127,9 +129,21 @@ export async function POST(
       body: JSON.stringify({
         title: finalTitle,
         content: finalDescription,
-        platforms: [{ platform: 'youtube', accountId: config.youtube_account_id }],
+        platforms: [{ 
+          platform: 'youtube', 
+          accountId: config.youtube_account_id,
+          options: {
+            privacyStatus: 'public',
+            ...(project.thumbnail_url ? { thumbnailUrl: project.thumbnail_url } : {})
+          }
+        }],
         mediaItems: mediaItems,
-        publishNow: true
+        publishNow: true,
+        // Fallback backward compatibility for Ayrshare-like API schemas
+        youtubeOptions: {
+          privacyStatus: 'public',
+          ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
+        }
       }),
     })
 
