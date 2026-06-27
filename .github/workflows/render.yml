@@ -122,7 +122,7 @@ jobs:
       - name: Render video chunk
         run: |
           mkdir -p output
-          npx remotion render src/index.ts StoryZVideo output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2
+          npx remotion render src/index.ts StoryZVideo output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2 --timeout=120000
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           REMOTION_LOCAL_ASSETS: 'true'

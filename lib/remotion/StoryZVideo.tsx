@@ -8,7 +8,7 @@ import {
   staticFile,
   useCurrentFrame,
   useVideoConfig,
-  Video,
+  OffthreadVideo,
 } from 'remotion'
 import type { SceneJSON, StoryboardJSON } from '../pipeline/types'
 import { storyboardFixture } from './storyboard-fixture'
@@ -204,7 +204,7 @@ function SceneVideos({ scene }: SceneProps) {
         
         return (
           <Sequence key={`${url}-${i}`} from={start} durationInFrames={length}>
-            <Video
+            <OffthreadVideo
               src={url}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               muted
