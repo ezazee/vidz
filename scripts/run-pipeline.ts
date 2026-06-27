@@ -126,6 +126,61 @@ async function runPipeline() {
     `
     console.log('[Pipeline] SEO completed.')
 
+    // 6. Thumbnail (auto-generate from director thumbnail_bible)
+    console.log('[Pipeline] Generating thumbnail...')
+    try {
+      const thumbnailPrompt = (director as any).thumbnail_bible?.composition
+        || `${topic} - cinematic documentary thumbnail, dramatic lighting, high contrast`
+
+      const thumbnailRes = await fetch(
+        `${process.env.AI_BASE_URL}/images/generations`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.AI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: process.env.IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0',
+            prompt: thumbnailPrompt,
+            n: 1,
+            size: '1792x1024',
+            response_format: 'url',
+          }),
+        }
+      )
+
+      if (!thumbnailRes.ok) throw new Error(`Thumbnail API failed: ${thumbnailRes.status}`)
+
+      const thumbnailData = await thumbnailRes.json()
+      let thumbnailUrl: string | null = null
+
+      if (thumbnailData.data?.[0]?.url) {
+        // Download the image and upload to R2
+        const { uploadToR2 } = await import('../lib/r2')
+        const imgRes = await fetch(thumbnailData.data[0].url)
+        const buffer = Buffer.from(await imgRes.arrayBuffer())
+        const filename = `projects/${id}/thumbnails/auto-${Date.now()}.jpg`
+        thumbnailUrl = await uploadToR2(filename, buffer, 'image/jpeg')
+      } else if (thumbnailData.data?.[0]?.b64_json) {
+        const { uploadToR2 } = await import('../lib/r2')
+        const buffer = Buffer.from(thumbnailData.data[0].b64_json, 'base64')
+        const filename = `projects/${id}/thumbnails/auto-${Date.now()}.jpg`
+        thumbnailUrl = await uploadToR2(filename, buffer, 'image/jpeg')
+      }
+
+      if (thumbnailUrl) {
+        await sql`
+          INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
+          VALUES (${id}, ${thumbnailPrompt}, ${thumbnailUrl}, null, 'completed')
+        `
+        console.log(`[Pipeline] Thumbnail generated and saved: ${thumbnailUrl}`)
+      }
+    } catch (thumbErr) {
+      console.error('[Pipeline] Thumbnail generation failed (non-fatal):', thumbErr)
+      // Non-fatal: pipeline tetap sukses walau thumbnail gagal
+    }
+
     console.log('[Pipeline] ✅ All AI stages completed successfully!')
     process.exit(0)
   } catch (err) {
