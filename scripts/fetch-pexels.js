@@ -3,11 +3,23 @@ const fs = require('fs/promises')
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function fetchPexelsVideoForScene(scene, apiKey) {
-  if (!scene.pexels_query) return
+  let query = scene.pexels_query
+  
+  // Fallback for older storyboards without pexels_query: Extract meaningful words from image_prompt
+  if (!query && scene.image_prompt) {
+    const ignoreWords = ['cinematic', 'shot', 'wide', 'close', 'angle', 'view', 'photorealistic', 'realistic', 'hyperrealistic', 'high', 'resolution', 'detail', 'detailed', 'photography', 'photo', 'camera', 'lens', 'style', 'lighting', 'background', 'foreground', 'with', 'that', 'this']
+    const words = scene.image_prompt.toLowerCase().replace(/[^\w\s]/g, '').split(' ')
+      .filter(w => w.length > 3 && !ignoreWords.includes(w))
+    
+    // Ambil 2 kata pertama yang bukan kata teknis kamera
+    query = words.slice(0, 2).join(' ')
+  }
+
+  if (!query) return
 
   try {
-    console.log(`Searching Pexels for scene ${scene.order_index + 1}: "${scene.pexels_query}"...`)
-    const res = await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(scene.pexels_query)}&per_page=3&orientation=landscape`, {
+    console.log(`Searching Pexels for scene ${scene.order_index + 1}: "${query}"...`)
+    const res = await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=15&orientation=landscape`, {
       headers: {
         Authorization: apiKey
       }
@@ -20,17 +32,25 @@ async function fetchPexelsVideoForScene(scene, apiKey) {
 
     const data = await res.json()
     if (data.videos && data.videos.length > 0) {
-      // Pick the first video
-      const video = data.videos[0]
-      // Find an HD quality file (1080p if possible, fallback to 720p)
-      const hdFile = video.video_files.find(f => f.width >= 1920) || video.video_files.find(f => f.width >= 1280) || video.video_files[0]
+      scene.pexels_video_urls = []
       
-      if (hdFile && hdFile.link) {
-        scene.pexels_video_url = hdFile.link
-        console.log(`✓ Found Pexels video for scene ${scene.order_index + 1}: ${hdFile.link.substring(0, 50)}...`)
+      // Loop through videos and get up to 3 HD links
+      for (const video of data.videos) {
+        if (scene.pexels_video_urls.length >= 3) break // We only need up to 3 videos per scene
+        
+        // Find an HD quality file (1080p if possible, fallback to 720p)
+        const hdFile = video.video_files.find(f => f.width >= 1920) || video.video_files.find(f => f.width >= 1280) || video.video_files[0]
+        
+        if (hdFile && hdFile.link) {
+          scene.pexels_video_urls.push(hdFile.link)
+        }
+      }
+      
+      if (scene.pexels_video_urls.length > 0) {
+        console.log(`✓ Found ${scene.pexels_video_urls.length} Pexels videos for scene ${scene.order_index + 1}`)
       }
     } else {
-      console.log(`No Pexels video found for "${scene.pexels_query}". Falling back to AI image later.`)
+      console.log(`No Pexels video found for "${query}". Falling back to AI image later.`)
     }
   } catch (err) {
     console.error(`Exception during Pexels fetch for scene ${scene.order_index + 1}:`, err.message)

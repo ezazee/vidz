@@ -4,8 +4,8 @@ const { uploadToR2 } = require('./r2-upload')
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
-  if (scene.pexels_video_url) {
-    console.log(`Skipping AI image generation for scene ${scene.order_index + 1} because a Pexels video was found.`)
+  if (scene.pexels_video_urls && scene.pexels_video_urls.length > 0) {
+    console.log(`Skipping AI image generation for scene ${scene.order_index + 1} because Pexels videos were found.`)
     return
   }
 

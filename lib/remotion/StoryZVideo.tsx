@@ -122,26 +122,22 @@ function SceneSubtitle({ scene }: SceneProps) {
 
   const words = text.split(' ')
   
-  // Group words into chunks of 5 for 1-line dynamic display
-  const wordsPerChunk = 5
+  // Group words into chunks of 6 for 1-line dynamic display
+  const wordsPerChunk = 6
   const chunks: string[][] = []
   for (let i = 0; i < words.length; i += wordsPerChunk) {
     chunks.push(words.slice(i, i + wordsPerChunk))
   }
 
-  // Hitung durasi per chunk
+  // Use 100% of the duration to pace evenly with the narrator's pauses (commas, periods)
   const totalFrames = Math.max(1, Math.round(scene.duration * fps))
-  const availableFrames = totalFrames * 0.92 // leave a tiny bit of empty time at the end
-  const durationPerChunk = Math.max(1, availableFrames / chunks.length)
+  const durationPerChunk = Math.max(1, totalFrames / chunks.length)
 
   const activeChunkIndex = Math.floor(frame / durationPerChunk)
   
-  // Jika frame sudah melebihi waktu bicara, hilangkan teks
-  if (activeChunkIndex >= chunks.length || frame > availableFrames) return null
+  if (activeChunkIndex >= chunks.length) return null
 
   const activeChunk = chunks[activeChunkIndex]
-  const chunkStartFrame = activeChunkIndex * durationPerChunk
-  const durationPerWord = Math.max(1, durationPerChunk / activeChunk.length)
 
   return (
     <div
@@ -167,22 +163,6 @@ function SceneSubtitle({ scene }: SceneProps) {
       }}
     >
       {activeChunk.map((word, index) => {
-        // Tentukan frame mulai untuk setiap kata secara proporsional
-        const startFrame = chunkStartFrame + (index * durationPerWord)
-        const fadeDuration = Math.min(6, durationPerWord) // quick fade-in
-        
-        const wordOpacity = interpolate(frame, [startFrame, startFrame + fadeDuration], [0, 1], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-          easing: Easing.bezier(0.25, 1, 0.5, 1),
-        })
-
-        // Highlight animation (scale up slightly when active)
-        const scale = interpolate(frame, [startFrame, startFrame + fadeDuration], [0.95, 1], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-
         // Check if word is a "keyword" to highlight (contains numbers, starts with capital letter, or is long)
         const isNumeric = /\d/.test(word)
         const isCapitalized = index > 0 && /^[A-Z]/.test(word.replace(/['"“]/g, ''))
@@ -193,12 +173,9 @@ function SceneSubtitle({ scene }: SceneProps) {
           <span
             key={`${activeChunkIndex}-${index}`}
             style={{
-              opacity: wordOpacity,
               color,
               display: 'inline-block',
               marginRight: '14px',
-              transform: `scale(${scale})`,
-              transition: 'color 0.2s ease',
             }}
           >
             {word}
@@ -206,6 +183,36 @@ function SceneSubtitle({ scene }: SceneProps) {
         )
       })}
     </div>
+  )
+}
+
+function SceneVideos({ scene }: SceneProps) {
+  const { fps } = useVideoConfig()
+  const urls = scene.pexels_video_urls || []
+  
+  if (urls.length === 0) return null
+
+  const durationInFrames = Math.max(1, Math.round(scene.duration * fps))
+  const framesPerVideo = Math.max(1, Math.floor(durationInFrames / urls.length))
+  
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      {urls.map((url, i) => {
+        const start = i * framesPerVideo
+        // The last video takes any remaining frames due to rounding
+        const length = i === urls.length - 1 ? durationInFrames - start : framesPerVideo
+        
+        return (
+          <Sequence key={`${url}-${i}`} from={start} durationInFrames={length}>
+            <Video
+              src={url}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              muted
+            />
+          </Sequence>
+        )
+      })}
+    </AbsoluteFill>
   )
 }
 
@@ -406,17 +413,12 @@ function SceneTransition() {
 }
 
 function StoryScene({ scene }: SceneProps & { index: number }) {
-  const index = scene.order_index ?? 0
   
   return (
     <AbsoluteFill>
       {/* Background Image / Motion / Video */}
-      {scene.pexels_video_url ? (
-        <Video
-          src={scene.pexels_video_url}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          muted // we provide our own voiceover and music
-        />
+      {scene.pexels_video_urls && scene.pexels_video_urls.length > 0 ? (
+        <SceneVideos scene={scene} />
       ) : (
         <SceneImage scene={scene} />
       )}
