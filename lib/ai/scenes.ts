@@ -27,20 +27,20 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
     ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
     : ''
 
-  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 5 : 6
+  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 8
 
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah penulis naskah dokumenter profesional. Balas HANYA JSON valid.
+      content: `Kamu adalah penulis naskah dokumenter profesional kelas dunia. Balas HANYA JSON valid.
 Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "pexels_query": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
-- narration: narasi panjang, mendalam, dan kaya informasi untuk voiceover (3-5 kalimat detail). Gunakan bahasa Indonesia yang baku, dramatis, dan mengalir seperti dokumenter profesional.
+- narration: SANGAT KRITIKAL! Tulis narasi yang *visceral*, emosional, dan penuh ketegangan (3-5 kalimat). JANGAN PERNAH gunakan kalimat klise/generik seperti "Halo semuanya", "Pada suatu hari", atau "Selamat datang di video ini". Gunakan teknik "Show, Don't Tell". Langsung tembak dengan fakta gila atau kalimat misterius! Gunakan bahasa Indonesia yang baku namun dramatis seperti dokumenter Netflix.
 - subtitle: versi pendek narration (max 10 kata)
 - image_prompt: prompt bahasa Inggris detail untuk image AI, sesuai visual_style. Jelaskan objek, komposisi, pencahayaan, dan detail visual secara spesifik.
 - pexels_query: SANGAT KRITIKAL! Ini digunakan untuk mencari video stok (video dunia nyata dari Pexels).
   - ISI dengan 1-2 kata benda bahasa Inggris HANYA JIKA adegan adalah suasana umum/B-Roll yang pasti tersedia di stok video (contoh: "ocean", "forest", "city night", "sad person", "galaxy", "rain", "crowd").
   - WAJIB KOSONGKAN ("") JIKA adegan membutuhkan hal spesifik yang tidak mungkin ada di stok video: tokoh sejarah, makhluk mitologi, hewan spesifik bertarung, monster, senjata kuno, adegan perang detail, wajah karakter fiksi, atau objek sangat unik. Jika dikosongkan, sistem akan menggambarnya menggunakan AI Image Generator agar 100% akurat dan sesuai topik.
-- duration: 15-20 detik per scene (sesuai panjang narasi yang dibacakan)
+- duration: 12-18 detik per scene (sesuai panjang narasi yang dibacakan, target total video 8-10 menit)
 - order_index mulai dari ${input.orderOffset}`,
     },
     {

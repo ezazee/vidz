@@ -15,25 +15,25 @@ export async function POST(
 
   try {
     const body = await request.json()
-    const { image, overlay_text, style } = body
+    const { image, imageUrl, overlay_text, style } = body
 
-    if (!image || !image.startsWith('data:image/png;base64,')) {
-      return NextResponse.json({ error: 'Format gambar Base64 PNG diperlukan' }, { status: 400 })
+    let finalImageUrl = imageUrl
+    if (image && image.startsWith('data:image/png;base64,')) {
+      const base64Data = image.replace(/^data:image\/png;base64,/, '')
+      const buffer = Buffer.from(base64Data, 'base64')
+      const filename = `projects/${id}/thumbnails/${Date.now()}.png`
+      console.log(`Uploading customized thumbnail for project ${id} to Cloudflare R2: ${filename}...`)
+      finalImageUrl = await uploadToR2(filename, buffer, 'image/png')
     }
 
-    // 1. Decode Base64 image
-    const base64Data = image.replace(/^data:image\/png;base64,/, '')
-    const buffer = Buffer.from(base64Data, 'base64')
-
-    // 2. Kirim ke Cloudflare R2 secara langsung
-    const filename = `projects/${id}/thumbnails/${Date.now()}.png`
-    console.log(`Uploading customized thumbnail for project ${id} to Cloudflare R2: ${filename}...`)
-    const imageUrl = await uploadToR2(filename, buffer, 'image/png')
+    if (!finalImageUrl) {
+      return NextResponse.json({ error: 'Format gambar Base64 PNG atau imageUrl diperlukan' }, { status: 400 })
+    }
 
     // 4. Simpan ke tabel thumbnails di database
     await sql`
       INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
-      VALUES (${id}, ${style || 'vox'}, ${imageUrl}, ${overlay_text || null}, 'completed')
+      VALUES (${id}, ${style || 'ai_pure'}, ${finalImageUrl}, ${overlay_text || null}, 'completed')
     `
 
     console.log(`Thumbnail successfully saved for project ${id}: ${imageUrl}`)

@@ -11,8 +11,21 @@ import {
   WandSparkles,
   Video,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Compass,
+  MoonStar,
+  Rocket,
+  HelpCircle,
+  Swords
 } from 'lucide-react'
+
+const THEMES = [
+  { id: 'Ancient History', label: 'Sejarah Kuno', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+  { id: 'Unsolved Mysteries', label: 'Misteri & Kriminal', icon: MoonStar, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { id: 'Space & Astronomy', label: 'Luar Angkasa', icon: Rocket, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  { id: 'What-If Scenarios', label: 'Skenario "What-If"', icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  { id: 'Mythology & Folklore', label: 'Mitologi & Legenda', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' }
+]
 
 type StageStatus = 'idle' | 'running' | 'done' | 'error'
 type RenderStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
@@ -119,6 +132,7 @@ export default function StudioPage() {
 
   // Studio States
   const [topic, setTopic] = useState('')
+  const [selectedTheme, setSelectedTheme] = useState('Unsolved Mysteries')
   const [running, setRunning] = useState(false)
   const [stages, setStages] = useState<Stage[]>(buildStages())
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -137,7 +151,7 @@ export default function StudioPage() {
   const fetchRecommendations = async () => {
     setLoadingRecs(true)
     try {
-      const res = await fetch('/api/topics/recommendations')
+      const res = await fetch(`/api/topics/recommendations?theme=${encodeURIComponent(selectedTheme)}`)
       if (res.ok) {
         const data = await res.json()
         setRecommendations(data.topics || [])
@@ -161,31 +175,50 @@ export default function StudioPage() {
     }, 2500)
   }
 
-  // polling render job and fetching initial recommendations on mount
+  // Polling unified pipeline status
   useEffect(() => {
-    fetchRecommendations()
-  }, [])
-
-  useEffect(() => {
-    if (!renderJobId || renderStatus === 'completed' || renderStatus === 'failed') return
+    if (!projectId || !running) return
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/render-jobs/${renderJobId}`)
+        const res = await fetch(`/api/projects/${projectId}/pipeline/status`)
         if (!res.ok) return
-        const job = (await res.json()).render_job
-        setRenderStatus(job.status)
-        setRenderLog(RENDER_LOGS[job.status] ?? '')
-        if (job.status === 'completed' && job.video_url) {
-          setVideoUrl(job.video_url)
+        const data = await res.json()
+        const s = data.stages
+        
+        setStages(prev => prev.map(st => {
+          const dbStatus = s[st.key]
+          // map DB status to UI status
+          let uiStatus: StageStatus = 'idle'
+          if (dbStatus === 'completed') uiStatus = 'done'
+          if (dbStatus === 'processing' || dbStatus === 'pending') uiStatus = 'running'
+          if (dbStatus === 'failed') uiStatus = 'error'
+          
+          if (uiStatus === 'running' && !st.log) {
+            startLogCycle(st.key)
+          } else if (uiStatus === 'done' || uiStatus === 'error') {
+             // Let log remain or clear it if handled elsewhere
+          }
+          return { ...st, status: uiStatus }
+        }))
+        
+        setRenderStatus(s.render)
+        if (s.render !== 'idle') {
+           setRenderLog(RENDER_LOGS[s.render] ?? '')
+        }
+        
+        if (s.render === 'completed' && data.videoUrl) {
+          setVideoUrl(data.videoUrl)
+          setRunning(false)
           clearInterval(pollRef.current!)
         }
-        if (job.status === 'failed') {
+        if (s.render === 'failed' || s.research === 'failed' || s.director === 'failed') {
+          setRunning(false)
           clearInterval(pollRef.current!)
         }
       } catch {}
-    }, 4000)
+    }, 3000)
     return () => clearInterval(pollRef.current!)
-  }, [renderJobId, renderStatus])
+  }, [projectId, running])
 
   function stopLogCycle() {
     if (logTimerRef.current) clearInterval(logTimerRef.current)
@@ -208,52 +241,21 @@ export default function StudioPage() {
 
     let pid: string
     try {
+      const finalTopic = `${topic.trim()} [THEME: ${selectedTheme}]`
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topic.trim() }),
+        body: JSON.stringify({ topic: finalTopic }),
       })
       pid = (await res.json()).project.id
       setProjectId(pid)
+      
+      const pipeRes = await fetch(`/api/projects/${pid}/pipeline`, { method: 'POST' })
+      if (!pipeRes.ok) throw new Error('Gagal memulai background pipeline')
     } catch {
       setRunning(false)
       return
     }
-
-    for (const stage of buildStages()) {
-      const start = Date.now()
-      setStage(stage.key, { status: 'running' })
-      startLogCycle(stage.key)
-      try {
-        const data = await runStageRequest(stage.key, pid)
-        stopLogCycle()
-        setStage(stage.key, { status: 'done', log: undefined, duration: Math.round((Date.now() - start) / 1000) })
-        if (stage.key === 'storyboard') setStoryboard(data.storyboard)
-      } catch (e) {
-        stopLogCycle()
-        setStage(stage.key, { status: 'error', log: undefined, error: (e as Error).message })
-        setRunning(false)
-        return
-      }
-    }
-
-    // dispatch render ke GitHub Actions
-    try {
-      const res = await fetch(`/api/projects/${pid}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'full' }),
-      })
-      const job = (await res.json()).render_job
-      setRenderJobId(job.id)
-      setRenderStatus('pending')
-      setRenderLog(RENDER_LOGS.pending)
-    } catch {
-      setRenderStatus('failed')
-      setRenderLog(RENDER_LOGS.failed)
-    }
-
-    setRunning(false)
   }
 
   const hasStarted = stages.some((s: Stage) => s.status !== 'idle')
@@ -300,10 +302,35 @@ export default function StudioPage() {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-3xl mx-auto space-y-6">
             {/* input card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-700">Mulai Produksi Video Baru</h3>
-                <p className="text-xs text-slate-400">Masukkan topik sejarah, sains, atau dokumenter untuk menyusun storyboard dan merender video otomatis secara paralel.</p>
+                <h3 className="text-sm font-semibold text-slate-700">Pilih Tema & Topik Utama</h3>
+                <p className="text-xs text-slate-400">Pilih genre visual dan BGM sebelum memasukkan topik untuk hasil terbaik.</p>
+              </div>
+
+              {/* Theme Selector */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {THEMES.map(theme => {
+                  const Icon = theme.icon
+                  const isSelected = selectedTheme === theme.id
+                  return (
+                    <button
+                      key={theme.id}
+                      onClick={() => setSelectedTheme(theme.id)}
+                      disabled={running}
+                      className={`flex flex-col items-center justify-center p-3 gap-2 rounded-xl border transition-all text-center ${
+                        isSelected 
+                          ? `${theme.bg} ${theme.border} ring-1 ring-${theme.border.split('-')[1]}-500 shadow-sm` 
+                          : 'border-slate-200 bg-white hover:bg-slate-50 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <Icon className={`size-5 ${isSelected ? theme.color : 'text-slate-400'}`} />
+                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? theme.color : 'text-slate-500'}`}>
+                        {theme.label}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
               
               <div className="flex gap-2">
@@ -326,38 +353,59 @@ export default function StudioPage() {
               </div>
 
               {/* AI Recommendations */}
-              <div className="space-y-2.5 pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    ✨ Rekomendasi Topik AI (Viral & Clickbait)
-                  </span>
-                  <button
-                    onClick={fetchRecommendations}
-                    disabled={loadingRecs || running}
-                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 disabled:opacity-50 transition-all"
-                  >
-                    {loadingRecs ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
-                    Generate Ulang
-                  </button>
+              <div className="space-y-4 pt-6 border-t border-slate-100">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <WandSparkles className="size-3.5 text-indigo-500" /> 
+                    Butuh Ide Topik?
+                  </h3>
+                  <p className="text-xs text-slate-500">Klik tombol di bawah untuk meminta AI memberikan ide topik yang sangat clickbait dan edukatif berdasarkan tema <span className="font-bold text-slate-700">"{THEMES.find(t => t.id === selectedTheme)?.label}"</span>.</p>
                 </div>
                 
-                {loadingRecs && recommendations.length === 0 ? (
-                  <div className="flex items-center gap-2 text-xs text-slate-400 py-2.5 animate-pulse font-medium">
-                    <Loader2 className="size-3.5 animate-spin text-indigo-600" />
-                    Memikirkan topik-topik viral terpanas...
-                  </div>
+                {recommendations.length === 0 && !loadingRecs ? (
+                  <button
+                    onClick={fetchRecommendations}
+                    disabled={running}
+                    className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50"
+                  >
+                    <RefreshCw className="size-3.5" /> Generate Ide Topik
+                  </button>
                 ) : (
-                  <div className="flex flex-wrap gap-2 pt-0.5">
-                    {recommendations.map((rec: string, idx: number) => (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">
+                        Rekomendasi Tema {THEMES.find(t => t.id === selectedTheme)?.label}
+                      </span>
                       <button
-                        key={idx}
-                        onClick={() => setTopic(rec)}
-                        disabled={running}
-                        className="text-xs bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all font-medium text-left shadow-sm"
+                        onClick={fetchRecommendations}
+                        disabled={loadingRecs || running}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 disabled:opacity-50 transition-all"
                       >
-                        {rec}
+                        {loadingRecs ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                        Generate Ulang
                       </button>
-                    ))}
+                    </div>
+                    
+                    {loadingRecs ? (
+                      <div className="flex items-center gap-2 text-xs text-slate-500 py-4 justify-center bg-slate-50 rounded-xl border border-slate-100 border-dashed animate-pulse font-medium">
+                        <Loader2 className="size-4 animate-spin text-indigo-600" />
+                        Menganalisis algoritma & meracik topik clickbait...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {recommendations.map((rec: string, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => setTopic(rec)}
+                            disabled={running}
+                            className="text-xs bg-white hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 text-slate-600 px-4 py-3 rounded-xl border border-slate-200 transition-all font-medium text-left shadow-sm group"
+                          >
+                            <span className="text-slate-400 group-hover:text-indigo-400 mr-2 font-bold">{idx + 1}.</span>
+                            {rec}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

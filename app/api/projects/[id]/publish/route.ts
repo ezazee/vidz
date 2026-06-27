@@ -33,6 +33,7 @@ export async function POST(
         p.id, 
         p.topic, 
         rj.video_url,
+        th.image_url as thumbnail_url,
         seo.title as seo_title,
         seo.description as seo_description,
         seo.hashtags as seo_hashtags
@@ -42,6 +43,11 @@ export async function POST(
         WHERE project_id = p.id AND status = 'completed' 
         ORDER BY created_at DESC LIMIT 1
       ) rj ON true
+      LEFT JOIN LATERAL (
+        SELECT image_url FROM thumbnails
+        WHERE project_id = p.id AND status = 'completed'
+        ORDER BY created_at DESC LIMIT 1
+      ) th ON true
       LEFT JOIN LATERAL (
         SELECT title, description, hashtags 
         FROM seo_metadata 
@@ -73,8 +79,17 @@ export async function POST(
 
     if (project.seo_description) {
       finalDescription = project.seo_description
-      if (project.seo_hashtags && Array.isArray(project.seo_hashtags) && project.seo_hashtags.length > 0) {
-        finalDescription += '\n\n' + project.seo_hashtags.join(' ')
+      
+      try {
+        let hashtags = project.seo_hashtags
+        if (typeof hashtags === 'string') {
+          hashtags = JSON.parse(hashtags)
+        }
+        if (Array.isArray(hashtags) && hashtags.length > 0) {
+          finalDescription += '\n\n' + hashtags.join(' ')
+        }
+      } catch (e) {
+        console.warn('Gagal memparsing hashtags', e)
       }
     } else {
       // Fallback jika data SEO AI belum terbuat
@@ -93,6 +108,15 @@ export async function POST(
 
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
+    // Siapkan Media Items untuk Zernio
+    const mediaItems = []
+    if (project.video_url) {
+      mediaItems.push({ url: project.video_url, type: 'video' })
+    }
+    if (project.thumbnail_url) {
+      mediaItems.push({ url: project.thumbnail_url, type: 'image' })
+    }
+
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {
       method: 'POST',
@@ -101,10 +125,10 @@ export async function POST(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        accountId: config.youtube_account_id,
         title: finalTitle,
-        body: finalDescription,
-        videoUrl: project.video_url,
+        content: finalDescription,
+        platforms: [{ platform: 'youtube', accountId: config.youtube_account_id }],
+        mediaItems: mediaItems,
         publishNow: true
       }),
     })

@@ -5,6 +5,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'StoryZ',
   description: 'AI production studio for documentary-style YouTube videos.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 }
 
 export default function RootLayout({

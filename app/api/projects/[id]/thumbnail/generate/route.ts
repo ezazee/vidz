@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { uploadToR2 } from '@/lib/r2'
+import { chat } from '@/lib/ai/client'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -26,7 +27,50 @@ export async function POST(
       return NextResponse.json({ error: 'Prompt gambar diperlukan' }, { status: 400 })
     }
 
-    console.log(`Generating new AI thumbnail background for project ${id} with prompt: "${prompt}"...`)
+    console.log(`Generating new AI thumbnail background for project ${id} with base prompt: "${prompt}"...`)
+
+    let enhancedPrompt = prompt
+    let generatedTextLeft = ''
+    let generatedTextRight = ''
+    let generatedTextBottom = ''
+
+    try {
+      const enhancePromise = chat([
+        { role: 'system', content: `You are an expert YouTube Thumbnail Strategist & Clickbait Master. The user gives you a topic. You must generate 4 things:
+1. 'imagePrompt': A highly detailed, cinematic image generation prompt in English (no text). Focus on high contrast, extreme emotions, or shocking visual elements.
+2. 'textLeft': A catchy 2-3 word extreme clickbait text for the top left (Indonesian). Use psychological triggers (e.g. "JANGAN TONTON", "RAHASIA GILA").
+3. 'textRight': A catchy 2-3 word extreme clickbait text for the top right (Indonesian). Use curiosity gaps (e.g. "TERNYATA PALSU?", "FAKTA MENCEKAM").
+4. 'textBottom': A catchy 3-4 word banner text for the bottom (Indonesian).
+OUTPUT EXCLUSIVELY A RAW JSON OBJECT with these 4 keys. DO NOT wrap in markdown \`\`\`json. DO NOT add any other text.` },
+        { role: 'user', content: prompt }
+      ], false) // json=false to prevent model hangs
+      
+      const timeoutPromise = new Promise<string>((_, reject) => 
+        setTimeout(() => reject(new Error('LLM Enhance Timeout')), 10000)
+      )
+      
+      const result = await Promise.race([enhancePromise, timeoutPromise])
+      if (result) {
+        try {
+          // Remove potential markdown formatting (```json ... ```)
+          let cleanStr = result.trim()
+          if (cleanStr.startsWith('```')) {
+            cleanStr = cleanStr.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '')
+          }
+          
+          const parsed = JSON.parse(cleanStr.trim())
+          if (parsed.imagePrompt) enhancedPrompt = parsed.imagePrompt
+          if (parsed.textLeft) generatedTextLeft = parsed.textLeft.toUpperCase()
+          if (parsed.textRight) generatedTextRight = parsed.textRight.toUpperCase()
+          if (parsed.textBottom) generatedTextBottom = parsed.textBottom.toUpperCase()
+          console.log(`Generated texts: ${generatedTextLeft} | ${generatedTextRight} | ${generatedTextBottom}`)
+        } catch (e) {
+          console.warn("Failed to parse JSON from LLM, falling back.", result)
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to enhance prompt, falling back to original.", e)
+    }
 
     // Call 9Router Image Generation API
     const res = await fetch(`${baseUrl}/images/generations`, {
@@ -37,7 +81,7 @@ export async function POST(
       },
       body: JSON.stringify({
         model: modelName,
-        prompt: prompt,
+        prompt: enhancedPrompt,
         n: 1,
         size: '1792x1024',
         response_format: 'url',
@@ -50,21 +94,28 @@ export async function POST(
     }
 
     const data = await res.json()
-    const imageUrl = data.data?.[0]?.url
+    let buffer: Buffer
 
-    if (!imageUrl) {
-      throw new Error('Tidak ada URL gambar yang dikembalikan dari API AI.')
+    if (data.data?.[0]?.b64_json) {
+      buffer = Buffer.from(data.data[0].b64_json, 'base64')
+    } else if (data.data?.[0]?.url) {
+      const imgRes = await fetch(data.data[0].url)
+      buffer = Buffer.from(await imgRes.arrayBuffer())
+    } else {
+      throw new Error('Tidak ada data gambar (b64_json atau url) yang dikembalikan dari API AI.')
     }
-
-    // Download the image
-    const imgRes = await fetch(imageUrl)
-    const buffer = Buffer.from(await imgRes.arrayBuffer())
 
     // Upload to Cloudflare R2
     const filename = `projects/${id}/thumbnails/raw-${Date.now()}.jpg`
     const r2Url = await uploadToR2(filename, buffer, 'image/jpeg')
 
-    return NextResponse.json({ success: true, imageUrl: r2Url })
+    return NextResponse.json({ 
+      success: true, 
+      imageUrl: r2Url,
+      textLeft: generatedTextLeft,
+      textRight: generatedTextRight,
+      textBottom: generatedTextBottom
+    })
   } catch (error) {
     console.error('Error generating custom thumbnail image:', error)
     const errMsg = error instanceof Error ? error.message : String(error)

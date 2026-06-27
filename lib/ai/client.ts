@@ -5,10 +5,10 @@ interface Message {
   content: string
 }
 
-export async function chat(messages: Message[], json = true): Promise<string> {
+export async function chat(messages: Message[], json = true, customModel?: string): Promise<string> {
   const baseUrl = env.AI_BASE_URL ?? env.NINE_ROUTER_BASE_URL
   const apiKey = env.AI_API_KEY ?? env.NINE_ROUTER_API_KEY
-  const model = env.AI_MODEL
+  const model = customModel ?? env.AI_MODEL
 
   if (!baseUrl || !apiKey || !model) throw new Error('AI_BASE_URL, AI_API_KEY, and AI_MODEL are required')
 

@@ -162,6 +162,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
 
+  type TabState = 'video' | 'storyboard' | 'seo'
+  const [activeTab, setActiveTab] = useState<TabState>('video')
+
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Fetch project details, storyboard, and integrations status
@@ -386,325 +389,417 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </Link>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6 max-w-6xl mx-auto">
-              {/* Back button */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <Link
-                  href="/?tab=library"
-                  className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
-                >
-                  &larr; Kembali ke Daftar Pustaka
-                </Link>
-                <div className="flex items-center gap-3">
-                  {project.project_status === 'uploaded' && (
-                    <span className="text-[10px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-bold border border-red-100 flex items-center gap-1">
-                      <Youtube className="size-3" /> YouTube Published
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-400 font-mono">ID: {project.id}</span>
-                  
-                  {/* Tombol Hapus */}
-                  <button
-                    onClick={handleDeleteProject}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all shadow-sm"
-                    title="Hapus Proyek Secara Permanen"
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-0 overflow-hidden max-w-6xl mx-auto flex flex-col">
+              {/* Sticky Header Section */}
+              <div className="bg-white border-b border-slate-200 px-6 py-5 sticky top-0 z-10 flex flex-col gap-4">
+                
+                {/* Top: Navigation & Actions */}
+                <div className="flex items-center justify-between">
+                  <Link
+                    href="/?tab=library"
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1.5 transition-all bg-indigo-50 px-3 py-1.5 rounded-lg"
                   >
-                    <Trash2 className="size-3.5" />
-                    Hapus Proyek
+                    &larr; Kembali ke Library
+                  </Link>
+                  <div className="flex items-center gap-3">
+                    {project.project_status === 'uploaded' && (
+                      <span className="text-[10px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-bold border border-red-100 flex items-center gap-1">
+                        <Youtube className="size-3" /> Published
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-2.5 py-1 border border-slate-100 rounded-full">ID: {project.id}</span>
+                    
+                    <button
+                      onClick={handleDeleteProject}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold transition-all shadow-sm"
+                      title="Hapus Proyek Secara Permanen"
+                    >
+                      <Trash2 className="size-3" />
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-snug">{project.topic}</h3>
+                  <p className="text-xs text-slate-400 mt-1 font-medium">Dibuat pada {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-2 pt-2 -mb-5">
+                  <button
+                    onClick={() => setActiveTab('video')}
+                    className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
+                      activeTab === 'video' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Video className="size-3.5" /> Video & Cover</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('storyboard')}
+                    className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
+                      activeTab === 'storyboard' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Library className="size-3.5" /> Storyboard & Aset</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('seo')}
+                    className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
+                      activeTab === 'seo' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Activity className="size-3.5" /> SEO & Publish</span>
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left side: Video player & stats / live progress panel */}
-                <div className="lg:col-span-5 space-y-5">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-600 block">Topic</span>
-                    <h3 className="text-xl font-bold text-slate-800 mt-1 leading-snug">{project.topic}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Dibuat pada {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  </div>
-
-                  {/* Video Player or active progress */}
-                  {project.video_url ? (
-                    <div className="space-y-3">
-                      <video src={project.video_url} controls className="w-full rounded-lg bg-black shadow-md aspect-video" />
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <a
-                          href={project.video_url}
-                          download
-                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold hover:bg-slate-800 transition-all shadow-sm"
-                        >
-                          Download MP4
-                        </a>
-
-                        {/* YouTube publishing actions */}
-                        {youtubeConnected ? (
-                          project.project_status === 'uploaded' || project.youtube_url ? (
+              {/* Tab Content Container */}
+              <div className="p-6 bg-slate-50/30">
+                
+                {/* TAB 1: VIDEO & COVER */}
+                {activeTab === 'video' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left: Video Player */}
+                    <div className="lg:col-span-7 space-y-5">
+                      {project.video_url ? (
+                        <div className="space-y-4">
+                          <div className="rounded-xl overflow-hidden shadow-lg border border-slate-200/50 bg-black">
+                            <video src={project.video_url} controls className="w-full aspect-video" />
+                          </div>
+                          
+                          <div className="flex items-center gap-3 bg-white p-3 border border-slate-200 rounded-xl shadow-sm">
                             <a
-                              href={project.youtube_url || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 px-4 py-2.5 text-xs font-semibold transition-all shadow-sm"
+                              href={project.video_url}
+                              download
+                              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold hover:bg-slate-800 transition-all"
                             >
-                              <Youtube className="size-3.5" />
-                              Tonton di YouTube
+                              Download MP4
                             </a>
-                          ) : project.upload_status === 'processing' || publishing ? (
                             <button
-                              disabled
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 text-red-500 border border-red-200 px-4 py-2.5 text-xs font-semibold cursor-not-allowed w-full"
+                              onClick={() => setActiveTab('seo')}
+                              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2.5 text-xs font-semibold hover:bg-indigo-100 transition-all"
                             >
-                              <Loader2 className="size-3.5 animate-spin" />
-                              Publishing...
+                              Ke Halaman Publish &rarr;
                             </button>
-                          ) : (
-                            <button
-                              onClick={publishToYoutube}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 text-xs font-semibold transition-all shadow-sm shadow-red-600/10"
-                            >
-                              <Youtube className="size-3.5" />
-                              Publish ke YouTube
-                            </button>
-                          )
-                        ) : (
-                          <div className="col-span-2 p-3 bg-slate-100 rounded-lg text-[10px] text-slate-500 text-center leading-relaxed">
-                            Hubungkan channel YouTube Anda di tab **Integrasi** halaman utama untuk memublikasikan video otomatis ke YouTube.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* YouTube Thumbnail Generator Section */}
-                      <ThumbnailGenerator projectId={id} scenes={scenes} defaultText={project.topic} />
-                    </div>
-                  ) : (
-                    <div className="border border-slate-200 rounded-xl bg-slate-50/50 p-6 shadow-inner">
-                      {project.render_status === 'pending' || project.render_status === 'processing' ? (
-                        <div className="w-full text-left space-y-5">
-                          <div className="flex items-center gap-3 border-b border-slate-200/60 pb-3">
-                            <Loader2 className="size-5 animate-spin text-indigo-600" />
-                            <div>
-                              <p className="font-bold text-slate-800 text-sm">Video Sedang Diproses</p>
-                              <p className="text-xs text-slate-400">Sistem sedang memproses aset dan merender video secara paralel di cloud.</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {/* Langkah 1: Gambar Visual */}
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-slate-600">Langkah 1: Membuat Gambar Visual (AI)</span>
-                                <span className="text-indigo-600 font-bold">{completedImages} / {totalScenes} Selesai</span>
-                              </div>
-                              <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
-                                  style={{ width: `${totalScenes > 0 ? (completedImages / totalScenes) * 100 : 0}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Langkah 2: Audio Voiceover */}
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-slate-600">Langkah 2: Membuat Rekaman Suara (TTS)</span>
-                                <span className="text-indigo-600 font-bold">{completedVoices} / {totalScenes} Selesai</span>
-                              </div>
-                              <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
-                                  style={{ width: `${totalScenes > 0 ? (completedVoices / totalScenes) * 100 : 0}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Langkah 3: Rendering & Penggabungan */}
-                            <div className="space-y-2 pt-2 border-t border-slate-100">
-                              <div className="flex items-center gap-2 text-xs font-semibold">
-                                <div className={`size-2 rounded-full ${completedImages === totalScenes && completedVoices === totalScenes ? 'bg-indigo-600 animate-pulse' : 'bg-slate-300'}`} />
-                                <span className={completedImages === totalScenes && completedVoices === totalScenes ? 'text-indigo-600 font-bold' : 'text-slate-400'}>
-                                  Langkah 3: Rendering & Penggabungan Video (Matrix)
-                                </span>
-                              </div>
-                              {completedImages === totalScenes && completedVoices === totalScenes ? (
-                                <p className="text-[11px] text-indigo-600 pl-4 animate-pulse font-mono bg-indigo-50 border border-indigo-100/50 p-2.5 rounded-md leading-relaxed">
-                                  8 runner sedang merender potongan video secara paralel di cloud...
-                                </p>
-                              ) : (
-                                <p className="text-[10px] text-slate-400 pl-4">
-                                  Menunggu seluruh aset gambar dan suara selesai diproduksi.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between">
-                            <a
-                              href={`https://github.com/${GITHUB_REPO}/actions`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-bold transition-all"
-                            >
-                              <ExternalLink className="size-3.5" />
-                              Lihat Runner GitHub
-                            </a>
-                            <span className="text-[9px] text-slate-400 bg-slate-100 px-2 py-1 rounded-md font-mono border border-slate-200/60">
-                              {project.render_status}
-                            </span>
-                          </div>
-                        </div>
-                      ) : project.render_status === 'failed' ? (
-                        <div className="text-center space-y-3 py-4">
-                          <XCircle className="size-8 text-rose-500 mx-auto" />
-                          <div className="space-y-1">
-                            <p className="font-semibold text-rose-500">Rendering Gagal</p>
-                            <p className="text-xs text-slate-400">Gagal memuat render video. Cek rincian kesalahan di bawah.</p>
-                            {project.error && (
-                              <div className="mt-3 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-md text-left text-xs font-mono max-w-md max-h-32 overflow-y-auto">
-                                {project.error}
-                              </div>
-                            )}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center space-y-2 py-6">
-                          <AlertCircle className="size-8 text-amber-500 mx-auto" />
-                          <div className="space-y-1">
-                            <p className="font-semibold text-slate-700">Video Belum Dirender</p>
-                            <p className="text-xs text-slate-400">Proyek ini berupa draf storyboard dan belum dirender.</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* SEO Metadata Card */}
-                  {project && (
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-5 space-y-4 shadow-sm">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                          ✨ Metadata SEO Teroptimasi AI
-                        </span>
-                      </div>
-
-                      {project.seo_title ? (
-                        <div className="space-y-4">
-                          {/* Title */}
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Judul YouTube</span>
-                            <div className="flex gap-2">
-                              <div className="bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 flex-1 leading-relaxed">
-                                {project.seo_title}
-                              </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(project.seo_title || '')
-                                  alert('Judul SEO berhasil disalin!')
-                                }}
-                                className="px-2.5 py-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md border border-indigo-100 transition-all shrink-0 self-start"
-                              >
-                                Salin
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Description */}
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Deskripsi Kaya Informasi</span>
-                            <div className="flex gap-2">
-                              <div className="bg-slate-50 border border-slate-200/60 rounded-lg p-3 text-xs text-slate-600 flex-1 leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap font-sans">
-                                {project.seo_description}
-                              </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(project.seo_description || '')
-                                  alert('Deskripsi SEO berhasil disalin!')
-                                }}
-                                className="px-2.5 py-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md border border-indigo-100 transition-all shrink-0 self-start"
-                              >
-                                Salin
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Hashtags & Tags */}
-                          {((project.seo_hashtags && project.seo_hashtags.length > 0) || (project.seo_tags && project.seo_tags.length > 0)) && (
-                            <div className="space-y-2.5 pt-2.5 border-t border-slate-100">
-                              {project.seo_hashtags && project.seo_hashtags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {project.seo_hashtags.map((tag, idx) => (
-                                    <span key={idx} className="text-[10px] font-bold text-indigo-600 bg-indigo-50/60 px-2 py-0.5 rounded-md">
-                                      {tag}
-                                    </span>
-                                  ))}
+                        <div className="border border-slate-200 rounded-xl bg-white p-8 shadow-sm">
+                          {project.render_status === 'pending' || project.render_status === 'processing' ? (
+                            <div className="w-full text-left space-y-6">
+                              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                <Loader2 className="size-6 animate-spin text-indigo-600" />
+                                <div>
+                                  <p className="font-bold text-slate-800 text-base">Sedang Memproses Video</p>
+                                  <p className="text-xs text-slate-400 mt-0.5">Sistem memproses aset dan merender di cloud.</p>
                                 </div>
-                              )}
-                              {project.seo_tags && project.seo_tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pt-1">
-                                  {project.seo_tags.map((tag, idx) => (
-                                    <span key={idx} className="text-[9px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/40">
-                                      {tag}
-                                    </span>
-                                  ))}
+                              </div>
+
+                              <div className="space-y-5">
+                                {/* Langkah 1 */}
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-xs font-bold">
+                                    <span className="text-slate-700">Tahap 1: Visual AI</span>
+                                    <span className="text-indigo-600">{completedImages} / {totalScenes}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60">
+                                    <div 
+                                      className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
+                                      style={{ width: `${totalScenes > 0 ? (completedImages / totalScenes) * 100 : 0}%` }}
+                                    />
+                                  </div>
                                 </div>
-                              )}
+
+                                {/* Langkah 2 */}
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-xs font-bold">
+                                    <span className="text-slate-700">Tahap 2: Voiceover TTS</span>
+                                    <span className="text-indigo-600">{completedVoices} / {totalScenes}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60">
+                                    <div 
+                                      className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
+                                      style={{ width: `${totalScenes > 0 ? (completedVoices / totalScenes) * 100 : 0}%` }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Langkah 3 */}
+                                <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                                  <div className="flex items-center gap-2 text-xs font-bold">
+                                    <div className={`size-2.5 rounded-full shadow-sm ${completedImages === totalScenes && completedVoices === totalScenes ? 'bg-indigo-600 animate-pulse' : 'bg-slate-300'}`} />
+                                    <span className={completedImages === totalScenes && completedVoices === totalScenes ? 'text-indigo-700' : 'text-slate-400'}>
+                                      Tahap 3: Cloud Rendering (Matrix)
+                                    </span>
+                                  </div>
+                                  {completedImages === totalScenes && completedVoices === totalScenes ? (
+                                    <p className="text-xs text-indigo-600 pl-4.5 font-mono bg-indigo-50 border border-indigo-100/50 p-3 rounded-lg">
+                                      8 runner memproses potongan klip di cloud...
+                                    </p>
+                                  ) : (
+                                    <p className="text-[10px] text-slate-400 pl-4.5 italic">
+                                      Menunggu aset gambar dan suara selesai...
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <a
+                                  href={`https://github.com/${GITHUB_REPO}/actions`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold transition-all bg-indigo-50 px-3 py-1.5 rounded-md"
+                                >
+                                  <ExternalLink className="size-3.5" />
+                                  Live Action Logs
+                                </a>
+                                <span className="text-[10px] text-slate-500 font-mono font-medium">Status: {project.render_status}</span>
+                              </div>
+                            </div>
+                          ) : project.render_status === 'failed' ? (
+                            <div className="text-center space-y-3 py-6">
+                              <XCircle className="size-10 text-rose-500 mx-auto" />
+                              <div className="space-y-1">
+                                <p className="font-bold text-rose-600 text-lg">Rendering Gagal</p>
+                                <p className="text-xs text-slate-500">Gagal merender video.</p>
+                                {project.error && (
+                                  <div className="mt-4 p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-lg text-left text-xs font-mono max-w-md max-h-40 overflow-y-auto shadow-inner mx-auto">
+                                    {project.error}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-2 py-8">
+                              <AlertCircle className="size-10 text-amber-500 mx-auto" />
+                              <div className="space-y-1">
+                                <p className="font-bold text-slate-700 text-lg">Menunggu Rendering</p>
+                                <p className="text-xs text-slate-500">Video belum dirender dari storyboard ini.</p>
+                              </div>
                             </div>
                           )}
                         </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 leading-relaxed italic">
-                          Metadata SEO premium akan otomatis dirancang secara optimal oleh AI setelah Anda menyelesaikan tahap pembuatan adegan storyboard.
-                        </p>
                       )}
                     </div>
-                  )}
 
-                  {/* Visual Style Info Cards */}
-                  {sb && (
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3 text-xs">
-                      <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">Visual & Narration Bible</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { label: 'Genre', value: sb.director?.genre },
-                          { label: 'Style Visual', value: sb.director?.visual_style },
-                          { label: 'Style Suara', value: sb.director?.voice_style },
-                          { label: 'Style Kamera', value: sb.director?.camera_style },
-                        ].map((item, idx) => (
-                          <div key={idx} className="bg-white border border-slate-200/40 p-2 rounded-lg">
-                            <span className="text-slate-400 block font-medium text-[10px]">{item.label}</span>
-                            <span className="font-bold text-slate-700 mt-0.5 block truncate">{String(item.value ?? 'Standard')}</span>
+                    {/* Right: Thumbnail Generator */}
+                    <div className="lg:col-span-5">
+                      {project.video_url ? (
+                        <div className="-mt-6">
+                          <ThumbnailGenerator projectId={id} scenes={scenes} defaultText={project.topic} />
+                        </div>
+                      ) : (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-8 text-center shadow-sm flex flex-col items-center justify-center gap-3 opacity-60">
+                          <Youtube className="size-8 text-slate-300" />
+                          <div>
+                            <p className="font-bold text-slate-700 text-sm">Thumbnail Generator</p>
+                            <p className="text-[10px] text-slate-400 mt-1">Akan tersedia setelah video dan gambar adegan selesai diproduksi.</p>
                           </div>
-                        ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: STORYBOARD & ASET */}
+                {activeTab === 'storyboard' && (
+                  <div className="space-y-6">
+                    {/* Visual Style Info Cards */}
+                    {sb && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                        <span className="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2 mb-4">
+                          <Film className="size-4 text-indigo-600" />
+                          Visual & Narration Bible
+                        </span>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {[
+                            { label: 'Genre', value: sb.director?.genre },
+                            { label: 'Style Visual', value: sb.director?.visual_style },
+                            { label: 'Style Suara', value: sb.director?.voice_style },
+                            { label: 'Style Kamera', value: sb.director?.camera_style },
+                          ].map((item, idx) => (
+                            <div key={idx} className="bg-slate-50 border border-slate-200/60 p-3 rounded-lg shadow-sm">
+                              <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wide">{item.label}</span>
+                              <span className="font-semibold text-slate-700 mt-1 block truncate text-sm">{String(item.value ?? 'Standard')}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
+                      <h4 className="font-extrabold text-slate-800 text-sm border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <span>Daftar Skrip & Adegan</span>
+                        {sb && (
+                          <span className="text-[11px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold border border-indigo-100 shadow-sm">
+                            {totalScenes} Scenes
+                          </span>
+                        )}
+                      </h4>
+
+                      {sb && totalScenes > 0 ? (
+                        <div className="space-y-5 max-h-[800px] overflow-y-auto pr-2 pb-4">
+                          {scenes.map(scene => (
+                            <SceneCard
+                              key={scene.id}
+                              scene={scene}
+                              renderStatus={project.render_status || 'idle'}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic text-center py-10">Data naskah storyboard tidak ditemukan.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: SEO & PUBLISH */}
+                {activeTab === 'seo' && (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {/* Left: YouTube Publish Box */}
+                    <div className="md:col-span-4 space-y-4">
+                      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-5">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                          <Youtube className="size-5 text-red-600" />
+                          <h4 className="font-extrabold text-slate-800 text-sm">YouTube Publisher</h4>
+                        </div>
+
+                        {youtubeConnected ? (
+                          project.project_status === 'uploaded' || project.youtube_url ? (
+                            <div className="space-y-3">
+                              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm">
+                                <CheckCircle2 className="size-4" />
+                                Video telah dipublikasikan!
+                              </div>
+                              <a
+                                href={project.youtube_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white px-4 py-3 text-xs font-bold transition-all shadow-md hover:bg-red-700"
+                              >
+                                <ExternalLink className="size-4" />
+                                Buka di YouTube
+                              </a>
+                            </div>
+                          ) : project.render_status === 'completed' && project.video_url ? (
+                            <div className="space-y-3">
+                              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                                Video telah dirender dan siap dipublikasikan ke Channel YouTube Anda menggunakan deskripsi SEO yang teroptimasi.
+                              </p>
+                              <button
+                                onClick={publishToYoutube}
+                                disabled={publishing}
+                                className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 hover:bg-red-700 text-white px-4 py-3 text-xs font-bold transition-all shadow-md disabled:opacity-50"
+                              >
+                                {publishing ? <Loader2 className="size-4 animate-spin" /> : <Youtube className="size-4" />}
+                                {publishing ? 'Mengunggah...' : 'Publish ke YouTube Sekarang'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg text-center shadow-inner">
+                              <AlertCircle className="size-6 text-slate-400 mx-auto mb-2" />
+                              <p className="text-[10px] text-slate-500 font-medium">Video belum dirender, selesaikan render video terlebih dahulu sebelum publish.</p>
+                            </div>
+                          )
+                        ) : (
+                          <div className="bg-red-50/50 border border-red-100 p-4 rounded-lg text-center space-y-3 shadow-inner">
+                            <AlertCircle className="size-6 text-red-400 mx-auto" />
+                            <p className="text-[10px] text-red-800 font-medium leading-relaxed">
+                              Hubungkan akun YouTube Anda di halaman "Integrations" untuk memublikasikan video dengan satu klik.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Right side: Storyboard script scenes list (Media rich) */}
-                <div className="lg:col-span-7 space-y-4">
-                  <h4 className="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
-                    <span>Daftar Adegan Storyboard</span>
-                    {sb && (
-                      <span className="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full font-bold border border-indigo-100">
-                        {totalScenes} Scenes
-                      </span>
-                    )}
-                  </h4>
+                    {/* Right: SEO Metadata */}
+                    <div className="md:col-span-8">
+                      {project && (
+                        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+                          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                            <Activity className="size-5 text-indigo-600" />
+                            <h4 className="font-extrabold text-slate-800 text-sm">Metadata SEO Teroptimasi AI</h4>
+                          </div>
 
-                  {sb && totalScenes > 0 ? (
-                    <div className="space-y-4 max-h-[620px] overflow-y-auto pr-3">
-                      {scenes.map(scene => (
-                        <SceneCard
-                          key={scene.id}
-                          scene={scene}
-                          renderStatus={project.render_status || 'idle'}
-                        />
-                      ))}
+                          {project.seo_title ? (
+                            <div className="space-y-5">
+                              {/* Title */}
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Judul YouTube</span>
+                                <div className="flex gap-2">
+                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg px-4 py-3 text-sm font-bold text-slate-800 flex-1 shadow-sm">
+                                    {project.seo_title}
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(project.seo_title || '')
+                                      alert('Judul tersalin!')
+                                    }}
+                                    className="px-4 py-2 text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 rounded-lg border border-indigo-100 transition-all shrink-0 self-start shadow-sm"
+                                  >
+                                    Salin
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Description */}
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Deskripsi Kaya Informasi</span>
+                                <div className="flex gap-2">
+                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-4 text-xs text-slate-600 flex-1 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-sans shadow-inner">
+                                    {project.seo_description}
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(project.seo_description || '')
+                                      alert('Deskripsi tersalin!')
+                                    }}
+                                    className="px-4 py-2 text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 rounded-lg border border-indigo-100 transition-all shrink-0 self-start shadow-sm"
+                                  >
+                                    Salin
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Tags */}
+                              {((project.seo_hashtags && project.seo_hashtags.length > 0) || (project.seo_tags && project.seo_tags.length > 0)) && (
+                                <div className="space-y-3 pt-4 border-t border-slate-100">
+                                  {project.seo_hashtags && project.seo_hashtags.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {project.seo_hashtags.map((tag, idx) => (
+                                        <span key={idx} className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-md border border-indigo-100 shadow-sm">
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {project.seo_tags && project.seo_tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-2">
+                                      {project.seo_tags.map((tag, idx) => (
+                                        <span key={idx} className="text-[10px] font-medium text-slate-600 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-sm">
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center p-8 bg-slate-50 border border-slate-200 border-dashed rounded-xl">
+                              <p className="text-sm text-slate-500 font-medium">Metadata belum tersedia</p>
+                              <p className="text-[10px] text-slate-400 mt-1">SEO akan otomatis digenerate setelah tahap outline selesai.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">Data naskah storyboard tidak ditemukan.</p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -714,26 +809,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   )
 }
 
+
 interface ThumbnailGeneratorProps {
   projectId: string
-  scenes: Scene[]
   defaultText: string
 }
 
-function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGeneratorProps) {
-  const [selectedSceneIdx, setSelectedSceneIdx] = useState(0)
-  const [text, setText] = useState(defaultText || '')
-  const [style, setStyle] = useState<'vox' | 'viral'>('vox')
+function ThumbnailGenerator({ projectId, defaultText }: ThumbnailGeneratorProps) {
+  const parsed = (defaultText || '').split('||')
+  const [text, setText] = useState(parsed.length === 1 ? parsed[0] : (defaultText || ''))
+  const [textLeft, setTextLeft] = useState(parsed.length === 3 ? parsed[0] : '')
+  const [textRight, setTextRight] = useState(parsed.length === 3 ? parsed[1] : '')
+  const [textBottom, setTextBottom] = useState(parsed.length === 3 ? parsed[2] : '')
+  const [style, setStyle] = useState<'vox' | 'viral'>('viral')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null)
-  const [thumbnailPrompt, setThumbnailPrompt] = useState(defaultText || '')
+  const [thumbnailPrompt, setThumbnailPrompt] = useState(parsed[0] || defaultText || '')
   const [generating, setGenerating] = useState(false)
-  
-  // Find all scenes that have valid image URLs
-  const validScenes = scenes.filter(s => s.image_url && s.image_url.trim() !== '')
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -771,43 +866,35 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
       } else {
         // Fallback beautiful dark cinematic gradient
         const grad = ctx.createLinearGradient(0, 0, 1280, 720)
-        grad.addColorStop(0, '#1c1917')
-        grad.addColorStop(1, '#0c0a09')
+        grad.addColorStop(0, '#0f172a')
+        grad.addColorStop(1, '#020617')
         ctx.fillStyle = grad
         ctx.fillRect(0, 0, 1280, 720)
       }
 
-      // 2. Cinematic Vignette (Warm dark arang edges for Vox/Johnny Harris style)
-      const vignette = ctx.createRadialGradient(640, 360, 200, 640, 360, 750)
-      vignette.addColorStop(0, 'rgba(0, 0, 0, 0.15)')
-      vignette.addColorStop(0.5, 'rgba(12, 10, 9, 0.50)')
-      vignette.addColorStop(1, 'rgba(8, 6, 5, 0.92)')
+      // 2. Cinematic Vignette
+      const vignette = ctx.createRadialGradient(640, 360, 200, 640, 360, 800)
+      vignette.addColorStop(0, 'rgba(0, 0, 0, 0.1)')
+      vignette.addColorStop(0.5, 'rgba(0, 0, 0, 0.4)')
+      vignette.addColorStop(1, 'rgba(0, 0, 0, 0.8)')
       ctx.fillStyle = vignette
       ctx.fillRect(0, 0, 1280, 720)
-
-      // 3. Warm Parchment Texture Tint Overlay
-      ctx.fillStyle = 'rgba(240, 225, 200, 0.06)'
-      ctx.globalCompositeOperation = 'color-burn'
-      ctx.fillRect(0, 0, 1280, 720)
-      ctx.globalCompositeOperation = 'source-over' // Reset composite
 
       // 4. Draw Typography Text
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'
 
       const xMargin = 90
-      const maxWidth = 720 // Left aligned, occupying ~60% width of the thumbnail
+      const maxWidth = 720 
       const yCenter = 360
 
       const cleanText = text.trim() || 'Judul Thumbnail'
       const words = cleanText.split(' ')
 
-      // Font and styling setups
       if (style === 'vox') {
         ctx.font = "italic 700 64px 'Georgia', 'Garamond', serif"
-        ctx.fillStyle = '#fdfdfa' // warm paper-white
+        ctx.fillStyle = '#fdfdfa'
         
-        // Wrap text
         const lines: string[] = []
         let currentLine = ''
         
@@ -823,14 +910,11 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
         }
         lines.push(currentLine.trim())
 
-        // Calculate total vertical height to center it
         const lineHeight = 86
         const totalHeight = lines.length * lineHeight
         let startY = yCenter - (totalHeight / 2) + (lineHeight / 2)
 
-        // Draw lines with soft drop shadow
         lines.forEach(line => {
-          // Soft realistic shadow
           ctx.shadowColor = 'rgba(0, 0, 0, 0.85)'
           ctx.shadowBlur = 18
           ctx.shadowOffsetX = 2
@@ -840,89 +924,106 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
           startY += lineHeight
         })
 
-        // Reset shadow
         ctx.shadowColor = 'transparent'
         ctx.shadowBlur = 0
         ctx.shadowOffsetX = 0
         ctx.shadowOffsetY = 0
 
       } else {
-        // Style: Viral Bold Caps
-        ctx.font = "900 82px 'Montserrat', 'Arial Black', sans-serif"
-        const upperWords = words.map(w => w.toUpperCase())
+        // Style: Viral Split
+        ctx.font = "italic 900 72px 'Montserrat', 'Arial Black', sans-serif"
         
-        const lines: string[][] = []
-        let currentLine: string[] = []
-        
-        for (let n = 0; n < upperWords.length; n++) {
-          const testLine = [...currentLine, upperWords[n]].join(' ')
-          const metrics = ctx.measureText(testLine)
-          if (metrics.width > maxWidth && n > 0) {
-            lines.push(currentLine)
-            currentLine = [upperWords[n]]
-          } else {
-            currentLine.push(upperWords[n])
-          }
-        }
-        lines.push(currentLine)
-
-        const lineHeight = 100
-        const totalHeight = lines.length * lineHeight
-        let startY = yCenter - (totalHeight / 2) + (lineHeight / 2)
-
-        lines.forEach(line => {
-          let currentX = xMargin
+        const drawViralText = (txt: string, x: number, y: number, color1: string, color2: string, align: 'left'|'right') => {
+          ctx.textAlign = align
+          ctx.textBaseline = 'top'
           
-          line.forEach(word => {
-            const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"")
-            // Highlight specific words in yellow
-            const isHighlight = cleanWord.length > 5 || cleanWord === 'INDONESIA' || cleanWord === 'MAJAPAHIT' || cleanWord === 'SEJARAH'
+          const maxWidthSplit = 550
+          const words = txt.toUpperCase().split(' ')
+          const lines: string[][] = []
+          let currentLine: string[] = []
+          
+          for (let n = 0; n < words.length; n++) {
+            const testLine = [...currentLine, words[n]].join(' ')
+            if (ctx.measureText(testLine).width > maxWidthSplit && n > 0) {
+              lines.push(currentLine)
+              currentLine = [words[n]]
+            } else {
+              currentLine.push(words[n])
+            }
+          }
+          lines.push(currentLine)
+
+          let startY = y
+          const lineHeight = 80
+
+          lines.forEach(line => {
+            const lineText = line.join(' ')
+            let drawX = x
             
-            ctx.fillStyle = isHighlight ? '#fbbf24' : '#ffffff'
-
-            // Thick Black Stroke (Outline)
             ctx.strokeStyle = '#000000'
-            ctx.lineWidth = 14
+            ctx.lineWidth = 18
             ctx.lineJoin = 'round'
-            ctx.strokeText(word, currentX, startY)
+            
+            ctx.shadowColor = 'rgba(0, 0, 0, 1)'
+            ctx.shadowBlur = 10
+            ctx.shadowOffsetX = 5
+            ctx.shadowOffsetY = 5
 
-            // Heavy Drop Shadow
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.95)'
-            ctx.shadowBlur = 20
-            ctx.shadowOffsetX = 4
-            ctx.shadowOffsetY = 8
-
-            // Fill text
-            ctx.fillText(word, currentX, startY)
-
-            // Reset shadow for next word calculations
+            ctx.strokeText(lineText, drawX, startY)
+            
             ctx.shadowColor = 'transparent'
-            ctx.shadowBlur = 0
             ctx.shadowOffsetX = 0
             ctx.shadowOffsetY = 0
-
-            currentX += ctx.measureText(word + ' ').width
+            ctx.fillStyle = (lines.indexOf(line) % 2 === 0) ? color1 : color2
+            ctx.fillText(lineText, drawX, startY)
+            
+            startY += lineHeight
           })
-          
-          startY += lineHeight
-        })
+        }
+
+        drawViralText(textLeft, 40, 40, '#ffffff', '#ff6b00', 'left')
+        drawViralText(textRight, 1240, 40, '#ffffff', '#ffd500', 'right')
+
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const bottomText = textBottom.toUpperCase()
+        
+        ctx.font = "italic 900 58px 'Montserrat', 'Arial Black', sans-serif"
+        const bTextMetrics = ctx.measureText(bottomText)
+        const bWidth = bTextMetrics.width + 80
+        const bHeight = 85
+        
+        const bX = 640
+        const bY = 640
+        
+        ctx.fillStyle = '#ffea00'
+        ctx.shadowColor = 'rgba(0,0,0,0.8)'
+        ctx.shadowBlur = 15
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 10
+        
+        ctx.beginPath()
+        ctx.moveTo(bX - bWidth/2 - 20, bY - bHeight/2)
+        ctx.lineTo(bX + bWidth/2, bY - bHeight/2)
+        ctx.lineTo(bX + bWidth/2 + 20, bY + bHeight/2)
+        ctx.lineTo(bX - bWidth/2, bY + bHeight/2)
+        ctx.closePath()
+        ctx.fill()
+        
+        ctx.shadowColor = 'transparent'
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+        ctx.fillStyle = '#000000'
+        ctx.fillText(bottomText, bX, bY)
       }
     }
 
-    // Load background image
-    const bgUrl = customImageUrl || (validScenes.length > 0 && selectedSceneIdx < validScenes.length ? validScenes[selectedSceneIdx].image_url : '')
+    const bgUrl = customImageUrl || ''
     
     if (bgUrl) {
       const fullUrl = bgUrl.startsWith('http') ? bgUrl : '/' + bgUrl
       let srcUrl = fullUrl
       
-      // Only apply cache busting for scene images to prevent constant reloading of generated thumbnails
-      if (!customImageUrl && validScenes.length > 0 && selectedSceneIdx < validScenes.length) {
-        const activeScene = validScenes[selectedSceneIdx]
-        const ts = activeScene.updated_at ? new Date(activeScene.updated_at).getTime() : Date.now()
-        srcUrl = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}t=${ts}`
-      }
-
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.src = srcUrl
@@ -935,15 +1036,14 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
     } else {
       drawThumbnailElements()
     }
-  }, [selectedSceneIdx, text, style, validScenes, customImageUrl])
+  }, [text, textLeft, textRight, textBottom, style, customImageUrl])
 
   const handleDownload = () => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const dataUrl = canvas.toDataURL('image/png')
     const link = document.createElement('a')
-    link.download = `thumbnail-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`
+    link.download = `thumbnail-${(style === 'viral' ? textLeft : text).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`
     link.href = dataUrl
     link.click()
   }
@@ -951,33 +1051,31 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
   const handleGenerateAIBackground = async () => {
     setGenerating(true)
     setSaveMessage(null)
+    
+    // Clear hardcoded text while generating to indicate progress
+    setTextLeft('MERENDER...')
+    setTextRight('HARAP TUNGGU')
+    setTextBottom('AI SEDANG BERPIKIR')
+    
     try {
       const res = await fetch(`/api/projects/${projectId}/thumbnail/generate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: thumbnailPrompt })
       })
 
       const data = await res.json()
       if (res.ok && data.imageUrl) {
         setCustomImageUrl(data.imageUrl)
-        setSaveMessage({
-          type: 'success',
-          text: 'Gambar latar thumbnail baru berhasil digenerate oleh AI!'
-        })
+        setTextLeft(data.textLeft || 'TOPIK BARU')
+        setTextRight(data.textRight || 'HASIL AI')
+        setTextBottom(data.textBottom || 'KLIK UNTUK NONTON!')
+        setSaveMessage({ type: 'success', text: 'Background dan Teks Clickbait berhasil digenerate oleh AI!' })
       } else {
-        setSaveMessage({
-          type: 'error',
-          text: data.error || 'Gagal generate gambar latar kustom.'
-        })
+        setSaveMessage({ type: 'error', text: data.error || 'Gagal generate gambar AI.' })
       }
     } catch (e) {
-      setSaveMessage({
-        type: 'error',
-        text: 'Terjadi kesalahan jaringan saat generate gambar latar.'
-      })
+      setSaveMessage({ type: 'error', text: 'Terjadi kesalahan jaringan saat generate gambar.' })
     } finally {
       setGenerating(false)
     }
@@ -986,7 +1084,6 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
   const handleSaveToCloud = async () => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     setSaving(true)
     setSaveMessage(null)
 
@@ -994,215 +1091,127 @@ function ThumbnailGenerator({ projectId, scenes, defaultText }: ThumbnailGenerat
       const dataUrl = canvas.toDataURL('image/png')
       const response = await fetch(`/api/projects/${projectId}/thumbnail`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: dataUrl,
-          overlay_text: text,
+          overlay_text: style === 'viral' ? `${textLeft}||${textRight}||${textBottom}` : text,
           style: style
         })
       })
 
       const data = await response.json()
       if (response.ok && data.success) {
-        setSaveMessage({
-          type: 'success',
-          text: 'Thumbnail berhasil disimpan di cloud dan diterapkan sebagai cover proyek!'
-        })
+        setSaveMessage({ type: 'success', text: 'Thumbnail beserta teks berhasil disimpan dan diterapkan sebagai cover proyek!' })
       } else {
-        setSaveMessage({
-          type: 'error',
-          text: data.error || 'Gagal menyimpan thumbnail ke cloud.'
-        })
+        setSaveMessage({ type: 'error', text: data.error || 'Gagal menyimpan thumbnail ke cloud.' })
       }
     } catch (e) {
-      setSaveMessage({
-        type: 'error',
-        text: 'Terjadi kesalahan jaringan saat menyimpan thumbnail.'
-      })
+      setSaveMessage({ type: 'error', text: 'Terjadi kesalahan jaringan saat menyimpan thumbnail.' })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 mt-6 space-y-4 shadow-sm">
-      <div className="flex items-center gap-2 border-b border-slate-200/50 pb-3">
-        <div className="p-1 bg-red-100 text-red-600 rounded-md">
-          <Youtube className="size-4" />
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6 shadow-2xl text-slate-200 relative overflow-hidden">
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none" />
+
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-6 relative z-10">
+        <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-lg border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+          <WandSparkles className="size-5" />
         </div>
         <div>
-          <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">YouTube Thumbnail Generator</h4>
-          <p className="text-[10px] text-slate-400 font-medium">Buat thumbnail YouTube sinematik instan secara otomatis</p>
+          <h4 className="text-sm font-black text-white uppercase tracking-widest">AI Thumbnail Generator</h4>
+          <p className="text-[11px] text-slate-400 font-medium mt-0.5">Hasilkan cover YouTube dengan AI dan tambahkan Clickbait Teks</p>
         </div>
       </div>
 
-      {/* Success/Error Alerts */}
       {saveMessage && (
-        <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 relative ${
+        <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 relative mb-6 backdrop-blur-md ${
           saveMessage.type === 'success'
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            : 'bg-rose-50 border-rose-200 text-rose-800'
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
         }`}>
           <div className="flex-1">
-            <span className="font-semibold">{saveMessage.type === 'success' ? 'Sukses!' : 'Gagal!'}</span> {saveMessage.text}
+            <span className="font-bold">{saveMessage.type === 'success' ? 'SUKSES:' : 'ERROR:'}</span> {saveMessage.text}
           </div>
-          <button onClick={() => setSaveMessage(null)} className="text-slate-400 hover:text-slate-750">
-            <X className="size-3.5" />
+          <button onClick={() => setSaveMessage(null)} className="text-slate-500 hover:text-white transition-colors">
+            <X className="size-4" />
           </button>
         </div>
       )}
 
-      {/* 16:9 Canvas Preview Container */}
-      <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden border border-slate-200 shadow-inner relative flex items-center justify-center">
-        <canvas ref={canvasRef} className="w-full h-full object-contain" />
+      {/* Full Image Preview Container (Canvas) */}
+      <div className="aspect-video bg-black rounded-xl overflow-hidden border border-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.5)] relative flex items-center justify-center mb-6 group">
+        <canvas ref={canvasRef} className={`w-full h-full object-contain ${!customImageUrl && !generating ? 'hidden' : ''}`} />
+        {!customImageUrl && !generating && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-3 z-10">
+            <Youtube className="size-10 opacity-20" />
+            <span className="text-xs font-semibold uppercase tracking-widest">Preview Kosong</span>
+          </div>
+        )}
+        <div className="absolute inset-0 border-2 border-white/5 rounded-xl pointer-events-none z-20" />
       </div>
 
-      <div className="space-y-3.5 text-xs">
-        {/* Dropdowns & Style selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Background Scene */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase block">Gambar Latar (Adegan)</label>
-            {customImageUrl ? (
-              <div className="flex items-center justify-between bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg text-[10px] text-red-700 font-bold shadow-sm">
-                <span>✨ Latar Kustom AI Aktif</span>
-                <button
-                  onClick={() => setCustomImageUrl(null)}
-                  className="bg-white border border-red-200 px-2 py-0.5 rounded text-[9px] hover:bg-red-100 transition-all"
-                >
-                  Kembali ke Adegan
-                </button>
-              </div>
-            ) : validScenes.length > 0 ? (
-              <select
-                value={selectedSceneIdx}
-                onChange={e => {
-                  setCustomImageUrl(null)
-                  setSelectedSceneIdx(parseInt(e.target.value, 10))
-                }}
-                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-lg outline-none focus:border-red-500 font-medium text-slate-700 shadow-sm transition-all"
-              >
-                {validScenes.map((s, idx) => (
-                  <option key={s.id} value={idx}>
-                    Adegan {s.order_index + 1} ({s.narration.slice(0, 32)}...)
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="bg-slate-100 border border-slate-200 p-2.5 rounded-lg text-[10px] text-slate-400 italic font-medium">
-                Belum ada gambar adegan yang selesai
-              </div>
-            )}
-          </div>
-
-          {/* Preset Style */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-bold text-slate-500 uppercase block">Gaya Tipografi (Style)</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStyle('vox')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                  style === 'vox'
-                    ? 'bg-red-500 border-red-500 text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                Vox Editorial Serif
-              </button>
-              <button
-                onClick={() => setStyle('viral')}
-                className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                  style === 'viral'
-                    ? 'bg-red-500 border-red-500 text-white'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                Viral Bold Caps
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Background Generator Section */}
-        <div className="bg-slate-100/60 border border-slate-200/40 p-4 rounded-xl space-y-3">
-          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
-            <WandSparkles className="size-3.5 text-red-500 animate-pulse" />
-            <span>Generate Latar Baru via AI (Stable Diffusion)</span>
-          </div>
-          <div className="flex gap-2">
+      <div className="space-y-5 text-xs relative z-10">
+        
+        {/* AI Generator Input */}
+        <div className="space-y-2 pt-2 border-t border-slate-800">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Topik / Judul Video (AI Prompt)</label>
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={thumbnailPrompt}
               onChange={e => setThumbnailPrompt(e.target.value)}
-              placeholder="Masukkan prompt gambar thumbnail..."
-              className="flex-1 bg-white border border-slate-200 px-3 py-2 rounded-lg outline-none focus:border-red-500 text-xs font-medium text-slate-700 shadow-sm"
+              placeholder="e.g. Ilmuwan Syok Ternyata Black Hole..."
+              className="flex-1 bg-slate-800 border border-slate-700 px-4 py-3 rounded-xl outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-medium text-white placeholder:text-slate-600 transition-all text-sm shadow-inner"
             />
             <button
               onClick={handleGenerateAIBackground}
               disabled={generating || !thumbnailPrompt.trim()}
-              className="bg-slate-850 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+              className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)] disabled:shadow-none"
             >
               {generating ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin animate-infinite" />
-                  <span>Generating...</span>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Merender AI...</span>
                 </>
               ) : (
                 <>
-                  <WandSparkles className="size-3.5" />
-                  <span>Generate</span>
+                  <WandSparkles className="size-4" />
+                  <span>Generate AI</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* Catchy Text Input */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-500 uppercase block">Teks Thumbnail (Headline)</label>
-          <input
-            type="text"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Ketik judul singkat yang memicu rasa penasaran..."
-            className="w-full bg-white border border-slate-200 px-3.5 py-2.5 rounded-lg outline-none focus:border-red-500 font-medium text-slate-700 shadow-sm transition-all"
-          />
-          <span className="text-[9px] text-slate-400 leading-relaxed block mt-1">
-            💡 **Tips**: Gunakan 2-4 kata saja yang memicu klik. Jangan gunakan judul lengkap video agar teks berukuran raksasa dan mudah dibaca di layar HP.
-          </span>
-        </div>
-
-        {/* Action Buttons Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-          {/* Save to Cloud Cover */}
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800">
           <button
             onClick={handleSaveToCloud}
-            disabled={saving || validScenes.length === 0}
-            className="w-full bg-red-600 hover:bg-red-750 text-white py-3 rounded-lg text-xs font-extrabold tracking-wide transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={saving}
+            className="w-full bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:border-slate-700 text-white py-3.5 rounded-xl text-xs font-black tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)] disabled:shadow-none flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                MENYIMPAN COVER...
+                MENYIMPAN...
               </>
             ) : (
               <>
                 <CheckCircle2 className="size-4" />
-                SIMPAN & TERAPKAN COVER
+                TERAPKAN COVER
               </>
             )}
           </button>
 
-          {/* Download Local PNG */}
           <button
             onClick={handleDownload}
-            disabled={validScenes.length === 0}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg text-xs font-extrabold tracking-wide transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-slate-800 hover:bg-slate-700 text-white py-3.5 rounded-xl text-xs font-black tracking-widest uppercase transition-all border border-slate-700 flex items-center justify-center gap-2"
           >
             <ExternalLink className="size-4" />
-            UNDUH THUMBNAIL PNG
+            UNDUH PNG
           </button>
         </div>
       </div>

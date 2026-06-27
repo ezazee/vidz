@@ -6,7 +6,15 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-function getBackgroundMusic(genre: string, emotion: string): { url: string; volume: number } {
+function getBackgroundMusic(genre: string, emotion: string, explicitTheme: string | null): { url: string; volume: number } {
+  // 1. Explicit Theme Override
+  if (explicitTheme) {
+    const theme = explicitTheme.toLowerCase()
+    if (theme.includes('unsolved mysteries')) return { url: 'audio/unsolved-mystery.wav', volume: 0.15 }
+    if (theme.includes('space & astronomy')) return { url: 'audio/light-in-the-darkness.wav', volume: 0.15 }
+    if (theme.includes('what-if') || theme.includes('mythology') || theme.includes('ancient history')) return { url: 'audio/warm-light.wav', volume: 0.15 }
+  }
+
   const genreLower = genre.toLowerCase()
   const emotionLower = emotion.toLowerCase()
 
@@ -21,8 +29,8 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     emotionLower.includes('mysterious')
   ) {
     return {
-      url: 'audio/unsolved-mystery.mp3', // Unsolved Mystery - Tense & Dark (Lokal)
-      volume: 0.10,
+      url: 'audio/unsolved-mystery.wav', // Procedural Drone: Detuned Low D
+      volume: 0.15,
     }
   }
 
@@ -34,8 +42,8 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     genreLower.includes('futuristic')
   ) {
     return {
-      url: 'audio/light-in-the-darkness.mp3', // Light in the Darkness - Ambient Synth (Lokal)
-      volume: 0.12,
+      url: 'audio/light-in-the-darkness.wav', // Procedural Drone: Evolving High Pitch
+      volume: 0.15,
     }
   }
 
@@ -47,15 +55,15 @@ function getBackgroundMusic(genre: string, emotion: string): { url: string; volu
     emotionLower.includes('emotional')
   ) {
     return {
-      url: 'audio/rain-and-tears.mp3', // Sad Piano (Lokal)
-      volume: 0.12,
+      url: 'audio/rain-and-tears.wav', // Procedural Drone: Brown Noise (Rain/Wind)
+      volume: 0.15,
     }
   }
 
   // 4. Default: Sejarah / Dokumenter Klasik / Epik / Narasi Umum
   return {
-    url: 'audio/warm-light.mp3', // Warm Light - Beautiful Cinematic Orchestral (Lokal)
-    volume: 0.12,
+    url: 'audio/warm-light.wav', // Procedural Drone: C Major chord
+    volume: 0.15,
   }
 }
 
@@ -80,7 +88,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const projects = await sql`
-    SELECT id, COALESCE(title, topic) AS title
+    SELECT id, topic, COALESCE(title, topic) AS title
     FROM projects
     WHERE id = ${id}
     LIMIT 1
@@ -108,7 +116,12 @@ export async function GET(_request: Request, context: RouteContext) {
   const director = directors[0]
   const genre = director?.genre ?? 'documentary'
   const emotion = director?.emotion ?? 'curious'
-  const music = getBackgroundMusic(genre, emotion)
+  
+  const rawTopic = projects[0].topic || ''
+  const themeMatch = rawTopic.match(/\[THEME:\s*(.*?)\]/i)
+  const explicitTheme = themeMatch ? themeMatch[1] : null
+
+  const music = getBackgroundMusic(genre, emotion, explicitTheme)
 
   const storyboard = {
     project_id: projects[0].id,

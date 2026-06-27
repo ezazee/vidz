@@ -15,10 +15,13 @@ export async function generateOutline(topic: string, summary: string): Promise<O
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah penulis dokumenter. Balas HANYA JSON valid.
+      content: `Kamu adalah Master Storyteller & Pakar Hook YouTube. Balas HANYA JSON valid.
 Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "order": number, "description": string }] }
-- 1 intro, 4-6 chapter, 1 ending
-- Setiap chapter fokus pada satu aspek/periode sejarah/kronologi kejadian yang sangat spesifik untuk mendukung durasi video panjang (target akhir video 10-15 menit).`,
+- 1 intro, 3 chapter, 1 ending (TEPAT 5 sections total, tidak boleh lebih!)
+- SANGAT PENTING: Jangan buat outline yang generik atau membosankan!
+- Intro WAJIB berisi "Curiosity Hook" yang memancing rasa penasaran ekstrem atau ancaman besar.
+- Chapter WAJIB membangun ketegangan (Tension Building), klimaks, dan pengungkapan fakta gila.
+- Setiap bab harus fokus pada kronologi/aspek yang spesifik dan provokatif (target akhir video 8-10 menit).`,
     },
     {
       role: 'user',
