@@ -6,8 +6,9 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
+  const baseUrl = new URL(request.url).origin
   const sql = getSql()
   const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
 
@@ -30,6 +31,13 @@ export async function POST(_request: Request, context: RouteContext) {
       )
       RETURNING *
     `
+
+    // Chain to next stage if requested
+    const url = new URL(request.url)
+    if (url.searchParams.get('chain') === 'true') {
+      fetch(`${baseUrl}/api/projects/${id}/director?chain=true`, { method: 'POST' })
+        .catch(err => console.error('[Research] Failed to chain to director:', err))
+    }
 
     return NextResponse.json({ research: rows[0] })
   } catch (error) {

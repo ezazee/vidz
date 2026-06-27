@@ -9,8 +9,9 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
+  const baseUrl = new URL(request.url).origin
   const sql = getSql()
 
   const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
@@ -52,57 +53,72 @@ export async function POST(_request: Request, context: RouteContext) {
     })
   })
 
-  const scenesResults = await Promise.all(scenesPromises)
-  const allScenes = []
-  let globalOrderIndex = 0
-
-  for (const scenes of scenesResults) {
-    for (const scene of scenes) {
-      scene.order_index = globalOrderIndex++
-      const row = await sql`
-        INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, camera, effect, emotion, transition, duration, image_status, voice_status)
-        VALUES (
-          ${id}, ${scene.order_index}, ${scene.narration}, ${scene.subtitle},
-          ${scene.image_prompt}, ${scene.camera}, ${scene.effect}, ${scene.emotion},
-          ${scene.transition}, ${scene.duration}, 'idle', 'idle'
-        )
-        RETURNING *
-      `
-      allScenes.push(row[0])
-    }
-  }
-
-  // Gabungkan seluruh teks narasi untuk input generasi SEO
-  const narrationText = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')
-
-  // Bersihkan SEO lama jika ada
-  await sql`DELETE FROM seo_metadata WHERE project_id = ${id}`
-
-  // Hasilkan metadata SEO secara paralel/asinkron tanpa menunda respons adegan
   try {
-    const seo = await generateSeoMetadata({
-      topic: projects[0].topic,
-      summary,
-      narrationText,
-    })
+    const scenesResults = await Promise.all(scenesPromises)
+    const allScenes = []
+    let globalOrderIndex = 0
 
-    await sql`
-      INSERT INTO seo_metadata (project_id, title, description, tags, hashtags, status)
-      VALUES (
-        ${id},
-        ${seo.title},
-        ${seo.description},
-        ${JSON.stringify(seo.tags)}::jsonb,
-        ${JSON.stringify(seo.hashtags)}::jsonb,
-        'completed'
-      )
-    `
-    console.log(`SEO Metadata successfully generated for project ${id}`)
-  } catch (seoErr) {
-    console.error('Gagal memproses AI SEO Metadata:', seoErr)
+    for (const scenes of scenesResults) {
+      for (const scene of scenes) {
+        scene.order_index = globalOrderIndex++
+        const row = await sql`
+          INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, camera, effect, emotion, transition, duration, image_status, voice_status)
+          VALUES (
+            ${id}, ${scene.order_index}, ${scene.narration}, ${scene.subtitle},
+            ${scene.image_prompt}, ${scene.camera}, ${scene.effect}, ${scene.emotion},
+            ${scene.transition}, ${scene.duration}, 'idle', 'idle'
+          )
+          RETURNING *
+        `
+        allScenes.push(row[0])
+      }
+    }
+
+    // Gabungkan seluruh teks narasi untuk input generasi SEO
+    const narrationText = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')
+
+    // Bersihkan SEO lama jika ada
+    await sql`DELETE FROM seo_metadata WHERE project_id = ${id}`
+
+    // Hasilkan metadata SEO secara paralel/asinkron tanpa menunda respons adegan
+    try {
+      const seo = await generateSeoMetadata({
+        topic: projects[0].topic,
+        summary,
+        narrationText,
+      })
+
+      await sql`
+        INSERT INTO seo_metadata (project_id, title, description, tags, hashtags, status)
+        VALUES (
+          ${id},
+          ${seo.title},
+          ${seo.description},
+          ${JSON.stringify(seo.tags)}::jsonb,
+          ${JSON.stringify(seo.hashtags)}::jsonb,
+          'completed'
+        )
+      `
+      console.log(`SEO Metadata successfully generated for project ${id}`)
+    } catch (seoErr) {
+      console.error('Gagal memproses AI SEO Metadata:', seoErr)
+    }
+
+    // Chain to next stage if requested
+    const url = new URL(request.url)
+    if (url.searchParams.get('chain') === 'true') {
+      fetch(`${baseUrl}/api/projects/${id}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'full' })
+      }).catch(err => console.error('[Scenes] Failed to chain to generate:', err))
+    }
+
+    return NextResponse.json({ scenes: allScenes, count: allScenes.length })
+  } catch (error) {
+    console.error('[Scenes] Failed:', error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
   }
-
-  return NextResponse.json({ scenes: allScenes, count: allScenes.length })
 }
 
 export const maxDuration = 60;
