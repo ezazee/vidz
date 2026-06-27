@@ -93,3 +93,6 @@ export async function POST(request: Request, context: RouteContext) {
     projectId: id
   }, { status: 202 })
 }
+
+export const maxDuration = 60;
+

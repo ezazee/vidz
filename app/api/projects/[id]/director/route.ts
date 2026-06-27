@@ -57,3 +57,6 @@ export async function POST(_request: Request, context: RouteContext) {
 
   return NextResponse.json({ director: rows[0] })
 }
+
+export const maxDuration = 60;
+

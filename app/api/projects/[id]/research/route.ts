@@ -15,20 +15,28 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 })
   }
 
-  const output = await generateResearch(projects[0].topic)
+  try {
+    const output = await generateResearch(projects[0].topic)
 
-  const rows = await sql`
-    INSERT INTO research (project_id, summary, facts, timeline, "references", status)
-    VALUES (
-      ${id},
-      ${output.summary},
-      ${JSON.stringify(output.facts)}::jsonb,
-      ${JSON.stringify(output.timeline)}::jsonb,
-      ${JSON.stringify(output.references)}::jsonb,
-      'completed'
-    )
-    RETURNING *
-  `
+    const rows = await sql`
+      INSERT INTO research (project_id, summary, facts, timeline, "references", status)
+      VALUES (
+        ${id},
+        ${output.summary},
+        ${JSON.stringify(output.facts)}::jsonb,
+        ${JSON.stringify(output.timeline)}::jsonb,
+        ${JSON.stringify(output.references)}::jsonb,
+        'completed'
+      )
+      RETURNING *
+    `
 
-  return NextResponse.json({ research: rows[0] })
+    return NextResponse.json({ research: rows[0] })
+  } catch (error) {
+    console.error('[Research] Failed:', error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
+  }
 }
+
+export const maxDuration = 60;
+

@@ -104,3 +104,6 @@ export async function POST(_request: Request, context: RouteContext) {
 
   return NextResponse.json({ scenes: allScenes, count: allScenes.length })
 }
+
+export const maxDuration = 60;
+

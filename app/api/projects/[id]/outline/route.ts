@@ -26,3 +26,6 @@ export async function POST(_request: Request, context: RouteContext) {
 
   return NextResponse.json({ outline: rows[0] })
 }
+
+export const maxDuration = 60;
+
