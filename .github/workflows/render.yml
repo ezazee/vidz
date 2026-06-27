@@ -43,6 +43,9 @@ jobs:
         run: node scripts/fetch-pexels.js
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET: ${{ secrets.API_SECRET }}
+          PROJECT_ID: ${{ github.event.client_payload.project_id }}
 
       - name: Generate images
         run: node scripts/generate-images.js

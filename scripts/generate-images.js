@@ -5,9 +5,10 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
   if (scene.pexels_video_urls && scene.pexels_video_urls.length > 0) {
-    console.log(`Skipping AI image generation for scene ${scene.order_index + 1} because Pexels videos were found.`)
+    console.log(`Scene ${scene.order_index + 1}: ✓ Menggunakan ${scene.pexels_video_urls.length} video Pexels (B-Roll) — skip AI image`)
     return
   }
+  console.log(`Scene ${scene.order_index + 1}: 🎨 Membuat gambar AI yang sesuai topik...`)
 
   const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
   const maxRetries = 3

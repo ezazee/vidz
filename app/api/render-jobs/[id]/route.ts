@@ -55,141 +55,152 @@ export async function PATCH(request: Request, context: RouteContext) {
     `
 
     try {
-      // 1. Ambil detail topik proyek untuk teks headline clickbait
+      // 1. Ambil detail proyek dan scene pertama
       const projectDetails = await sql`
         SELECT topic FROM projects WHERE id = ${projectId} LIMIT 1
       `
-      const topic = projectDetails[0]?.topic || 'Sejarah Misteri'
+      const topic = projectDetails[0]?.topic || 'Dokumenter'
 
-      // 2. Tentukan Model dan Kredensial AI untuk Generasi Gambar Unik
-      const aiBaseUrl = process.env.AI_BASE_URL
-      const aiApiKey = process.env.AI_API_KEY
-      const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+      // 2. Ambil gambar scene pertama sebagai background thumbnail (paling relevan dengan topik)
+      const firstScene = await sql`
+        SELECT image_url FROM scenes 
+        WHERE project_id = ${projectId} AND image_url IS NOT NULL AND image_url != ''
+        ORDER BY order_index ASC LIMIT 1
+      `
 
-      if (aiBaseUrl && aiApiKey) {
-        console.log(`Pipeline generating a COMPLETELY UNIQUE AI background image for project ${projectId} thumbnail...`)
+      let bgBuffer: Buffer | null = null
 
-        // Buat prompt gambar khusus untuk YouTube Thumbnail (High contrast, dramatic, clickable)
-        const thumbnailImagePrompt = `A high-contrast, dramatic, highly engaging YouTube thumbnail background image for a documentary about: ${topic}. Cinematic lighting, highly detailed, 8k resolution, photorealistic, no text, no logos, no banners, epic composition.`
+      // Prioritas 1: Gunakan gambar scene pertama (sudah pasti relevan dengan topik)
+      if (firstScene[0]?.image_url) {
+        try {
+          const sceneImgUrl = firstScene[0].image_url.startsWith('http')
+            ? firstScene[0].image_url
+            : `${process.env.R2_PUBLIC_URL}/${firstScene[0].image_url}`
+          console.log(`Thumbnail: Menggunakan gambar scene pertama sebagai background...`)
+          const bgImgRes = await fetch(sceneImgUrl)
+          if (bgImgRes.ok) {
+            bgBuffer = Buffer.from(await bgImgRes.arrayBuffer())
+          }
+        } catch (e) {
+          console.error('Failed to fetch first scene image for thumbnail:', e)
+        }
+      }
 
-        // 3. Panggil API AI untuk generate gambar unik
-        const aiRes = await fetch(`${aiBaseUrl}/images/generations`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${aiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: modelName,
-            prompt: thumbnailImagePrompt,
-            n: 1,
-            size: '1792x1024',
-            response_format: 'url',
-          }),
-        })
+      // Prioritas 2: Jika tidak ada gambar scene, generate AI background
+      if (!bgBuffer) {
+        const aiBaseUrl = process.env.AI_BASE_URL
+        const aiApiKey = process.env.AI_API_KEY
+        const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
 
-        if (aiRes.ok) {
-          const aiData = await aiRes.json()
-          const generatedImgUrl = aiData.data?.[0]?.url
+        if (aiBaseUrl && aiApiKey) {
+          console.log(`Thumbnail: Tidak ada gambar scene, generate AI background...`)
+          const thumbnailImagePrompt = `A high-contrast, dramatic, cinematic YouTube thumbnail background for a documentary about: ${topic}. Epic lighting, highly detailed, 8k, photorealistic, no text, no logos.`
+          
+          const aiRes = await fetch(`${aiBaseUrl}/images/generations`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${aiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: modelName,
+              prompt: thumbnailImagePrompt,
+              n: 1,
+              size: '1792x1024',
+              response_format: 'url',
+            }),
+          })
 
-          if (generatedImgUrl) {
-            // 4. Unduh buffer gambar unik yang baru saja digenerate
-            const bgImgRes = await fetch(generatedImgUrl)
-            if (bgImgRes.ok) {
-              const bgBuffer = Buffer.from(await bgImgRes.arrayBuffer())
-
-              // 5. Buat Headline Clickbait 2 Baris yang Sangat Menarik
-              const getClickbaitHeadline = (title: string) => {
-                const t = title.toLowerCase()
-                if (t.includes('proklamasi')) {
-                  return { line1: 'MISTERI NYATA!', line2: 'PROKLAMASI 1945' }
-                }
-                if (t.includes('majapahit')) {
-                  return { line1: 'RAHASIA HILANG!', line2: 'MAJAPAHIT' }
-                }
-                if (t.includes('makan') || t.includes('bakso')) {
-                  return { line1: 'TERNYATA BEGINI!', line2: 'MAKAN BAKSO' }
-                }
-                
-                const words = title.split(' ')
-                const line2 = words.slice(0, 2).join(' ').toUpperCase()
-                const dramaticHooks = ['TERUNGKAP!', 'MISTERI BESAR!', 'RAHASIA NYATA!', 'FAKTA ANEH!', 'MISTERI HILANG!']
-                const line1 = dramaticHooks[Math.floor(Math.random() * dramaticHooks.length)]
-                return { line1, line2 }
-              }
-
-              const { line1, line2 } = getClickbaitHeadline(topic)
-
-              // 6. Buat SVG Overlay dengan Vignette & Outline Teks Tebal
-              const svgOverlay = `
-                <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-                      <stop offset="15%" stop-color="#000000" stop-opacity="0.10" />
-                      <stop offset="60%" stop-color="#000000" stop-opacity="0.60" />
-                      <stop offset="100%" stop-color="#000000" stop-opacity="0.92" />
-                    </radialGradient>
-                  </defs>
-                  <rect width="1280" height="720" fill="url(#vignette)" />
-                  <g transform="translate(90, 360)">
-                    <!-- Line 1: Hook (Kuning Clickbait) -->
-                    <text x="0" y="-45" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="88" fill="#fbbf24" stroke="#000000" stroke-width="14" stroke-linejoin="round" text-anchor="left" dominant-baseline="middle">
-                      ${line1}
-                    </text>
-                    <!-- Line 2: Topik Utama (Putih Kontras) -->
-                    <text x="0" y="55" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="76" fill="#ffffff" stroke="#000000" stroke-width="14" stroke-linejoin="round" text-anchor="left" dominant-baseline="middle">
-                      ${line2}
-                    </text>
-                  </g>
-                </svg>
-              `
-
-              // 7. Jalankan Sharp untuk menggabungkan background unik dengan SVG overlay
-              const sharp = require('sharp')
-              const compositeBuffer = await sharp(bgBuffer)
-                .resize(1280, 720, { fit: 'cover' })
-                .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
-                .png()
-                .toBuffer()
-
-              // 8. Upload thumbnail hasil composite ke Vercel Blob
-              const blobToken = process.env.BLOB_READ_WRITE_TOKEN
-              if (blobToken) {
-                const filename = `thumbnails/pipeline-unique-${projectId}-${Date.now()}.png`
-                const uploadRes = await fetch(`https://blob.vercel-storage.com/${filename}`, {
-                  method: 'PUT',
-                  headers: {
-                    Authorization: `Bearer ${blobToken}`,
-                    'Content-Type': 'image/png',
-                    'x-content-type': 'image/png',
-                  },
-                  body: compositeBuffer,
-                })
-
-                if (uploadRes.ok) {
-                  const uploadData = await uploadRes.json()
-                  const pipelineThumbnailUrl = uploadData.url
-                  console.log(`Pipeline successfully uploaded unique clickbait cover: ${pipelineThumbnailUrl}`)
-
-                  // Simpan sebagai thumbnail resmi di database
-                  await sql`
-                    INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
-                    VALUES (${projectId}, 'pipeline_unique_clickbait', ${pipelineThumbnailUrl}, ${line1 + ' ' + line2}, 'completed')
-                  `
-                } else {
-                  console.error(`Failed to upload unique pipeline thumbnail: ${uploadRes.statusText}`)
-                }
+          if (aiRes.ok) {
+            const aiData = await aiRes.json()
+            const generatedImgUrl = aiData.data?.[0]?.url
+            if (generatedImgUrl) {
+              const bgImgRes = await fetch(generatedImgUrl)
+              if (bgImgRes.ok) {
+                bgBuffer = Buffer.from(await bgImgRes.arrayBuffer())
               }
             }
           }
+        }
+      }
+
+      if (bgBuffer) {
+        // 3. Format judul menjadi 2 baris yang rapi
+        const words = topic.split(' ')
+        let line1 = ''
+        let line2 = ''
+        
+        if (words.length <= 3) {
+          line1 = topic.toUpperCase()
+          line2 = ''
         } else {
-          console.error(`Failed to generate unique AI thumbnail background: ${aiRes.status} ${aiRes.statusText}`)
+          const midpoint = Math.ceil(words.length / 2)
+          line1 = words.slice(0, midpoint).join(' ').toUpperCase()
+          line2 = words.slice(midpoint).join(' ').toUpperCase()
+        }
+
+        // 4. Buat SVG Overlay (Warm Gold + Serif style, konsisten dengan visual video)
+        const svgOverlay = `
+          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+                <stop offset="15%" stop-color="#000000" stop-opacity="0.10" />
+                <stop offset="60%" stop-color="#000000" stop-opacity="0.60" />
+                <stop offset="100%" stop-color="#000000" stop-opacity="0.92" />
+              </radialGradient>
+            </defs>
+            <rect width="1280" height="720" fill="url(#vignette)" />
+            <g transform="translate(640, ${line2 ? '330' : '360'})">
+              <text x="0" y="0" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="82" fill="#fbbf24" stroke="#000000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">
+                ${line1}
+              </text>
+              ${line2 ? `<text x="0" y="90" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="72" fill="#ffffff" stroke="#000000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">
+                ${line2}
+              </text>` : ''}
+            </g>
+          </svg>
+        `
+
+        // 5. Composite dengan Sharp
+        const sharp = require('sharp')
+        const compositeBuffer = await sharp(bgBuffer)
+          .resize(1280, 720, { fit: 'cover' })
+          .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
+          .png()
+          .toBuffer()
+
+        // 6. Upload ke Vercel Blob
+        const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+        if (blobToken) {
+          const filename = `thumbnails/thumb-${projectId}-${Date.now()}.png`
+          const uploadRes = await fetch(`https://blob.vercel-storage.com/${filename}`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${blobToken}`,
+              'Content-Type': 'image/png',
+              'x-content-type': 'image/png',
+            },
+            body: compositeBuffer,
+          })
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json()
+            const thumbnailUrl = uploadData.url
+            console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl}`)
+
+            await sql`
+              INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
+              VALUES (${projectId}, 'pipeline_auto', ${thumbnailUrl}, ${(line1 + ' ' + line2).trim()}, 'completed')
+            `
+          } else {
+            console.error(`Failed to upload thumbnail: ${uploadRes.statusText}`)
+          }
         }
       } else {
-        console.warn('AI credentials (AI_BASE_URL or AI_API_KEY) missing. Skipping unique thumbnail generation.')
+        console.warn('Tidak bisa membuat thumbnail: tidak ada gambar scene dan AI credentials tidak tersedia.')
       }
     } catch (err) {
-      console.error('Failed to automatically generate unique clickbait pipeline thumbnail:', err)
+      console.error('Failed to generate thumbnail:', err)
     }
   }
 

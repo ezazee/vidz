@@ -47,6 +47,7 @@ interface Scene {
   duration: number
   image_url?: string
   voice_url?: string
+  pexels_video_urls?: string[]
   updated_at?: string
 }
 
@@ -74,11 +75,19 @@ function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: Render
   }
 
   const isRendering = renderStatus === 'processing' || renderStatus === 'pending'
+  const hasPexels = scene.pexels_video_urls && scene.pexels_video_urls.length > 0
 
   return (
     <div className="bg-white border border-slate-200/60 rounded-xl p-4 space-y-4 hover:border-indigo-100 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-        <span className="text-indigo-600 font-bold">Adegan {scene.order_index + 1}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-indigo-600 font-bold">Adegan {scene.order_index + 1}</span>
+          {scene.image_url && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${hasPexels ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-violet-50 text-violet-600 border border-violet-200'}`}>
+              {hasPexels ? `🎬 Video Pexels (${scene.pexels_video_urls!.length})` : '🎨 AI Image'}
+            </span>
+          )}
+        </div>
         <span className="bg-slate-100 px-2.5 py-0.5 rounded-md text-slate-500 font-medium">Durasi: {scene.duration}s</span>
       </div>
 

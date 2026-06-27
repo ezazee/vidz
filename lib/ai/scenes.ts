@@ -37,7 +37,9 @@ Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": s
 - narration: narasi panjang, mendalam, dan kaya informasi untuk voiceover (3-5 kalimat detail). Gunakan bahasa Indonesia yang baku, dramatis, dan mengalir seperti dokumenter profesional.
 - subtitle: versi pendek narration (max 10 kata)
 - image_prompt: prompt bahasa Inggris detail untuk image AI, sesuai visual_style. Jelaskan objek, komposisi, pencahayaan, dan detail visual secara spesifik.
-- pexels_query: 1-2 kata bahasa Inggris (kata benda/suasana umum) untuk mencari stock video (contoh: "space", "sad man", "ancient ruins", "ocean"). Kosongkan jika konsepnya terlalu abstrak.
+- pexels_query: SANGAT KRITIKAL! Ini digunakan untuk mencari video stok (video dunia nyata dari Pexels).
+  - ISI dengan 1-2 kata benda bahasa Inggris HANYA JIKA adegan adalah suasana umum/B-Roll yang pasti tersedia di stok video (contoh: "ocean", "forest", "city night", "sad person", "galaxy", "rain", "crowd").
+  - WAJIB KOSONGKAN ("") JIKA adegan membutuhkan hal spesifik yang tidak mungkin ada di stok video: tokoh sejarah, makhluk mitologi, hewan spesifik bertarung, monster, senjata kuno, adegan perang detail, wajah karakter fiksi, atau objek sangat unik. Jika dikosongkan, sistem akan menggambarnya menggunakan AI Image Generator agar 100% akurat dan sesuai topik.
 - duration: 15-20 detik per scene (sesuai panjang narasi yang dibacakan)
 - order_index mulai dari ${input.orderOffset}`,
     },
