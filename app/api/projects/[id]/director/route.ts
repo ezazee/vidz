@@ -4,6 +4,7 @@ import { getSql } from '@/lib/db/client'
 
 interface RouteContext {
   params: Promise<{ id: string }>
+}
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
   const sql = getSql()
