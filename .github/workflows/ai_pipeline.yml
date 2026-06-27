@@ -10,16 +10,23 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Trigger Research
-        run: curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/research"
+        run: |
+          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/research"
       
       - name: Trigger Director
-        run: curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/director"
+        run: |
+          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/director"
         
       - name: Trigger Outline
-        run: curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/outline"
+        run: |
+          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/outline"
         
       - name: Trigger Scenes
-        run: curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/scenes"
+        run: |
+          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/scenes"
         
       - name: Trigger Generate
-        run: curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/generate" -H "Content-Type: application/json" -d '{"mode": "full"}'
+        run: |
+          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/generate" \
+            -H "Content-Type: application/json" \
+            -d '{"mode": "full"}'
