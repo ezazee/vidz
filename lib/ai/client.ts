@@ -13,7 +13,7 @@ export async function chat(messages: Message[], json = true, customModel?: strin
   if (!baseUrl || !apiKey || !model) throw new Error('AI_BASE_URL, AI_API_KEY, and AI_MODEL are required')
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 60000)
+  const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes timeout
 
   try {
     const res = await fetch(`${baseUrl}/chat/completions`, {
