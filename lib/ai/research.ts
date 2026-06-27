@@ -9,6 +9,9 @@ export interface ResearchOutput {
 
 
 async function scrapeWebForTopic(topic: string): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
+
   try {
     console.log(`Scraping web for topic: ${topic}...`);
     const res = await fetch('https://lite.duckduckgo.com/lite/', {
@@ -17,8 +20,10 @@ async function scrapeWebForTopic(topic: string): Promise<string> {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
       },
-      body: `q=${encodeURIComponent(topic)}`
+      body: `q=${encodeURIComponent(topic)}`,
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     const html = await res.text();
     const regex = /class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/g;
     let match;
@@ -30,7 +35,13 @@ async function scrapeWebForTopic(topic: string): Promise<string> {
       return "\n\nBERIKUT ADALAH HASIL PENCARIAN INTERNET TERKINI UNTUK REFERENSI (JANGAN HALUSINASI, GUNAKAN FAKTA INI):\n- " + results.join("\n- ");
     }
   } catch (err) {
-    console.error('Failed to scrape web:', err);
+    if ((err as any).name === 'AbortError') {
+      console.error('Scraping web timed out after 8 seconds, proceeding with AI knowledge...');
+    } else {
+      console.error('Failed to scrape web:', err);
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
   return '';
 }
