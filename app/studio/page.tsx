@@ -17,7 +17,8 @@ import {
   Rocket,
   HelpCircle,
   Swords,
-  Plus
+  Plus,
+  Cpu
 } from 'lucide-react'
 
 const THEMES = [
@@ -25,7 +26,8 @@ const THEMES = [
   { id: 'Unsolved Mysteries', label: 'Misteri & Kriminal', icon: MoonStar, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
   { id: 'Space & Astronomy', label: 'Luar Angkasa', icon: Rocket, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { id: 'What-If Scenarios', label: 'Skenario "What-If"', icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  { id: 'Mythology & Folklore', label: 'Mitologi & Legenda', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' }
+  { id: 'Mythology & Folklore', label: 'Mitologi & Legenda', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+  { id: 'Technology & IT', label: 'Teknologi & IT', icon: Cpu, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200' }
 ]
 
 type StageStatus = 'idle' | 'running' | 'done' | 'error'
@@ -340,7 +342,7 @@ export default function StudioPage() {
               </div>
 
               {/* Theme Selector */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {THEMES.map(theme => {
                   const Icon = theme.icon
                   const isSelected = selectedTheme === theme.id

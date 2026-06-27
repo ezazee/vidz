@@ -23,6 +23,7 @@ export async function GET(
         rj.error,
         u.youtube_url,
         u.status as upload_status,
+        u.scheduled_at,
         seo.title as seo_title,
         seo.description as seo_description,
         seo.tags as seo_tags,
@@ -37,7 +38,7 @@ export async function GET(
         LIMIT 1
       ) rj ON true
       LEFT JOIN LATERAL (
-        SELECT youtube_url, status 
+        SELECT youtube_url, status, scheduled_at 
         FROM uploads 
         WHERE project_id = p.id 
         ORDER BY created_at DESC 
@@ -115,30 +116,50 @@ export async function DELETE(
       }
     }
 
-    // 3. Batalkan GitHub Actions yang sedang berjalan jika ada
+    // 3. Batalkan dan Hapus log GitHub Actions terkait
     if (env.GITHUB_TOKEN && env.GITHUB_REPO) {
       for (const job of renderJobs) {
-        if (job.github_run_id && (job.status === 'pending' || job.status === 'processing')) {
-          console.log(`Canceling GitHub Actions run ${job.github_run_id} for project ${id}...`)
+        if (job.github_run_id) {
+          // Jika sedang berjalan, cancel dulu
+          if (job.status === 'pending' || job.status === 'processing') {
+            console.log(`Canceling GitHub Actions run ${job.github_run_id} for project ${id}...`)
+            try {
+              await fetch(
+                `https://api.github.com/repos/${env.GITHUB_REPO}/actions/runs/${job.github_run_id}/cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+                    Accept: 'application/vnd.github+json',
+                    'Content-Type': 'application/json',
+                  },
+                }
+              )
+            } catch (gitErr) {
+              console.error('Failed to cancel GitHub Actions run:', gitErr)
+            }
+          }
+          
+          // Hapus log / histori workflow run dari GitHub
+          console.log(`Deleting GitHub Actions run ${job.github_run_id} for project ${id}...`)
           try {
-            const cancelRes = await fetch(
-              `https://api.github.com/repos/${env.GITHUB_REPO}/actions/runs/${job.github_run_id}/cancel`,
+            const delRes = await fetch(
+              `https://api.github.com/repos/${env.GITHUB_REPO}/actions/runs/${job.github_run_id}`,
               {
-                method: 'POST',
+                method: 'DELETE',
                 headers: {
                   Authorization: `Bearer ${env.GITHUB_TOKEN}`,
                   Accept: 'application/vnd.github+json',
-                  'Content-Type': 'application/json',
                 },
               }
             )
-            if (cancelRes.ok) {
-              console.log(`Successfully requested cancellation for GitHub run ${job.github_run_id}`)
+            if (delRes.ok) {
+              console.log(`Successfully deleted GitHub run ${job.github_run_id}`)
             } else {
-              console.warn(`GitHub cancellation returned status: ${cancelRes.status}`)
+              console.warn(`GitHub delete returned status: ${delRes.status}`)
             }
           } catch (gitErr) {
-            console.error('Failed to cancel GitHub Actions run:', gitErr)
+            console.error('Failed to delete GitHub Actions run:', gitErr)
           }
         }
       }

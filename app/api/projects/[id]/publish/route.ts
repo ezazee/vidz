@@ -11,6 +11,9 @@ export async function POST(
 ) {
   const { id } = await context.params
   const sql = getSql()
+  
+  const body = await request.json().catch(() => ({}))
+  const { scheduledAt } = body // e.g. "2026-06-29T12:00:00.000Z"
 
   try {
     // 1. Ambil Zernio API Key dan YouTube Account ID dari database
@@ -134,18 +137,22 @@ export async function POST(
           accountId: config.youtube_account_id,
           options: {
             privacyStatus: 'public',
+            title: finalTitle,
             ...(project.thumbnail_url ? { thumbnailUrl: project.thumbnail_url, thumbNail: project.thumbnail_url } : {})
           }
         }],
         mediaItems: mediaItems,
-        publishNow: true,
+        publishNow: !scheduledAt,
+        ...(scheduledAt ? { scheduleDate: scheduledAt } : {}),
         // Fallback backward compatibility for Ayrshare-like API schemas
         youtubeOptions: {
           privacyStatus: 'public',
+          title: finalTitle,
           ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
         },
         youTubeOptions: {
           privacyStatus: 'public',
+          title: finalTitle,
           ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
         }
       }),
@@ -162,8 +169,8 @@ export async function POST(
     // 5. Catat riwayat unggahan ke tabel uploads database
     const youtubeUrl = zernioData.url || zernioData.youtubeUrl || ''
     await sql`
-      INSERT INTO uploads (project_id, youtube_id, youtube_url, status)
-      VALUES (${id}, ${postId}, ${youtubeUrl}, 'processing')
+      INSERT INTO uploads (project_id, youtube_id, youtube_url, status, scheduled_at)
+      VALUES (${id}, ${postId}, ${youtubeUrl}, 'processing', ${scheduledAt ? new Date(scheduledAt) : null})
       ON CONFLICT DO NOTHING
     `
 

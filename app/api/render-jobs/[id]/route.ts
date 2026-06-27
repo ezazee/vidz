@@ -57,9 +57,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     try {
       // 1. Ambil detail proyek dan scene pertama
       const projectDetails = await sql`
-        SELECT topic FROM projects WHERE id = ${projectId} LIMIT 1
+        SELECT topic, auto_publish FROM projects WHERE id = ${projectId} LIMIT 1
       `
       const topic = projectDetails[0]?.topic || 'Dokumenter'
+      const autoPublish = projectDetails[0]?.auto_publish === true
 
       // 2. Ambil gambar scene pertama sebagai background thumbnail (paling relevan dengan topik)
       const firstScene = await sql`
@@ -199,8 +200,26 @@ export async function PATCH(request: Request, context: RouteContext) {
       } else {
         console.warn('Tidak bisa membuat thumbnail: tidak ada gambar scene dan AI credentials tidak tersedia.')
       }
+
+      // 7. Auto Publish Check
+      if (autoPublish) {
+        console.log(`[Render Webhook] Auto-publish is enabled for project ${projectId}. Triggering publish API...`)
+        try {
+          const baseUrl = new URL(request.url).origin
+          let publishUrl = `${baseUrl}/api/projects/${projectId}/publish`
+          if (publishUrl.includes('localhost')) publishUrl = publishUrl.replace('localhost', '127.0.0.1')
+          
+          await fetch(publishUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          })
+          console.log(`[Render Webhook] Publish API triggered successfully.`)
+        } catch (pubErr) {
+          console.error(`[Render Webhook] Failed to trigger auto-publish:`, pubErr)
+        }
+      }
     } catch (err) {
-      console.error('Failed to generate thumbnail:', err)
+      console.error('Failed to generate thumbnail or publish:', err)
     }
   }
 

@@ -7,6 +7,7 @@ import {
   Library,
   LayoutDashboard,
   Plug,
+  CalendarClock,
   X
 } from 'lucide-react'
 
@@ -53,6 +54,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       href: '/integrations',
       icon: Plug,
       active: isActive('/integrations'),
+    },
+    {
+      label: 'Automation',
+      href: '/schedule',
+      icon: CalendarClock,
+      active: isActive('/schedule'),
     },
   ]
 

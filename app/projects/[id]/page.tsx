@@ -39,6 +39,7 @@ interface Project {
   seo_tags?: string[] | null
   seo_hashtags?: string[] | null
   thumbnail_url?: string | null
+  scheduled_at?: string | null
 }
 
 interface Scene {
@@ -162,6 +163,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [publishing, setPublishing] = useState(false)
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState<string>('')
 
   type TabState = 'video' | 'storyboard' | 'seo'
   const [activeTab, setActiveTab] = useState<TabState>('video')
@@ -243,7 +246,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setPublishSuccess(null)
     setPublishError(null)
     try {
-      const res = await fetch(`/api/projects/${id}/publish`, { method: 'POST' })
+      const payload: Record<string, any> = {}
+      if (scheduleEnabled && scheduledAt) {
+        payload.scheduledAt = new Date(scheduledAt).toISOString()
+      }
+      const res = await fetch(`/api/projects/${id}/publish`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
       const data = await res.json()
       if (res.ok && data.success) {
         setPublishSuccess(data.message)
@@ -687,18 +698,53 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               </a>
                             </div>
                           ) : project.render_status === 'completed' && project.video_url ? (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                                 Video telah dirender dan siap dipublikasikan ke Channel YouTube Anda menggunakan deskripsi SEO yang teroptimasi.
                               </p>
+                              
+                              {/* Opsi Penjadwalan */}
+                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={scheduleEnabled}
+                                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-700">Jadwalkan Publikasi</span>
+                                </label>
+                                
+                                {scheduleEnabled && (
+                                  <div className="pt-1">
+                                    <input 
+                                      type="datetime-local" 
+                                      value={scheduledAt}
+                                      onChange={(e) => setScheduledAt(e.target.value)}
+                                      min={new Date().toISOString().slice(0, 16)}
+                                      className="w-full text-xs rounded-lg border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1.5">Pilih waktu kapan video akan dipublish (Minimal 15 menit dari sekarang).</p>
+                                  </div>
+                                )}
+                              </div>
+
                               <button
                                 onClick={publishToYoutube}
-                                disabled={publishing}
+                                disabled={publishing || (scheduleEnabled && !scheduledAt)}
                                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 hover:bg-red-700 text-white px-4 py-3 text-xs font-bold transition-all shadow-md disabled:opacity-50"
                               >
                                 {publishing ? <Loader2 className="size-4 animate-spin" /> : <Youtube className="size-4" />}
-                                {publishing ? 'Mengunggah...' : 'Publish ke YouTube Sekarang'}
+                                {publishing ? 'Mengunggah...' : scheduleEnabled ? 'Jadwalkan ke YouTube' : 'Publish ke YouTube Sekarang'}
                               </button>
+                              
+                              {project.scheduled_at && (
+                                <div className="mt-3 text-center bg-indigo-50 border border-indigo-100 rounded-lg p-2">
+                                  <p className="text-[10px] font-semibold text-indigo-700">
+                                    Status: Terjadwal pada {new Date(project.scheduled_at).toLocaleString('id-ID')}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg text-center shadow-inner">
