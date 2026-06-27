@@ -7,11 +7,8 @@ import type { DirectorOutput } from '@/lib/pipeline/types'
 
 interface RouteContext {
   params: Promise<{ id: string }>
-}
-
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
-  const baseUrl = new URL(request.url).origin
   const sql = getSql()
 
   const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
@@ -102,16 +99,6 @@ export async function POST(request: Request, context: RouteContext) {
       console.log(`SEO Metadata successfully generated for project ${id}`)
     } catch (seoErr) {
       console.error('Gagal memproses AI SEO Metadata:', seoErr)
-    }
-
-    // Chain to next stage if requested
-    const url = new URL(request.url)
-    if (url.searchParams.get('chain') === 'true') {
-      fetch(`${baseUrl}/api/projects/${id}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'full' })
-      }).catch(err => console.error('[Scenes] Failed to chain to generate:', err))
     }
 
     return NextResponse.json({ scenes: allScenes, count: allScenes.length })

@@ -4,11 +4,8 @@ import { getSql } from '@/lib/db/client'
 
 interface RouteContext {
   params: Promise<{ id: string }>
-}
-
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
-  const baseUrl = new URL(request.url).origin
   const sql = getSql()
 
   const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
@@ -56,13 +53,6 @@ export async function POST(request: Request, context: RouteContext) {
       )
       RETURNING *
     `
-
-    // Chain to next stage if requested
-    const url = new URL(request.url)
-    if (url.searchParams.get('chain') === 'true') {
-      fetch(`${baseUrl}/api/projects/${id}/outline?chain=true`, { method: 'POST' })
-        .catch(err => console.error('[Director] Failed to chain to outline:', err))
-    }
 
     return NextResponse.json({ director: rows[0] })
   } catch (error) {
