@@ -34,7 +34,7 @@ jobs:
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
           IMAGE_MODEL: ${{ secrets.IMAGE_MODEL }}
         run: |
-          npx tsx scripts/run-pipeline.ts ${{ github.event.client_payload.project_id }}
+          npx tsx --tsconfig tsconfig.json scripts/run-pipeline.ts ${{ github.event.client_payload.project_id }}
           
       - name: Trigger Generate Render
         run: |
