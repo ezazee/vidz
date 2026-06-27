@@ -14,21 +14,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
           
       - name: Install dependencies
         run: npm ci
 
-      - name: Run AI Pipeline Locally
+      - name: Run AI Pipeline
         env:
-          DATABASE_URL: ${{ github.event.client_payload.db_url }}
-          AI_API_KEY: ${{ github.event.client_payload.ai_key }}
-          AI_MODEL: ${{ github.event.client_payload.ai_model }}
-          AI_BASE_URL: ${{ github.event.client_payload.ai_base }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          NINE_ROUTER_API_KEY: ${{ secrets.NINE_ROUTER_API_KEY }}
+          NINE_ROUTER_BASE_URL: ${{ secrets.NINE_ROUTER_BASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          IMAGE_MODEL: ${{ secrets.IMAGE_MODEL }}
         run: |
           npx tsx scripts/run-pipeline.ts ${{ github.event.client_payload.project_id }}
           
       - name: Trigger Generate Render
         run: |
-          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/generate" \
+          curl -sSf -X POST "${{ secrets.API_BASE_URL }}/api/projects/${{ github.event.client_payload.project_id }}/generate" \
             -H "Content-Type: application/json" \
             -d '{"mode": "full"}'
