@@ -589,7 +589,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <div className="lg:col-span-5">
                       {project.video_url ? (
                         <div className="-mt-6">
-                          <ThumbnailGenerator projectId={id} scenes={scenes} defaultText={project.topic} />
+                          <ThumbnailGenerator projectId={id} defaultText={project.topic} />
                         </div>
                       ) : (
                         <div className="bg-white border border-slate-200/80 rounded-xl p-8 text-center shadow-sm flex flex-col items-center justify-center gap-3 opacity-60">
