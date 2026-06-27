@@ -7,39 +7,27 @@ on:
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
-      - name: Trigger Research
-        run: |
-          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/research"
+      - uses: actions/checkout@v4
       
-      - name: Trigger Director
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run AI Pipeline Locally
+        env:
+          DATABASE_URL: ${{ github.event.client_payload.db_url }}
+          AI_API_KEY: ${{ github.event.client_payload.ai_key }}
+          AI_MODEL: ${{ github.event.client_payload.ai_model }}
+          AI_BASE_URL: ${{ github.event.client_payload.ai_base }}
         run: |
-          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/director"
-        
-      - name: Trigger Outline
-        run: |
-          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/outline"
-        
-      - name: Trigger Scenes (Chunked to bypass 60s limit)
-        run: |
-          SECTION_INDEX=0
-          while true; do
-            echo "Generating scenes for section index $SECTION_INDEX..."
-            RESPONSE=$(curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/scenes?sectionIndex=$SECTION_INDEX")
-            
-            # The API returns remainingSections which is total - 1 - sectionIndex
-            # If we don't have jq, we can just grep it, but Github Actions ubuntu-latest has jq
-            REMAINING=$(echo "$RESPONSE" | jq -r '.remainingSections')
-            echo "Remaining sections: $REMAINING"
-            
-            if [ "$REMAINING" = "0" ] || [ "$REMAINING" = "null" ]; then
-              break
-            fi
-            SECTION_INDEX=$((SECTION_INDEX + 1))
-          done
-        
-      - name: Trigger Generate
+          npx tsx scripts/run-pipeline.ts ${{ github.event.client_payload.project_id }}
+          
+      - name: Trigger Generate Render
         run: |
           curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/generate" \
             -H "Content-Type: application/json" \

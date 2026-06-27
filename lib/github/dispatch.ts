@@ -53,6 +53,10 @@ export async function dispatchAiPipeline(projectId: string, baseUrl: string) {
       client_payload: {
         project_id: projectId,
         base_url: baseUrl,
+        db_url: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+        ai_key: process.env.AI_API_KEY || process.env.NINE_ROUTER_API_KEY,
+        ai_model: process.env.AI_MODEL,
+        ai_base: process.env.AI_BASE_URL || process.env.NINE_ROUTER_BASE_URL,
       },
     }),
   })
