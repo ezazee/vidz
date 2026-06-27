@@ -41,7 +41,7 @@ ${input.narrationText}
 
 Buatkan judul, deskripsi, tag, dan hashtag yang sangat ramah mesin pencari (SEO-optimized) sesuai dengan instruksi sistem.`,
     },
-  ], true, 'gemini-flash-grade')
+  ], true)
 
   try {
     // Bersihkan jika model tidak sengaja menyertakan markdown wrap

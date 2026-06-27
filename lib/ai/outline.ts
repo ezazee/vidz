@@ -27,7 +27,7 @@ Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "o
       role: 'user',
       content: `Buat outline video dokumenter YouTube tentang: "${topic}"\n\nRingkasan:\n${summary}`,
     },
-  ], true, 'gemini-flash-grade')
+  ], true)
   try {
     let cleaned = content.trim()
     // 1. Hapus pembungkus markdown

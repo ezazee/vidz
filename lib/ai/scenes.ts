@@ -72,7 +72,7 @@ INSTRUKSI FINAL & KRITIKAL:
 Bab ini membutuhkan TEPAT ${numScenes} scene. Kamu WAJIB mengembalikan array "scenes" yang berisi persis ${numScenes} objek. Jangan kurang, jangan lebih!
 Jika materi/deskripsi terasa sedikit, JANGAN mengurangi jumlah scene! Jabarkan lebih detail secara perlahan (slow pacing) dengan mendeskripsikan visual, suasana, dan emosi yang mendalam agar jumlah scene tetap persis ${numScenes}.`,
     },
-  ], true, 'gemini-flash-grade')
+  ], true)
   try {
     let cleaned = content.trim()
     // 1. Hapus pembungkus markdown

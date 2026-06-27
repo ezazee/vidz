@@ -52,7 +52,7 @@ Schema: { "summary": string, "facts": string[], "timeline": [{ "year": string, "
       role: 'user',
       content: `Lakukan riset mendalam tentang topik: "${topic}"` + searchContext,
     },
-  ], true, 'gemini-flash-grade')
+  ], true)
 
   try {
     let cleaned = content.trim()

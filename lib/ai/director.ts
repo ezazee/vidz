@@ -44,7 +44,7 @@ ${input.research.facts.slice(0, 5).join('\n')}
 
 Buat director bible lengkap untuk video dokumenter YouTube tentang topik ini. Gunakan bahasa Indonesia untuk voice_style.`,
     },
-  ], true, 'gemini-flash-grade')
+  ], true)
 
   try {
     let cleaned = content.trim()
