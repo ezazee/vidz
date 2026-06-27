@@ -43,7 +43,7 @@ export async function POST(
 4. 'textBottom': A catchy 3-4 word banner text for the bottom (Indonesian).
 OUTPUT EXCLUSIVELY A RAW JSON OBJECT with these 4 keys. DO NOT wrap in markdown \`\`\`json. DO NOT add any other text.` },
         { role: 'user', content: prompt }
-      ], false) // json=false to prevent model hangs
+      ], false, 'gemini-flash-grade') // json=false to prevent model hangs
       
       const timeoutPromise = new Promise<string>((_, reject) => 
         setTimeout(() => reject(new Error('LLM Enhance Timeout')), 10000)

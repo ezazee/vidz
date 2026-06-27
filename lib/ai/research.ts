@@ -22,7 +22,7 @@ Schema: { "summary": string, "facts": string[], "timeline": [{ "year": string, "
       role: 'user',
       content: `Lakukan riset mendalam tentang topik: "${topic}"`,
     },
-  ])
+  ], true, 'gemini-flash-grade')
 
   return JSON.parse(content) as ResearchOutput
 }

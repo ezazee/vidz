@@ -144,6 +144,15 @@ export default function StudioPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const logTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    const activePid = localStorage.getItem('activeProjectId')
+    if (activePid) {
+      setProjectId(activePid)
+      setRunning(true)
+    }
+  }, [])
+
   // AI Topic Recommendations States
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [loadingRecs, setLoadingRecs] = useState(false)
@@ -210,10 +219,12 @@ export default function StudioPage() {
           setVideoUrl(data.videoUrl)
           setRunning(false)
           clearInterval(pollRef.current!)
+          localStorage.removeItem('activeProjectId')
         }
         if (s.render === 'failed' || s.research === 'failed' || s.director === 'failed') {
           setRunning(false)
           clearInterval(pollRef.current!)
+          localStorage.removeItem('activeProjectId')
         }
       } catch {}
     }, 3000)
@@ -249,6 +260,7 @@ export default function StudioPage() {
       })
       pid = (await res.json()).project.id
       setProjectId(pid)
+      localStorage.setItem('activeProjectId', pid)
       
       const pipeRes = await fetch(`/api/projects/${pid}/pipeline`, { method: 'POST' })
       if (!pipeRes.ok) throw new Error('Gagal memulai background pipeline')
