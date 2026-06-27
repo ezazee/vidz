@@ -26,7 +26,8 @@ export async function GET(
         seo.title as seo_title,
         seo.description as seo_description,
         seo.tags as seo_tags,
-        seo.hashtags as seo_hashtags
+        seo.hashtags as seo_hashtags,
+        th.image_url as thumbnail_url
       FROM projects p
       LEFT JOIN LATERAL (
         SELECT status, video_url, error 
@@ -49,6 +50,13 @@ export async function GET(
         ORDER BY created_at DESC 
         LIMIT 1
       ) seo ON true
+      LEFT JOIN LATERAL (
+        SELECT image_url
+        FROM thumbnails
+        WHERE project_id = p.id AND status = 'completed'
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) th ON true
       WHERE p.id = ${id}
     `
 

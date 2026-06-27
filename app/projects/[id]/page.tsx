@@ -38,6 +38,7 @@ interface Project {
   seo_description?: string | null
   seo_tags?: string[] | null
   seo_hashtags?: string[] | null
+  thumbnail_url?: string | null
 }
 
 interface Scene {
@@ -589,7 +590,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <div className="lg:col-span-5">
                       {project.video_url ? (
                         <div className="-mt-6">
-                          <ThumbnailGenerator projectId={id} defaultText={project.topic} />
+                          <ThumbnailGenerator projectId={id} defaultText={project.topic} initialImageUrl={project.thumbnail_url} />
                         </div>
                       ) : (
                         <div className="bg-white border border-slate-200/80 rounded-xl p-8 text-center shadow-sm flex flex-col items-center justify-center gap-3 opacity-60">
@@ -813,9 +814,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 interface ThumbnailGeneratorProps {
   projectId: string
   defaultText: string
+  initialImageUrl?: string | null
 }
 
-function ThumbnailGenerator({ projectId, defaultText }: ThumbnailGeneratorProps) {
+function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: ThumbnailGeneratorProps) {
   const parsed = (defaultText || '').split('||')
   const [text, setText] = useState(parsed.length === 1 ? parsed[0] : (defaultText || ''))
   const [textLeft, setTextLeft] = useState(parsed.length === 3 ? parsed[0] : '')
@@ -826,7 +828,7 @@ function ThumbnailGenerator({ projectId, defaultText }: ThumbnailGeneratorProps)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   
-  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null)
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(initialImageUrl || null)
   const [thumbnailPrompt, setThumbnailPrompt] = useState(parsed[0] || defaultText || '')
   const [generating, setGenerating] = useState(false)
 

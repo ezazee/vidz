@@ -44,9 +44,10 @@ const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? 'ezazee/vidz'
 
 const STAGE_LOGS: Record<string, string[]> = {
   research: [
-    'Mengumpulkan data dan fakta...',
-    'Menyusun timeline kejadian...',
-    'Merangkum referensi...',
+    'Menjalankan Web Scraper (DuckDuckGo Lite)...',
+    'Mengekstrak snippet berita/artikel terkini...',
+    'RAG: Menginjeksi referensi real-time ke memori AI...',
+    'Merangkum fakta-fakta anti-halusinasi...',
   ],
   director: [
     'Menentukan genre dan visual style...',

@@ -27,11 +27,12 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
     ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
     : ''
 
-  // 8 scene untuk intro/ending, 10 scene untuk setiap chapter
-  // Total = 8 + (3 * 10) + 8 = 46 scenes.
-  // 46 scenes * rata-rata 12 detik = 552 detik (sekitar 9.2 menit).
-  // Ini memastikan durasi tidak akan jatuh di bawah 8 menit.
-  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 8 : 10
+  // 10 scene untuk intro/ending, 14 scene untuk setiap chapter
+  // Total = 10 + (3 * 14) + 10 = 62 scenes.
+  // Kecepatan TTS rata-rata 8.5 - 9.5 detik/scene.
+  // 62 scenes * 9 detik = 558 detik (sekitar 9.3 menit).
+  // Ini memastikan durasi 100% aman di atas 8 menit.
+  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 10 : 14
 
   const content = await chat([
     {
