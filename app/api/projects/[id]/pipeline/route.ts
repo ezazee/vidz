@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { dispatchAiPipeline } from '@/lib/github/dispatch'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -19,7 +20,7 @@ export async function POST(request: Request, context: RouteContext) {
   // We update project status to 'processing' to indicate the pipeline is active
   await sql`UPDATE projects SET status = 'draft' WHERE id = ${id}` // it's already draft, but just in case
 
-  console.log(`[Pipeline] Starting pipeline for project ${id}`)
+  console.log(`[Pipeline] Dispatching GitHub Action for AI pipeline project ${id}`)
 
   const markStageStatus = async (stage: string, status: 'processing' | 'failed') => {
     try {
@@ -38,56 +39,26 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const stages = ['research', 'director', 'outline', 'scenes']
-  
   for (const stage of stages) {
-    console.log(`[Pipeline] Running stage: ${stage} for project ${id}`)
     await markStageStatus(stage, 'processing')
-    let fetchUrl = `${baseUrl}/api/projects/${id}/${stage}`
-    if (fetchUrl.includes('localhost')) fetchUrl = fetchUrl.replace('localhost', '127.0.0.1')
-    
-    try {
-      const res = await fetch(fetchUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      
-      if (!res.ok) {
-        const err = await res.text()
-        console.error(`[Pipeline] Stage ${stage} failed for project ${id}:`, err)
-        await markStageStatus(stage, 'failed')
-        return NextResponse.json({ error: `Stage ${stage} failed` }, { status: 500 })
-      }
-      console.log(`[Pipeline] Stage ${stage} completed for project ${id}`)
-    } catch (err) {
-      console.error(`[Pipeline] Stage ${stage} threw an error for project ${id}:`, err)
-      await markStageStatus(stage, 'failed')
-      return NextResponse.json({ error: `Stage ${stage} threw an error` }, { status: 500 })
-    }
   }
 
-  console.log(`[Pipeline] All AI stages completed for project ${id}. Triggering render...`)
-  
   try {
-    const renderRes = await fetch(`${baseUrl}/api/projects/${id}/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'full' }),
-    })
-    if (!renderRes.ok) {
-      const err = await renderRes.text()
-      console.error(`[Pipeline] Render trigger failed for project ${id}:`, err)
-    } else {
-      console.log(`[Pipeline] Render successfully triggered for project ${id}`)
-    }
+    await dispatchAiPipeline(id, baseUrl)
+    console.log(`[Pipeline] GitHub Action successfully dispatched for project ${id}`)
   } catch (err) {
-    console.error(`[Pipeline] Render trigger threw an error for project ${id}:`, err)
+    console.error(`[Pipeline] Failed to dispatch GitHub Action for project ${id}:`, err)
+    for (const stage of stages) {
+      await markStageStatus(stage, 'failed')
+    }
+    return NextResponse.json({ error: 'Failed to dispatch pipeline' }, { status: 500 })
   }
 
   return NextResponse.json({
     success: true,
-    message: 'Pipeline completed successfully',
+    message: 'Pipeline dispatched to GitHub Actions',
     projectId: id
-  }, { status: 200 })
+  }, { status: 202 })
 }
 
 export const maxDuration = 60;
