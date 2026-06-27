@@ -5,9 +5,9 @@ dist
 build
 coverage
 .vercel
-# .env
-# .env.local
-# .env.*.local
+.env
+.env.local
+.env.*.local
 storyboard.json
 output
 tmp
