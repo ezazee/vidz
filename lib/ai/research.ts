@@ -24,5 +24,15 @@ Schema: { "summary": string, "facts": string[], "timeline": [{ "year": string, "
     },
   ], true, 'gemini-flash-grade')
 
-  return JSON.parse(content) as ResearchOutput
-}
+  try {
+    let cleaned = content.trim()
+    const startCurly = cleaned.indexOf('{')
+    const endCurly = cleaned.lastIndexOf('}')
+    if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+      cleaned = cleaned.substring(startCurly, endCurly + 1)
+    }
+    return JSON.parse(cleaned) as ResearchOutput
+  } catch (err) {
+    console.error('Gagal mem-parse research JSON. Konten asli:', content)
+    throw new Error(`Format JSON Research dari AI tidak valid: ${(err as Error).message}`)
+  }

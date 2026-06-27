@@ -44,8 +44,11 @@ export async function POST(request: Request, context: RouteContext) {
     for (const stage of stages) {
       console.log(`[Pipeline] Running stage: ${stage} for project ${id}`)
       await markStageStatus(stage, 'processing')
+      let fetchUrl = `${baseUrl}/api/projects/${id}/${stage}`
+      if (fetchUrl.includes('localhost')) fetchUrl = fetchUrl.replace('localhost', '127.0.0.1')
+      
       try {
-        const res = await fetch(`${baseUrl}/api/projects/${id}/${stage}`, {
+        const res = await fetch(fetchUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         })

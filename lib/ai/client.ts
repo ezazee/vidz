@@ -12,20 +12,27 @@ export async function chat(messages: Message[], json = true, customModel?: strin
 
   if (!baseUrl || !apiKey || !model) throw new Error('AI_BASE_URL, AI_API_KEY, and AI_MODEL are required')
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      max_tokens: 8192,
-      ...(json && { response_format: { type: 'json_object' } }),
-    }),
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+  try {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: false,
+        max_tokens: 8192,
+        ...(json && { response_format: { type: 'json_object' } }),
+      }),
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
 
   if (!res.ok) throw new Error(`AI request failed: ${res.status} ${res.statusText}`)
 
@@ -47,6 +54,10 @@ export async function chat(messages: Message[], json = true, customModel?: strin
 
   const data = await res.json()
   return stripMarkdown(data.choices[0].message.content)
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw error
+  }
 }
 
 function stripMarkdown(s: string): string {
