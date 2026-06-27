@@ -27,12 +27,12 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
     ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
     : ''
 
-  // 10 scene untuk intro/ending, 14 scene untuk setiap chapter
-  // Total = 10 + (3 * 14) + 10 = 62 scenes.
-  // Kecepatan TTS rata-rata 8.5 - 9.5 detik/scene.
-  // 62 scenes * 9 detik = 558 detik (sekitar 9.3 menit).
-  // Ini memastikan durasi 100% aman di atas 8 menit.
-  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 10 : 14
+  // 6 scene untuk intro/ending, 10 scene untuk setiap chapter
+  // Total = 6 + (3 * 10) + 6 = 42 scenes.
+  // Kecepatan TTS rata-rata 10-12 detik/scene.
+  // 42 scenes * 11 detik = 462 detik (sekitar 7.7 menit).
+  // Target video 8-10 menit tercapai.
+  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 10
 
   const content = await chat([
     {
@@ -45,7 +45,7 @@ Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": s
 - pexels_query: SANGAT KRITIKAL! Ini digunakan untuk mencari video stok (video dunia nyata dari Pexels).
   - ISI dengan 1-2 kata benda bahasa Inggris HANYA JIKA adegan adalah suasana umum/B-Roll yang pasti tersedia di stok video (contoh: "ocean", "forest", "city night", "sad person", "galaxy", "rain", "crowd").
   - WAJIB KOSONGKAN ("") JIKA adegan membutuhkan hal spesifik yang tidak mungkin ada di stok video: tokoh sejarah, makhluk mitologi, hewan spesifik bertarung, monster, senjata kuno, adegan perang detail, wajah karakter fiksi, atau objek sangat unik. Jika dikosongkan, sistem akan menggambarnya menggunakan AI Image Generator agar 100% akurat dan sesuai topik.
-- duration: 12-18 detik per scene (sesuai panjang narasi yang dibacakan, target total video 8-10 menit)
+- duration: 10-13 detik per scene (sesuai panjang narasi, target total video 8-10 menit)
 - order_index mulai dari ${input.orderOffset}`,
     },
     {

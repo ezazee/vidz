@@ -80,7 +80,7 @@ async function runPipeline() {
 
     for (const section of outline.sections) {
       console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
-      const numScenes = section.type === 'intro' || section.type === 'ending' ? 6 : 8
+      const numScenes = section.type === 'intro' || section.type === 'ending' ? 6 : 10
       
       const scenes = await generateScenes({
         section,
