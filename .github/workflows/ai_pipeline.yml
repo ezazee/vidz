@@ -21,9 +21,23 @@ jobs:
         run: |
           curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/outline"
         
-      - name: Trigger Scenes
+      - name: Trigger Scenes (Chunked to bypass 60s limit)
         run: |
-          curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/scenes"
+          SECTION_INDEX=0
+          while true; do
+            echo "Generating scenes for section index $SECTION_INDEX..."
+            RESPONSE=$(curl -sSf -X POST "${{ github.event.client_payload.base_url }}/api/projects/${{ github.event.client_payload.project_id }}/scenes?sectionIndex=$SECTION_INDEX")
+            
+            # The API returns remainingSections which is total - 1 - sectionIndex
+            # If we don't have jq, we can just grep it, but Github Actions ubuntu-latest has jq
+            REMAINING=$(echo "$RESPONSE" | jq -r '.remainingSections')
+            echo "Remaining sections: $REMAINING"
+            
+            if [ "$REMAINING" = "0" ] || [ "$REMAINING" = "null" ]; then
+              break
+            fi
+            SECTION_INDEX=$((SECTION_INDEX + 1))
+          done
         
       - name: Trigger Generate
         run: |
