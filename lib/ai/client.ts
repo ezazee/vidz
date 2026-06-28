@@ -86,5 +86,7 @@ export async function chat(messages: Message[], json = true, customModel?: strin
 }
 
 function stripMarkdown(s: string): string {
+  // strip <think>...</think> blocks (reasoning models)
+  s = s.replace(/<think>[\s\S]*?<\/think>/gi, '')
   return s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 }
