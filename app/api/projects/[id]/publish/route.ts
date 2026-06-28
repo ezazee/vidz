@@ -116,11 +116,18 @@ export async function POST(
 
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
-    // Siapkan Media Items untuk Zernio (hanya video)
-    const mediaItems = []
+    // Zernio: title field diabaikan, YouTube title diambil dari baris pertama content
+    // Thumbnail harus masuk sebagai mediaItems type "image" (bukan options)
+    const mediaItems: { url: string; type: string }[] = []
     if (project.video_url) {
       mediaItems.push({ url: project.video_url, type: 'video' })
     }
+    if (project.thumbnail_url) {
+      mediaItems.push({ url: project.thumbnail_url, type: 'image' })
+    }
+
+    // YouTube title = baris pertama content — pisah dengan newline
+    const contentWithTitle = `${finalTitle}\n\n${finalDescription}`
 
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {
@@ -131,31 +138,15 @@ export async function POST(
       },
       body: JSON.stringify({
         title: finalTitle,
-        content: finalDescription,
-        post: finalDescription, // Ayrshare standard uses 'post'
-        platforms: [{ 
-          platform: 'youtube', 
+        content: contentWithTitle,
+        platforms: [{
+          platform: 'youtube',
           accountId: config.youtube_account_id,
-          options: {
-            privacyStatus: 'public',
-            title: finalTitle,
-            ...(project.thumbnail_url ? { thumbnailUrl: project.thumbnail_url, thumbNail: project.thumbnail_url } : {})
-          }
+          options: { privacyStatus: 'public' }
         }],
-        mediaItems: mediaItems,
+        mediaItems,
         publishNow: !scheduledAt,
         ...(scheduledAt ? { scheduleDate: scheduledAt } : {}),
-        // Fallback backward compatibility for Ayrshare-like API schemas
-        youtubeOptions: {
-          privacyStatus: 'public',
-          title: finalTitle,
-          ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
-        },
-        youTubeOptions: {
-          privacyStatus: 'public',
-          title: finalTitle,
-          ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {})
-        }
       }),
     })
 
