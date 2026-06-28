@@ -33,13 +33,14 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah penulis naskah dokumenter Netflix/Vice kelas dunia. Balas HANYA JSON valid.
+      content: `Kamu adalah penulis naskah dokumenter Netflix/Vice kelas dunia. Output HANYA JSON mentah, tanpa teks lain, tanpa markdown.
 Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "pexels_query": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
 
 ATURAN NARASI (PALING PENTING):
 - Narasi WAJIB berupa kalimat lengkap — BUKAN judul, BUKAN frasa pendek
 - Terasa seperti Netflix documentary voiceover — dramatis, intim, menghantui
 - WAJIB 20-35 kata per scene (1-2 kalimat, target baca TTS 10-14 detik)
+- duration WAJIB antara 12-15 (detik), sesuai panjang narasi
 - MULAI dengan fakta spesifik, angka, atau detail sensoris yang mengejutkan
 - DILARANG: narasi yang hanya berupa judul/frasa seperti "Detik-Detik Terakhir" atau "Kesalahan Fatal"
 

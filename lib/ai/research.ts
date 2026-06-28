@@ -48,16 +48,14 @@ export async function generateResearch(topic: string): Promise<ResearchOutput> {
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah researcher dokumenter. Balas HANYA dengan JSON valid tanpa markdown.
-Schema: { "summary": string, "facts": string[], "timeline": [{ "year": string, "event": string }], "references": string[] }
-- summary: 2-3 paragraf ringkasan topik
-- facts: 8-12 fakta menarik dan spesifik
-- timeline: urutan kronologis kejadian penting
-- references: sumber atau tokoh kunci yang relevan`,
+      content: `Kamu adalah researcher dokumenter profesional. Output HANYA JSON mentah, tanpa teks lain.`,
     },
     {
       role: 'user',
-      content: `Lakukan riset mendalam tentang topik: "${topic}"` + searchContext,
+      content: `Riset mendalam tentang: "${topic}"${searchContext}
+
+Output JSON persis seperti ini, mulai dengan { :
+{"summary":"2-3 paragraf ringkasan","facts":["fakta spesifik 1","fakta spesifik 2","...8-12 fakta"],"timeline":[{"year":"tahun","event":"kejadian penting"}],"references":["sumber atau tokoh kunci"]}`,
     },
   ], true)
 

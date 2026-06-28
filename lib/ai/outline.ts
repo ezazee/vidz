@@ -15,30 +15,19 @@ export async function generateOutline(topic: string, summary: string): Promise<O
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah showrunner dokumenter Netflix & Vice kelas dunia. Balas HANYA JSON valid.
-Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "order": number, "description": string }] }
-WAJIB 1 intro + 3 chapter + 1 ending = TEPAT 5 sections.
-
-FORMULA VIRAL YOUTUBE DOCUMENTARY:
-- INTRO: Mulai IN MEDIAS RES — lempar penonton ke momen paling dramatis/mengejutkan. Ajukan pertanyaan yang tidak bisa diabaikan. Buat penonton merasa: "Tunggu, apa ini??"
-- CHAPTER 1: Latar belakang yang bikin syok — fakta yang bertentangan dengan asumsi umum
-- CHAPTER 2: Titik puncak ketegangan — momen di mana segalanya berubah, keputusan kritis, plot twist
-- CHAPTER 3: Konsekuensi & pengungkapan — "siapa yang tahu", "apa yang disembunyikan", dampak nyata
-- ENDING: Bukan penutup generik! Tinggalkan pertanyaan terbuka atau fakta mengejutkan terakhir yang bikin penonton share video
-
-JUDUL setiap chapter WAJIB:
-- Spesifik dan provokatif (pakai angka, nama, atau pernyataan mengejutkan)
-- Contoh BAIK: "48 Jam Sebelum Kehancuran: Keputusan yang Mengubah Segalanya"
-- Contoh BURUK: "Latar Belakang Kejadian"`,
+      content: `Kamu adalah showrunner dokumenter Netflix & Vice. Output HANYA JSON mentah, tanpa teks lain, tanpa markdown, tanpa penjelasan.`,
     },
     {
       role: 'user',
-      content: `Buat outline dokumenter YouTube yang SANGAT menarik tentang: "${topic}"
+      content: `Buat outline dokumenter YouTube viral tentang: "${topic}"
 
 Ringkasan riset:
 ${summary}
 
-INGAT: Ini bukan essay sekolah. Ini dokumenter yang harus membuat orang tidak bisa berhenti menonton dari detik pertama sampai akhir.`,
+WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending):
+{"sections":[{"type":"intro","title":"...momen paling dramatis...","order":0,"description":"..."},{"type":"chapter","title":"...fakta mengejutkan...","order":1,"description":"..."},{"type":"chapter","title":"...plot twist/keputusan kritis...","order":2,"description":"..."},{"type":"chapter","title":"...konsekuensi & pengungkapan...","order":3,"description":"..."},{"type":"ending","title":"...pertanyaan terbuka atau fakta terakhir yang bikin share...","order":4,"description":"..."}]}
+
+Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`,
     },
   ], true)
   try {

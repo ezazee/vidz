@@ -17,29 +17,15 @@ export async function generateSeoMetadata(input: SeoInput): Promise<SeoOutput> {
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah pakar SEO YouTube dan spesialis konten dokumenter profesional (seperti Vox, Johnny Harris, dan Lemmino).
-Tugasmu adalah menghasilkan Metadata SEO YouTube kelas dunia untuk topik video yang diberikan.
-Kamu harus mengembalikan data HANYA dalam format JSON valid tanpa penjelasan tambahan dan tanpa blok markdown (\`\`\`json).
-
-Skema JSON yang harus dikembalikan:
-{
-  "title": "Judul YouTube teroptimasi SEO. MAKSIMAL 80 HURUF! JANGAN LEBIH DARI 80 KARAKTER! Menarik dan tidak clickbait murahan.",
-  "description": "Deskripsi YouTube premium yang panjang dan kaya informasi. Harus mencakup: 1. Paragraf pembuka yang memikat dan penuh kata kunci relevan. 2. Ringkasan poin-poin penting dari video secara naratif dan edukatif. 3. Daftar kata kunci terkait dalam konteks kalimat alami untuk membantu algoritma pencarian. Harap gunakan bahasa Indonesia yang baku, menarik, dan profesional.",
-  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "minimal 10 tag pencarian spesifik dan relevan"],
-  "hashtags": ["#tag1", "#tag2", "#tag3", "3-5 hashtag populer yang relevan"]
-}`,
+      content: `Kamu adalah pakar SEO YouTube. Output HANYA JSON mentah, tanpa teks lain.`,
     },
     {
       role: 'user',
-      content: `Topik Utama: "${input.topic}"
+      content: `Topik: "${input.topic}"
+Ringkasan: ${input.summary.slice(0, 400)}
 
-Ringkasan Riset Sejarah/Fakta:
-${input.summary}
-
-Naskah Lengkap Narasi Video:
-${input.narrationText}
-
-Buatkan judul, deskripsi, tag, dan hashtag yang sangat ramah mesin pencari (SEO-optimized) sesuai dengan instruksi sistem.`,
+Output JSON SEO YouTube, mulai dengan { :
+{"title":"judul max 80 karakter menarik tidak clickbait","description":"deskripsi panjang informatif bahasa Indonesia dengan kata kunci relevan, minimal 3 paragraf","tags":["tag1","tag2","tag3","minimal 10 tag"],"hashtags":["#hashtag1","#hashtag2","#hashtag3"]}`,
     },
   ], true)
 

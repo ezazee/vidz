@@ -11,38 +11,16 @@ export async function generateDirector(input: DirectorInput): Promise<DirectorOu
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah sutradara dokumenter profesional. Balas HANYA dengan JSON valid tanpa markdown.
-Schema yang harus dikembalikan:
-{
-  "genre": string,
-  "visual_style": string,
-  "emotion": string,
-  "lighting": string,
-  "color_palette": string[],
-  "thumbnail_style": string,
-  "voice_style": string,
-  "camera_style": string,
-  "transition": "cut"|"fade"|"dissolve"|"wipe",
-  "image_style": string,
-  "visual_bible": { "genre": string, "visual_style": string, "image_style": string, "color_palette": string[], "lighting": string, "emotion": string, "transition": string },
-  "character_bible": { "characters": [{ "name": string, "description": string, "clothing": string, "prompt_anchor": string }] },
-  "environment_bible": { "locations": [{ "name": string, "description": string, "prompt_anchor": string }], "era": string, "geography": string },
-  "camera_bible": { "default_movement": string, "allowed_movements": string[], "aspect_ratio": "16:9", "composition_rules": string },
-  "motion_bible": { "transition_style": string, "effect_palette": string[], "timing": string },
-  "thumbnail_bible": { "style": string, "color_scheme": string, "text_style": string, "composition": string }
-}`,
+      content: `Kamu adalah sutradara dokumenter profesional. Output HANYA JSON mentah, tanpa teks lain.`,
     },
     {
       role: 'user',
       content: `Topik: "${input.topic}"
+Ringkasan: ${input.research.summary.slice(0, 300)}
+Fakta: ${input.research.facts.slice(0, 3).join(' | ')}
 
-Ringkasan riset:
-${input.research.summary}
-
-Fakta kunci:
-${input.research.facts.slice(0, 5).join('\n')}
-
-Buat director bible lengkap untuk video dokumenter YouTube tentang topik ini. Gunakan bahasa Indonesia untuk voice_style.`,
+Output JSON director bible, mulai dengan { :
+{"genre":"...","visual_style":"...","emotion":"...","lighting":"...","color_palette":["..."],"thumbnail_style":"...","voice_style":"narasi bahasa Indonesia dramatis","camera_style":"...","transition":"fade","image_style":"cinematic documentary photorealistic","visual_bible":{"genre":"...","visual_style":"...","image_style":"...","color_palette":["..."],"lighting":"...","emotion":"...","transition":"fade"},"character_bible":{"characters":[{"name":"...","description":"...","clothing":"...","prompt_anchor":"..."}]},"environment_bible":{"locations":[{"name":"...","description":"...","prompt_anchor":"..."}],"era":"...","geography":"..."},"camera_bible":{"default_movement":"pan_right","allowed_movements":["static","pan_left","pan_right","zoom_in"],"aspect_ratio":"16:9","composition_rules":"rule of thirds"},"motion_bible":{"transition_style":"cinematic dissolve","effect_palette":["light_rays","fog"],"timing":"slow"},"thumbnail_bible":{"style":"dramatic","color_scheme":"dark gold","text_style":"bold impact","composition":"..."}}`,
     },
   ], true)
 
