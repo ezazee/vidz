@@ -9,33 +9,24 @@ export async function GET(request: Request) {
 
     const sql = getSql()
     // Fetch last 20 projects to avoid repeating recent topics
-    const recentProjects = await sql`SELECT topic FROM projects ORDER BY created_at DESC LIMIT 20`
+    const recentProjects = await sql`SELECT topic FROM projects ORDER BY created_at DESC LIMIT 5`
     const usedTopics = recentProjects
       .map(p => p.topic.replace(/\s*\[THEME:.*?\]\s*/g, '').trim())
       .filter(Boolean)
 
-    let exclusionText = ''
-    if (usedTopics.length > 0) {
-      exclusionText = `\nCRITICAL: DO NOT suggest any of the following topics, as they have already been covered:\n- ${usedTopics.join('\n- ')}`
-    }
-
-    const systemPrompt = `You are a YouTube viral content strategist. Suggest exactly 5 highly engaging, clickbait, and educational video topics in Indonesian suitable for historical, scientific, mystery, or biographical documentary/explainer videos. 
-    The requested visual theme / genre is: "${theme}". You MUST tailor the topics to fit this theme!${exclusionText}
-    You MUST return a JSON object containing a "topics" field which is a string array of exactly 5 topics. 
-    Example output format:
-    {
-      "topics": [
-        "Detik-detik Meletusnya Gunung Krakatau 1883",
-        "Misteri Hilangnya Peradaban Atlantis",
-        "Gajah Mada: Sumpah Palapa dan Penyatuan Nusantara",
-        "Bagaimana Jika Bumi Berhenti Berputar?",
-        "Konspirasi Area 51 dan Pendaratan di Bulan"
-      ]
-    }`
+    const exclusionText = usedTopics.length > 0
+      ? ` Jangan gunakan topik ini: ${usedTopics.join('; ')}.`
+      : ''
 
     const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: `Hasilkan 5 rekomendasi topik video YouTube yang sangat clickbait dan edukatif, khusus untuk tema: ${theme}.` }
+      {
+        role: 'system' as const,
+        content: `Kamu strategi konten YouTube. Balas HANYA JSON: {"topics":["...","...","...","...","..."]}`
+      },
+      {
+        role: 'user' as const,
+        content: `Buat 5 topik video dokumenter YouTube bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText} Topik harus spesifik, dramatis, dan edukatif.`
+      }
     ]
 
     console.log('Generating viral topic recommendations via AI (Fast Model)...')
