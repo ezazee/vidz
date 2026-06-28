@@ -15,6 +15,7 @@ export interface SceneDraft {
   narration: string
   subtitle: string
   image_prompt: string
+  pexels_query: string
   camera: string
   effect: string
   emotion: string

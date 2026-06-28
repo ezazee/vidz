@@ -1,4 +1,5 @@
-try { require('dotenv').config() } catch {} // ponytail: no-op in CI where env comes from secrets
+import { config } from 'dotenv'
+config()
 import { getSql } from '../lib/db/client'
 import { generateResearch } from '../lib/ai/research'
 import { generateDirector } from '../lib/ai/director'
@@ -84,31 +85,29 @@ async function runPipeline() {
 
     for (const section of outline.sections) {
       console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
-      const numScenes = section.type === 'intro' || section.type === 'ending' ? 6 : 10
-      
+
       const scenes = await generateScenes({
         section,
         topic,
         director,
-        orderOffset: currentOffset,
+        orderOffset: globalOrderIndex,
         fullOutline: outline.sections,
       })
-      
+
       for (const scene of scenes) {
         scene.order_index = globalOrderIndex++
         const row = await sql`
-          INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, camera, effect, emotion, transition, duration, image_status, voice_status)
+          INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, pexels_query, camera, effect, emotion, transition, duration, image_status, voice_status)
           VALUES (
             ${id}, ${scene.order_index}, ${scene.narration}, ${scene.subtitle},
-            ${scene.image_prompt}, ${scene.camera}, ${scene.effect}, ${scene.emotion},
+            ${scene.image_prompt}, ${scene.pexels_query ?? ''},
+            ${scene.camera}, ${scene.effect}, ${scene.emotion},
             ${scene.transition}, ${scene.duration}, 'idle', 'idle'
           )
           RETURNING *
         `
         allScenes.push(row[0])
       }
-      
-      currentOffset += numScenes
     }
     console.log(`[Pipeline] Scenes completed. Total: ${allScenes.length} scenes.`)
 
@@ -185,10 +184,12 @@ async function runPipeline() {
       // Non-fatal: pipeline tetap sukses walau thumbnail gagal
     }
 
+    await sql`UPDATE projects SET status = 'ai_completed' WHERE id = ${id}`
     console.log('[Pipeline] ✅ All AI stages completed successfully!')
     process.exit(0)
   } catch (err) {
     console.error('[Pipeline] Error:', err)
+    await sql`UPDATE projects SET status = 'failed' WHERE id = ${id}`.catch(() => {})
     process.exit(1)
   }
 }

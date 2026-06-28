@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     ]
 
     console.log('Generating viral topic recommendations via AI (Fast Model)...')
-    const rawResult = await chat(messages, true, 'gemini-flash-grade')
+    const rawResult = await chat(messages, true)
     const result = JSON.parse(rawResult)
 
     return NextResponse.json({

@@ -11,8 +11,9 @@ export async function GET(request: Request, context: RouteContext) {
 
   try {
     const statuses = await sql`
-      SELECT 
+      SELECT
         p.id,
+        p.status as project_status,
         (SELECT status FROM research WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as research_status,
         (SELECT status FROM director WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as director_status,
         (SELECT status FROM outlines WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as outline_status,
@@ -37,23 +38,29 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const row = statuses[0]
-    
-    // For scenes, if there are no rows yet, we check if outline is completed.
-    // If outline is completed but scenes are 'idle' (0 rows), it might mean scenes are currently generating.
-    // Actually, `app/api/projects/[id]/scenes/route.ts` inserts rows *after* generating. So before they are inserted, it will be 'idle'.
-    // A better way is: if outline is completed but scenes is idle, it implies scenes is 'processing'.
-    let scenes_status = row.scenes_status
-    if (scenes_status === 'idle' && row.outline_status === 'completed') {
-      scenes_status = 'processing'
+
+    // Kalau project status 'processing' atau 'ai_completed', semua stage yang masih 'idle' dianggap 'processing'
+    const projectProcessing = ['processing', 'ai_completed'].includes(row.project_status)
+
+    const resolveStage = (status: string | null, prevCompleted: boolean) => {
+      if (status === 'completed') return 'completed'
+      if (status === 'failed') return 'failed'
+      if (projectProcessing && prevCompleted) return 'processing'
+      return 'idle'
     }
+
+    const researchDone = row.research_status === 'completed'
+    const directorDone = row.director_status === 'completed'
+    const outlineDone = row.outline_status === 'completed'
 
     return NextResponse.json({
       success: true,
+      projectStatus: row.project_status,
       stages: {
-        research: row.research_status || 'idle',
-        director: row.director_status || 'idle',
-        outline: row.outline_status || 'idle',
-        scenes: scenes_status || 'idle',
+        research: resolveStage(row.research_status, true),
+        director: resolveStage(row.director_status, researchDone),
+        outline: resolveStage(row.outline_status, directorDone),
+        scenes: resolveStage(row.scenes_status, outlineDone),
         render: row.render_status || 'idle'
       },
       videoUrl: row.video_url || null,

@@ -53,9 +53,14 @@ export async function chat(messages: Message[], json = true, customModel?: strin
   }
 
   const data = await res.json()
-  return stripMarkdown(data.choices[0].message.content)
+  const content = data.choices?.[0]?.message?.content
+  if (!content) throw new Error(`AI returned empty response: ${JSON.stringify(data)}`)
+  return stripMarkdown(content)
   } catch (error) {
     clearTimeout(timeoutId)
+    if ((error as any)?.name === 'AbortError') {
+      throw new Error(`AI fetch aborted (timeout or connection failed). URL: ${baseUrl}/chat/completions`)
+    }
     throw error
   }
 }

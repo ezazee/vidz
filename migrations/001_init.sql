@@ -9,7 +9,7 @@ CREATE TYPE render_mode AS ENUM (
 );
 
 CREATE TYPE video_status AS ENUM (
-  'draft', 'rendered', 'uploaded'
+  'draft', 'processing', 'ai_completed', 'rendered', 'uploaded', 'failed'
 );
 
 CREATE TABLE projects (
@@ -90,6 +90,7 @@ CREATE TABLE scenes (
   effect TEXT,
   emotion TEXT,
   transition TEXT,
+  pexels_query TEXT DEFAULT '',
   image_url TEXT,
   image_status pipeline_status NOT NULL DEFAULT 'idle',
   voice_url TEXT,

@@ -60,7 +60,6 @@ export async function PATCH(request: Request, context: RouteContext) {
         SELECT topic, auto_publish FROM projects WHERE id = ${projectId} LIMIT 1
       `
       const topic = projectDetails[0]?.topic || 'Dokumenter'
-      const autoPublish = projectDetails[0]?.auto_publish === true
 
       // 2. Ambil gambar scene pertama sebagai background thumbnail (paling relevan dengan topik)
       const firstScene = await sql`
@@ -126,97 +125,46 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
 
       if (bgBuffer) {
-        // 3. Format judul menjadi 2 baris yang rapi
+        // 3. Format judul menjadi 2 baris
         const words = topic.split(' ')
-        let line1 = ''
-        let line2 = ''
-        
-        if (words.length <= 3) {
-          line1 = topic.toUpperCase()
-          line2 = ''
-        } else {
-          const midpoint = Math.ceil(words.length / 2)
-          line1 = words.slice(0, midpoint).join(' ').toUpperCase()
-          line2 = words.slice(midpoint).join(' ').toUpperCase()
-        }
+        const midpoint = Math.ceil(words.length / 2)
+        const line1 = (words.length <= 3 ? topic : words.slice(0, midpoint).join(' ')).toUpperCase()
+        const line2 = words.length <= 3 ? '' : words.slice(midpoint).join(' ').toUpperCase()
 
-        // 4. Buat SVG Overlay (Warm Gold + Serif style, konsisten dengan visual video)
-        const svgOverlay = `
-          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-                <stop offset="15%" stop-color="#000000" stop-opacity="0.10" />
-                <stop offset="60%" stop-color="#000000" stop-opacity="0.60" />
-                <stop offset="100%" stop-color="#000000" stop-opacity="0.92" />
-              </radialGradient>
-            </defs>
-            <rect width="1280" height="720" fill="url(#vignette)" />
-            <g transform="translate(640, ${line2 ? '330' : '360'})">
-              <text x="0" y="0" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="82" fill="#fbbf24" stroke="#000000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">
-                ${line1}
-              </text>
-              ${line2 ? `<text x="0" y="90" font-family="Impact, Arial, sans-serif" font-weight="900" font-size="72" fill="#ffffff" stroke="#000000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">
-                ${line2}
-              </text>` : ''}
-            </g>
-          </svg>
-        `
+        const svgOverlay = `<svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+          <defs><radialGradient id="v" cx="50%" cy="50%" r="70%">
+            <stop offset="15%" stop-color="#000" stop-opacity="0.10"/>
+            <stop offset="60%" stop-color="#000" stop-opacity="0.60"/>
+            <stop offset="100%" stop-color="#000" stop-opacity="0.92"/>
+          </radialGradient></defs>
+          <rect width="1280" height="720" fill="url(#v)"/>
+          <g transform="translate(640,${line2 ? '330' : '360'})">
+            <text x="0" y="0" font-family="Impact,Arial,sans-serif" font-weight="900" font-size="82" fill="#fbbf24" stroke="#000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">${line1}</text>
+            ${line2 ? `<text x="0" y="90" font-family="Impact,Arial,sans-serif" font-weight="900" font-size="72" fill="#fff" stroke="#000" stroke-width="12" stroke-linejoin="round" text-anchor="middle" dominant-baseline="middle">${line2}</text>` : ''}
+          </g></svg>`
 
-        // 5. Composite dengan Sharp
-        const sharp = require('sharp')
-        const compositeBuffer = await sharp(bgBuffer)
-          .resize(1280, 720, { fit: 'cover' })
-          .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
-          .png()
-          .toBuffer()
+        try {
+          const sharp = require('sharp')
+          const compositeBuffer = await sharp(bgBuffer)
+            .resize(1280, 720, { fit: 'cover' })
+            .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
+            .jpeg({ quality: 90 })
+            .toBuffer()
 
-        // 6. Upload ke Vercel Blob
-        const blobToken = process.env.BLOB_READ_WRITE_TOKEN
-        if (blobToken) {
-          const filename = `thumbnails/thumb-${projectId}-${Date.now()}.png`
-          const uploadRes = await fetch(`https://blob.vercel-storage.com/${filename}`, {
-            method: 'PUT',
-            headers: {
-              Authorization: `Bearer ${blobToken}`,
-              'Content-Type': 'image/png',
-              'x-content-type': 'image/png',
-            },
-            body: compositeBuffer,
-          })
+          const { uploadToR2 } = await import('@/lib/r2')
+          const filename = `projects/${projectId}/thumbnails/auto-${Date.now()}.jpg`
+          const thumbnailUrl = await uploadToR2(filename, compositeBuffer, 'image/jpeg')
+          console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl}`)
 
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json()
-            const thumbnailUrl = uploadData.url
-            console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl}`)
-
-            await sql`
-              INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
-              VALUES (${projectId}, 'pipeline_auto', ${thumbnailUrl}, ${(line1 + ' ' + line2).trim()}, 'completed')
-            `
-          } else {
-            console.error(`Failed to upload thumbnail: ${uploadRes.statusText}`)
-          }
+          await sql`
+            INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
+            VALUES (${projectId}, 'render_auto', ${thumbnailUrl}, ${(line1 + ' ' + line2).trim()}, 'completed')
+          `
+        } catch (sharpErr) {
+          console.error('Sharp/R2 thumbnail upload failed:', sharpErr)
         }
       } else {
-        console.warn('Tidak bisa membuat thumbnail: tidak ada gambar scene dan AI credentials tidak tersedia.')
-      }
-
-      // 7. Auto Publish Check
-      if (autoPublish) {
-        console.log(`[Render Webhook] Auto-publish is enabled for project ${projectId}. Triggering publish API...`)
-        try {
-          const baseUrl = new URL(request.url).origin
-          let publishUrl = `${baseUrl}/api/projects/${projectId}/publish`
-          if (publishUrl.includes('localhost')) publishUrl = publishUrl.replace('localhost', '127.0.0.1')
-          
-          await fetch(publishUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          })
-          console.log(`[Render Webhook] Publish API triggered successfully.`)
-        } catch (pubErr) {
-          console.error(`[Render Webhook] Failed to trigger auto-publish:`, pubErr)
-        }
+        console.warn('Tidak bisa membuat thumbnail: tidak ada gambar scene tersedia.')
       }
     } catch (err) {
       console.error('Failed to generate thumbnail or publish:', err)

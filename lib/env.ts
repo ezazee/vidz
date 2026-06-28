@@ -20,4 +20,13 @@ const envSchema = z.object({
   TTS_VOICE: optionalString,
 })
 
-export const env = envSchema.parse(process.env)
+export function getEnv() {
+  return envSchema.parse(process.env)
+}
+
+// ponytail: lazy parse so dotenv loads before first access
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_, key: string) {
+    return getEnv()[key as keyof z.infer<typeof envSchema>]
+  }
+})
