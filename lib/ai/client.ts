@@ -15,7 +15,7 @@ export async function chat(messages: Message[], json = true, customModel?: strin
   const maxRetries = 3
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 300000)
+    const timeoutId = setTimeout(() => controller.abort(), 90000) // 90s per attempt
 
     try {
       const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -29,7 +29,6 @@ export async function chat(messages: Message[], json = true, customModel?: strin
           messages,
           stream: false,
           max_tokens: 8192,
-          ...(json && { response_format: { type: 'json_object' } }),
         }),
         signal: controller.signal,
       })
@@ -72,8 +71,8 @@ export async function chat(messages: Message[], json = true, customModel?: strin
       clearTimeout(timeoutId)
       if ((error as any)?.name === 'AbortError') {
         if (attempt < maxRetries) {
-          console.warn(`AI fetch aborted (timeout), retry ${attempt}/${maxRetries} in 15s...`)
-          await new Promise(r => setTimeout(r, 15000))
+          console.warn(`AI fetch aborted (timeout), retry ${attempt}/${maxRetries} in 5s...`)
+          await new Promise(r => setTimeout(r, 5000))
           continue
         }
         throw new Error(`AI fetch aborted after ${maxRetries} attempts (timeout or connection failed). URL: ${baseUrl}/chat/completions`)
