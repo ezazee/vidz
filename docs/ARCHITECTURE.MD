@@ -10,27 +10,48 @@
 User (Browser)
     │
     ▼
-Vercel (Next.js)
+Vercel (Next.js) — vidz-factory.vercel.app
     │
     ├── Frontend (React + Tailwind)
+    │       Dashboard project, progress pipeline, preview scenes
     │
     └── API Routes (Next.js)
             │
-            ├── Neon PostgreSQL
-            │       (project state, scenes, assets, jobs)
+            ├── Neon PostgreSQL (@neondatabase/serverless)
+            │       (projects, research, director, outlines, scenes,
+            │        seo_metadata, thumbnails, render_jobs)
             │
-            ├── 9Router (AI calls)
-            │       (research, script, image prompt, SEO, dll)
-            │
-            └── GitHub Actions (dispatch)
+            └── GitHub Actions (via repository_dispatch)
                     │
-                    └── GitHub Runner
-                            │
-                            ├── Generate Assets (image, voice)
-                            ├── Render Video (Remotion + FFmpeg)
-                            ├── Upload hasil ke Storage
-                            └── Update Database → trigger polling
+                    ├── Workflow: ai_pipeline.yml
+                    │       └── GitHub Runner
+                    │               └── npx tsx scripts/run-pipeline.ts
+                    │                       (Research → Director → Outline
+                    │                        → Scenes → SEO → Thumbnail)
+                    │
+                    └── Workflow: render.yml
+                            └── GitHub Runner
+                                    ├── fetch-storyboard.js
+                                    ├── fetch-pexels.js
+                                    ├── generate-images.js
+                                    ├── generate-voices.js
+                                    ├── Remotion render (paralel per chunk)
+                                    ├── FFmpeg merge
+                                    ├── Upload ke Cloudflare R2
+                                    └── update-job.js → PATCH /api/render-jobs/:id
 ```
+
+---
+
+## Kenapa AI Pipeline di GitHub Actions?
+
+Vercel Hobby plan memiliki batas waktu **60 detik absolut** per serverless function.
+Seluruh proses AI (Research + Director + Outline + Scenes + SEO) membutuhkan **±75–120 detik**.
+
+Solusi: pipeline AI di-dispatch ke GitHub Actions runner yang **bebas dari batas waktu Vercel**.
+- `POST /api/projects/:id/pipeline` → dispatch `run_ai_pipeline` event → runner eksekusi `run-pipeline.ts`
+- Semua hasil ditulis langsung ke Neon DB oleh runner
+- Frontend polling DB untuk update status
 
 ---
 
@@ -38,101 +59,90 @@ Vercel (Next.js)
 
 ### Frontend (Next.js App Router)
 
-- Menampilkan project dashboard, progress pipeline, dan preview per-scene
-- Polling status job via TanStack Query (interval: 3–5 detik)
-- Memungkinkan user trigger regenerate di setiap tahap
-- Menampilkan preview storyboard, gambar, subtitle, dan video hasil render
+- Dashboard project: daftar project, status pipeline, progress render
+- Detail project: preview scenes (gambar, narasi, subtitle), SEO metadata, thumbnail
+- Polling status render job via interval fetch
+- Trigger generate, regenerate per scene/section
 
 ### API Routes
 
-- Menerima request dari frontend
-- Memanggil AI wrapper yang sesuai
-- Menyimpan hasil ke PostgreSQL
-- Men-dispatch GitHub Actions workflow untuk rendering
-- Mengembalikan job ID untuk keperluan polling
+| Route | Fungsi |
+|---|---|
+| `POST /api/projects` | Buat project baru |
+| `POST /api/projects/:id/pipeline` | Dispatch AI pipeline ke GitHub Actions |
+| `POST /api/projects/:id/research` | Stage research (bisa dipanggil sendiri) |
+| `POST /api/projects/:id/director` | Stage director |
+| `POST /api/projects/:id/outline` | Stage outline |
+| `POST /api/projects/:id/scenes` | Stage scenes (support `?sectionIndex=N`) |
+| `POST /api/projects/:id/generate` | Dispatch render workflow ke GitHub Actions |
+| `POST /api/projects/:id/thumbnail/generate` | Generate thumbnail via AI image |
+| `POST /api/projects/:id/thumbnail` | Simpan thumbnail ke DB |
+| `POST /api/projects/:id/publish` | Upload video ke YouTube |
+| `GET /api/projects/:id/storyboard` | Ambil storyboard JSON untuk render runner |
 
-### Director Engine
+### GitHub Actions Runner (ai_pipeline.yml)
 
-- Dipanggil setelah Research selesai
-- Menghasilkan semua "bible" yang digunakan oleh seluruh modul AI downstream
-- Output disimpan sebagai JSON di database dan digunakan oleh Prompt Generator, Script Generator, dll.
+- Checkout repo
+- Install dependencies (`npm ci`)
+- Jalankan `npx tsx --tsconfig tsconfig.json scripts/run-pipeline.ts <project_id>`
+- Script membaca env dari **GitHub Secrets** (bukan dari client_payload)
+- Setelah selesai, trigger render via curl ke `/api/projects/:id/generate`
 
-### GitHub Actions Runner
+### GitHub Actions Runner (render.yml)
 
-- Menerima `repository_dispatch` event dengan payload project ID
-- Mengambil storyboard JSON dari database
-- Generate gambar dan voice per scene
-- Render video menggunakan Remotion + FFmpeg
-- Upload hasil ke storage
-- PATCH database dengan URL hasil dan status `completed`
+- Paralel: fetch storyboard, generate images, generate voices, download Pexels videos
+- Render video per chunk dengan Remotion (paralel matrix)
+- FFmpeg merge semua chunk
+- Upload MP4 final ke Cloudflare R2
+- PATCH `/api/render-jobs/:id` dengan video URL dan status `completed`
 
 ### Database (Neon PostgreSQL)
 
-- Single source of truth untuk seluruh state project
-- Semua AI output disimpan sebagai JSON column
-- Status job (pending / processing / completed / failed) tersimpan per tahap
+Single source of truth. Semua AI output disimpan sebagai JSON column.
+
+| Tabel | Isi |
+|---|---|
+| `projects` | Data project utama |
+| `research` | Output AI research |
+| `director` | Director bibles (visual, character, environment, camera, motion, thumbnail) |
+| `outlines` | Struktur sections JSON |
+| `scenes` | Semua adegan dengan narasi, prompt, camera, dll |
+| `seo_metadata` | Title, description, tags, hashtags |
+| `thumbnails` | URL thumbnail tersimpan |
+| `render_jobs` | Status & URL video render |
+| `schedules` | Jadwal auto-publish harian |
 
 ---
 
-## Request Flow — Generate Video
+## Request Flow — Start Pipeline
 
 ```
-1. User input topik
+1. User klik "Generate" di web
         │
-2. API: Research AI → simpan ke DB
+2. POST /api/projects/:id/pipeline
         │
-3. API: Director Engine → simpan Visual Bible ke DB
+3. Vercel: dispatch repository_dispatch → event: run_ai_pipeline
+        │                                 payload: { project_id, base_url }
         │
-4. API: Outline Generator → simpan ke DB
+4. GitHub Actions (ai_pipeline.yml) berjalan:
         │
-5. API: Script Generator (per chapter) → simpan ke DB
+        ├── npx tsx --tsconfig tsconfig.json scripts/run-pipeline.ts <id>
+        │       ├── Research      → INSERT INTO research
+        │       ├── Director      → INSERT INTO director
+        │       ├── Outline       → INSERT INTO outlines
+        │       ├── Scenes        → INSERT INTO scenes (42 scenes)
+        │       ├── SEO           → INSERT INTO seo_metadata
+        │       └── Thumbnail     → AI image → R2 → INSERT INTO thumbnails
         │
-6. API: Storyboard Generator → simpan scenes[] ke DB
-        │
-7. API: Prompt Generator (per scene) → simpan ke DB
-        │
-8. API: dispatch GitHub Actions dengan project_id
-        │
-9. GitHub Runner:
-        ├── Generate image per scene
-        ├── Generate voice per scene
-        ├── Render video (Remotion + FFmpeg)
-        ├── Generate thumbnail
-        └── Upload ke Storage
-        │
-10. Runner: PATCH /api/jobs/:id → status = completed, video_url = ...
-        │
-11. Frontend: polling deteksi completed → tampilkan video
-```
-
----
-
-## Polling Strategy
-
-Frontend menggunakan TanStack Query dengan `refetchInterval` untuk memantau status job.
-
-```typescript
-const { data } = useQuery({
-  queryKey: ['job', jobId],
-  queryFn: () => fetchJobStatus(jobId),
-  refetchInterval: (data) =>
-    data?.status === 'completed' || data?.status === 'failed' ? false : 4000,
-})
-```
-
----
-
-## Regenerate Strategy
-
-Setiap tahap menyimpan output ke kolom terpisah di database. Regenerate satu tahap hanya menimpa kolom yang bersangkutan dan menjalankan ulang tahap downstream yang bergantung padanya.
-
-```
-Regenerate scene image #12
-    → Hapus image URL scene #12
-    → Dispatch GitHub Actions: generate_image job (scene_id: 12)
-    → Render ulang hanya scene #12
-    → Update database
-    → Frontend polling → tampilkan gambar baru
+        └── curl POST /api/projects/:id/generate (mode: full)
+                │
+                └── dispatch repository_dispatch → event: render_video
+                        │
+                        └── GitHub Actions (render.yml) berjalan
+                                ├── Generate images & voices
+                                ├── Render Remotion (paralel)
+                                ├── FFmpeg merge
+                                └── Upload R2 + update DB
 ```
 
 ---
@@ -140,16 +150,22 @@ Regenerate scene image #12
 ## Deployment Architecture
 
 ```
-Branch: main
-    │
-    └── Vercel auto-deploy
-            (preview per PR, production per merge ke main)
+Branch: main → Vercel auto-deploy (production)
 
 Database:
-    Neon PostgreSQL — connection pooling via @neondatabase/serverless
+    Neon PostgreSQL — serverless connection pooling
 
-Rendering:
-    GitHub Actions workflow: render.yml
-    Trigger: repository_dispatch (event: render_video)
-    Payload: { project_id, scene_ids?, mode: 'full' | 'partial' }
+Storage:
+    Cloudflare R2 — images, voices, video final, thumbnails
+    Bucket: vidz-factory
+    Public URL: https://pub-e6a3fd31a6b9466f93d7e02cf9f92fe4.r2.dev
+
+AI Gateway:
+    9Router (creavoo-9router.fly.dev/v1)
+    Model: groq/llama-3.3-70b-versatile (ultra-fast, <1 detik)
+    Image Model: cf/@cf/stabilityai/stable-diffusion-xl-base-1.0
+
+Render:
+    GitHub Actions: render.yml + ai_pipeline.yml
+    Trigger: repository_dispatch
 ```

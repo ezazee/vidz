@@ -1,282 +1,222 @@
 # WORKFLOW.md
 
-> Penjelasan detail setiap tahap dalam pipeline StoryZ — input, output, trigger, dan error handling.
+> Penjelasan detail setiap tahap dalam pipeline StoryZ — input, output, trigger, dan cara kerja saat ini.
 
 ---
 
-## Overview Pipeline
+## Overview Pipeline (Current State)
 
 ```
-Topic
-  └─ Research
-       └─ Director Engine
-            └─ Outline
-                 └─ Script (per section)
-                      └─ Storyboard (per scene)
-                           └─ Prompt Generation (per scene)
-                                └─ Image Generation (per scene)  ─┐
-                                └─ Voice Generation (per scene)  ─┤
-                                                                   ▼
-                                                              Rendering
-                                                                   │
-                                                              Thumbnail
-                                                                   │
-                                                                  SEO
-                                                                   │
-                                                            YouTube Upload
-```
-
----
-
-## Stage 1 — Topic Discovery
-
-**Input:** String topik dari user (contoh: "Kisah Jatuhnya Kerajaan Majapahit")
-
-**Output:** Topik tersimpan di tabel `projects`
-
-**API endpoint:** `POST /api/projects`
-
-```typescript
-// Request
-{ topic: string }
-
-// Response
-{ project_id: string }
+User input topik
+      │
+      ▼
+POST /api/projects/:id/pipeline
+      │
+      ▼
+GitHub Actions: ai_pipeline.yml
+      │
+      ├── [1] Research      → AI riset topik
+      ├── [2] Director      → AI buat director bible
+      ├── [3] Outline       → AI buat struktur video
+      ├── [4] Scenes        → AI buat 42 adegan (narasi, prompt, dll)
+      ├── [5] SEO           → AI buat title, desc, tags, hashtags
+      └── [6] Thumbnail     → AI generate gambar thumbnail → upload R2
+            │
+            ▼
+      curl POST /api/projects/:id/generate
+            │
+            ▼
+      GitHub Actions: render.yml
+            │
+            ├── Generate images per scene (AI + Pexels stock)
+            ├── Generate voice TTS per scene
+            ├── Render Remotion (paralel per chunk)
+            ├── FFmpeg merge semua chunk
+            └── Upload MP4 → Cloudflare R2 → update DB
 ```
 
 ---
 
-## Stage 2 — Research
+## Stage 1 — Research
 
-**Input:** `project_id`, `topic`
+**Input:** `topic` dari project
 
-**Output:** `summary`, `facts[]`, `timeline[]`, `references[]` tersimpan di tabel `research`
+**Output:** `summary`, `facts[]`, `timeline[]`, `references[]` → tabel `research`
 
-**API endpoint:** `POST /api/projects/:id/research`
+**AI Module:** `lib/ai/research.ts`
 
-**AI module:** `lib/ai/research.ts`
-
-**Error handling:**
-- Jika AI timeout → set status `failed`, simpan error message
-- Dapat di-retry tanpa menghapus data project
-
----
-
-## Stage 3 — Director Engine
-
-**Input:** `project_id`, output research
-
-**Output:** Seluruh "bible" tersimpan di tabel `director`:
-- `visual_bible` — deskripsi style visual keseluruhan
-- `character_bible` — panduan konsistensi karakter
-- `environment_bible` — panduan environment & setting
-- `camera_bible` — panduan gerakan kamera
-- `motion_bible` — panduan motion & transisi
-- `thumbnail_bible` — panduan style thumbnail
-
-**API endpoint:** `POST /api/projects/:id/director`
-
-**Catatan penting:** Semua modul AI downstream **wajib** membaca output Director sebelum generate. Director adalah kontrak visual yang mengikat.
+**Detail:**
+- DuckDuckGo scrape (optional, 8s timeout) untuk konteks terkini
+- Jika scrape gagal/timeout → AI tetap jalan dengan pengetahuan internal
+- Output: JSON dengan 8–12 fakta spesifik + timeline kronologis
 
 ---
 
-## Stage 4 — Outline
+## Stage 2 — Director Engine
 
-**Input:** `project_id`, output research, output director
+**Input:** `topic`, output research
 
-**Output:** Struktur video dengan section: intro, chapter_1..N, ending
+**Output:** Director bibles → tabel `director`
 
-**API endpoint:** `POST /api/projects/:id/outline`
+**AI Module:** `lib/ai/director.ts`
 
-**Contoh output:**
+**Kolom yang disimpan:**
+| Kolom | Isi |
+|---|---|
+| `genre` | Genre dokumenter |
+| `visual_style` | Deskripsi gaya visual keseluruhan |
+| `voice_style` | Panduan gaya narasi/voice |
+| `image_style` | Panduan style gambar AI |
+| `camera_style` | Panduan gerakan kamera |
+| `transition` | Jenis transisi default |
+| `emotion` | Tone emosional keseluruhan |
+| `visual_bible` | Detail visual style lengkap (JSON) |
+| `character_bible` | Panduan konsistensi karakter (JSON) |
+| `environment_bible` | Panduan environment & setting (JSON) |
+| `camera_bible` | Panduan kamera detail (JSON) |
+| `motion_bible` | Panduan motion & effect (JSON) |
+| `thumbnail_bible` | Panduan style thumbnail (JSON) |
 
+---
+
+## Stage 3 — Outline
+
+**Input:** `topic`, `research.summary`
+
+**Output:** Struktur 5 sections → tabel `outlines`
+
+**AI Module:** `lib/ai/outline.ts`
+
+**Struktur fixed:**
 ```json
 {
   "sections": [
-    { "type": "intro",   "title": "Kejayaan Majapahit", "order": 0 },
-    { "type": "chapter", "title": "Awal Keruntuhan",    "order": 1 },
-    { "type": "chapter", "title": "Perang Saudara",     "order": 2 },
-    { "type": "chapter", "title": "Invasi Demak",       "order": 3 },
-    { "type": "ending",  "title": "Warisan yang Tersisa","order": 4 }
+    { "type": "intro",   "title": "...", "order": 0, "description": "..." },
+    { "type": "chapter", "title": "...", "order": 1, "description": "..." },
+    { "type": "chapter", "title": "...", "order": 2, "description": "..." },
+    { "type": "chapter", "title": "...", "order": 3, "description": "..." },
+    { "type": "ending",  "title": "...", "order": 4, "description": "..." }
   ]
 }
 ```
 
 ---
 
-## Stage 5 — Script
+## Stage 4 — Scenes
 
-**Input:** `project_id`, satu section outline, output director
+**Input:** Semua sections outline, director bibles, topic
 
-**Output:** Teks narasi untuk section tersebut
+**Output:** 42 adegan → tabel `scenes`
 
-**API endpoint:** `POST /api/projects/:id/scripts`
+**AI Module:** `lib/ai/scenes.ts`
 
-**Catatan:** Script di-generate **per section secara independen**. Ini memungkinkan regenerate satu chapter tanpa mengganggu chapter lain.
+**Jumlah scene per section:**
+- `intro` → 6 scenes
+- `chapter` → 10 scenes × 3 = 30 scenes
+- `ending` → 6 scenes
+- **Total: 42 scenes**
+
+**Target durasi video:** 8–10 menit (42 × 11 detik rata-rata)
+
+**Per scene tersimpan:**
+| Kolom | Isi |
+|---|---|
+| `order_index` | Urutan scene |
+| `narration` | Narasi bahasa Indonesia (20–35 kata) |
+| `subtitle` | Versi pendek narasi (max 10 kata) |
+| `image_prompt` | Prompt bahasa Inggris untuk AI image generator |
+| `camera` | Gerakan kamera |
+| `effect` | Visual effect |
+| `emotion` | Tone emosional scene |
+| `transition` | Jenis transisi ke scene berikutnya |
+| `duration` | Durasi scene (10–13 detik) |
+| `image_status` | `idle` / `processing` / `completed` / `failed` |
+| `voice_status` | `idle` / `processing` / `completed` / `failed` |
 
 ---
 
-## Stage 6 — Storyboard
+## Stage 5 — SEO
 
-**Input:** `project_id`, semua script, output director
+**Input:** `topic`, `research.summary`, narasi semua scenes
 
-**Output:** Array scene, masing-masing tersimpan sebagai baris di tabel `scenes`
+**Output:** Metadata SEO → tabel `seo_metadata`
 
-**API endpoint:** `POST /api/projects/:id/storyboard`
+**AI Module:** `lib/ai/seo.ts`
 
-**Contoh satu scene:**
+**Output:** `title`, `description`, `tags[]`, `hashtags[]`
 
-```json
-{
-  "order_index": 0,
-  "narration": "Di puncak kejayaannya, Majapahit menguasai hampir seluruh Nusantara.",
-  "image_prompt": "Wide aerial view of a grand ancient Javanese kingdom...",
-  "camera": "zoom_out",
-  "duration": 7.5,
-  "subtitle": "Puncak kejayaan Majapahit",
-  "effect": "light_rays",
-  "emotion": "epic",
-  "transition": "fade"
-}
+---
+
+## Stage 6 — Thumbnail (Auto)
+
+**Input:** `director.thumbnail_bible.composition`
+
+**Output:** Gambar thumbnail 1792×1024 → upload R2 → tabel `thumbnails`
+
+**Proses:**
+1. Ambil prompt dari `thumbnail_bible`
+2. Kirim ke AI Image Generator (Stable Diffusion XL)
+3. Upload ke Cloudflare R2
+4. Simpan URL ke tabel `thumbnails`
+
+---
+
+## Stage 7 — Render (GitHub Actions: render.yml)
+
+**Trigger:** `POST /api/projects/:id/generate` → dispatch `render_video` event
+
+**Proses:**
+
+```
+prepare job:
+  1. fetch-storyboard.js     → ambil storyboard JSON dari API
+  2. fetch-pexels.js         → download stock video dari Pexels (per scene)
+  3. generate-images.js      → generate AI image per scene (atau skip jika ada Pexels)
+  4. generate-voices.js      → generate TTS voice per scene (ElevenLabs/Azure)
+  5. prepare-chunks.js       → bagi scenes menjadi chunk untuk render paralel
+
+render job (paralel matrix):
+  6. Remotion render per chunk → output MP4 per part
+
+merge job:
+  7. merge-chunks.js         → FFmpeg gabung semua part
+  8. upload.js               → upload MP4 final ke Cloudflare R2
+  9. update-job.js           → PATCH /api/render-jobs/:id { status: 'completed', video_url }
 ```
 
 ---
 
-## Stage 7 — Prompt Generation
+## Stage 8 — YouTube Upload (Manual / Auto Schedule)
 
-**Input:** `scene.narration`, `scene.emotion`, output director (semua bible)
+**Trigger:** Tombol "Publish" di web, atau jadwal otomatis (cron via cron-job.org)
 
-**Output:** Image prompt final per scene, disimpan ke kolom `image_prompt` di tabel `scenes`
-
-**Struktur prompt:**
-
-```
-[Base description dari narasi]
-+ [Director: visual_style]
-+ [Director: character_bible jika ada karakter]
-+ [Director: environment_bible]
-+ [Director: lighting]
-+ [Director: color_palette]
-```
-
----
-
-## Stage 8 — Image & Voice Generation (paralel via GitHub Actions)
-
-**Input:** Semua scene dengan `image_prompt` yang sudah final
-
-**Output:**
-- `image_url` per scene → update kolom `scenes.image_url`
-- `voice_url` per scene → update kolom `scenes.voice_url`
-
-**Trigger:** `POST /api/projects/:id/generate` → dispatch `repository_dispatch` ke GitHub Actions
-
-**Mode:**
-- `full` → generate semua scene
-- `partial` → generate hanya `scene_ids[]` yang diberikan (untuk regenerate)
-
----
-
-## Stage 9 — Rendering
-
-**Input:** Semua scene dengan `image_url` dan `voice_url` tersedia
-
-**Output:** File MP4 video final
-
-**Tools:** Remotion + FFmpeg
-
-**Trigger:** Lanjutan GitHub Actions setelah image & voice selesai
-
-**Proses di runner:**
-
-```
-1. Baca storyboard JSON dari API
-2. Download semua image dan voice per scene
-3. Remotion: compose video dengan camera animation, subtitle, effect
-4. FFmpeg: mux audio + video → output MP4
-5. Upload MP4 ke storage
-6. PATCH /api/render-jobs/:id { status: 'completed', video_url: '...' }
-```
-
----
-
-## Stage 10 — Thumbnail
-
-**Input:** Output director (`thumbnail_bible`), judul video, fakta utama
-
-**Output:** Thumbnail image + overlay text
-
-**API endpoint:** `POST /api/projects/:id/thumbnail`
-
----
-
-## Stage 11 — SEO
-
-**Input:** Topik, outline, script
-
-**Output:** `title`, `description`, `tags[]`, `hashtags[]`, `chapters[]`
-
-**API endpoint:** `POST /api/projects/:id/seo`
-
----
-
-## Stage 12 — YouTube Upload
-
-**Input:** `video_url`, `thumbnail_url`, semua SEO metadata
-
-**Output:** `youtube_id`, `youtube_url`
-
-**API endpoint:** `POST /api/projects/:id/upload`
+**API:** `POST /api/projects/:id/publish`
 
 **Fitur:**
-- Upload video
+- Upload video MP4 dari R2
 - Set thumbnail
-- Set judul, deskripsi, tags
-- Assign ke playlist
-- Jadwalkan publish (opsional)
+- Set title, description, tags (dari SEO metadata)
+- Set jadwal publish (opsional)
 
 ---
 
-## Regenerate Flow
+## AI Client
 
-```
-User klik "Regenerate" pada tahap tertentu
-    │
-    ▼
-API: reset status kolom yang bersangkutan → 'idle'
-    │
-    ▼
-Jalankan ulang AI/runner untuk tahap tersebut
-    │
-    ▼
-Update database dengan output baru
-    │
-    ▼
-Frontend polling mendeteksi status → 'completed'
-    │
-    ▼
-Tampilkan hasil baru
-```
+**File:** `lib/ai/client.ts`
 
-**Aturan cascade regenerate:**
-
-| Regenerate tahap ini | Harus regenerate ulang downstream |
-|---|---|
-| Research | Director, Outline, Script, Storyboard, Prompt, Image, Voice, Render |
-| Director | Outline, Script, Storyboard, Prompt, Image, Voice, Render |
-| Outline | Script, Storyboard, Prompt, Image, Voice, Render |
-| Script (1 section) | Storyboard scenes terkait, Prompt, Image, Voice, Render |
-| Scene image prompt | Image scene tersebut, Render |
-| Scene image | Render |
-| Scene voice | Render |
-| Thumbnail | — |
-| SEO | — |
+**Model:** `groq/llama-3.3-70b-versatile` via 9Router gateway  
+**Response time:** < 1 detik  
+**Timeout:** 5 menit (300 detik) — aman untuk GitHub Actions runner  
+**Image model:** `cf/@cf/stabilityai/stable-diffusion-xl-base-1.0`
 
 ---
 
 ## Error Handling
 
-- Setiap stage menyimpan `status` → `'failed'` dan pesan error jika gagal
-- User dapat retry stage yang gagal tanpa mengulang stage sebelumnya
-- GitHub Actions job failure → webhook PATCH `/api/render-jobs/:id` dengan `{ status: 'failed', error: '...' }`
-- Frontend menampilkan error message dan tombol retry per stage
+| Situasi | Penanganan |
+|---|---|
+| DuckDuckGo scrape gagal | Non-fatal, AI tetap jalan tanpa konteks web |
+| AI stage gagal | Log error, status `failed` di DB, user bisa retry |
+| Thumbnail gagal | Non-fatal, pipeline tetap dianggap sukses |
+| Render gagal | PATCH job status `failed`, runner kirim error message |
+| Vercel timeout | Tidak mungkin terjadi — AI pipeline jalan di GitHub Actions |

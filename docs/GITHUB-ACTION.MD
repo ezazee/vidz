@@ -1,225 +1,148 @@
-# GITHUB_ACTIONS.md
+# GITHUB-ACTION.MD
 
-> Dokumentasi lengkap GitHub Actions workflow untuk StoryZ — trigger, jobs, secrets, dan error handling.
-
----
-
-## Overview
-
-StoryZ menggunakan GitHub Actions sebagai **rendering engine** karena:
-- Gratis untuk public repo (2.000 menit/bulan untuk private)
-- Runner menyediakan resource cukup untuk Remotion + FFmpeg
-- Tidak perlu server dedicated — zero infra cost untuk rendering
-- Mudah di-trigger via `repository_dispatch` dari Next.js API
+> Panduan setup dan cara kerja kedua GitHub Actions workflow di StoryZ.
 
 ---
 
-## Workflow File
+## Dua Workflow
 
-**Path:** `.github/workflows/render.yml`
+| Workflow | File | Event | Fungsi |
+|---|---|---|---|
+| AI Pipeline | `.github/workflows/ai_pipeline.yml` | `run_ai_pipeline` | Research → Scenes → Thumbnail |
+| Render Video | `.github/workflows/render.yml` | `render_video` | Image → Voice → Remotion → Upload |
+
+---
+
+## Workflow 1: AI Pipeline (`ai_pipeline.yml`)
+
+### Cara Kerja
 
 ```yaml
-name: Render Video
+trigger: repository_dispatch (event: run_ai_pipeline)
+payload: { project_id, base_url }
 
-on:
-  repository_dispatch:
-    types: [render_video]
+steps:
+  1. actions/checkout@v4
+  2. actions/setup-node@v4 (node 20)
+  3. npm ci
+  4. npx tsx --tsconfig tsconfig.json scripts/run-pipeline.ts <project_id>
+     └── env dari GitHub Secrets (bukan dari client_payload)
+  5. curl POST <base_url>/api/projects/<project_id>/generate
+     └── trigger render workflow
+```
+
+### Kenapa `--tsconfig tsconfig.json`?
+
+`tsx` perlu flag `--tsconfig` untuk me-resolve path alias `@/*` yang didefinisikan di `tsconfig.json`.
+Tanpa flag ini, import seperti `import { getSql } from '@/lib/db/client'` akan gagal.
+
+### Environment yang Dibutuhkan (GitHub Secrets)
+
+```
+DATABASE_URL
+AI_API_KEY
+AI_BASE_URL
+AI_MODEL
+IMAGE_MODEL
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_PUBLIC_URL
+```
+
+### Yang Dijalankan `run-pipeline.ts`
+
+Script ini mengeksekusi seluruh AI pipeline secara berurutan dan menulis hasilnya langsung ke Neon DB:
+
+```
+1. Research      → lib/ai/research.ts   → INSERT INTO research
+2. Director      → lib/ai/director.ts   → INSERT INTO director
+3. Outline       → lib/ai/outline.ts    → INSERT INTO outlines
+4. Scenes        → lib/ai/scenes.ts     → INSERT INTO scenes (42 scenes)
+   └── per section secara berurutan (intro → chapter1 → chapter2 → chapter3 → ending)
+5. SEO           → lib/ai/seo.ts        → INSERT INTO seo_metadata
+6. Thumbnail     → AI image API         → R2 upload → INSERT INTO thumbnails
+```
+
+---
+
+## Workflow 2: Render Video (`render.yml`)
+
+### Cara Kerja
+
+```yaml
+trigger: repository_dispatch (event: render_video)
+payload: { project_id, job_id }
 
 jobs:
-  render:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+  prepare:
+    - fetch-storyboard.js      → GET /api/projects/:id/storyboard → storyboard.json
+    - fetch-pexels.js          → download stock video per scene (jika ada pexels_query)
+    - generate-images.js       → AI image per scene (jika tidak ada Pexels video)
+    - generate-voices.js       → TTS voice per scene
+    - prepare-chunks.js        → bagi scenes menjadi chunk → matrix output
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  render (paralel per chunk):
+    - Remotion render → output/part-N.mp4
+    - Upload artifact
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+  merge:
+    - merge-chunks.js          → FFmpeg merge semua part → output/final.mp4
+    - upload.js                → upload ke Cloudflare R2
+    - update-job.js            → PATCH /api/render-jobs/:id { status, video_url }
+```
 
-      - name: Install dependencies
-        run: npm ci
+### Environment yang Dibutuhkan (GitHub Secrets)
 
-      - name: Install FFmpeg
-        run: sudo apt-get install -y ffmpeg
-
-      - name: Install Chrome (for Remotion)
-        run: npx remotion browser ensure
-
-      - name: Fetch storyboard
-        id: fetch
-        run: |
-          node scripts/fetch-storyboard.js \
-            --project-id="${{ github.event.client_payload.project_id }}" \
-            --mode="${{ github.event.client_payload.mode }}" \
-            --scene-ids="${{ github.event.client_payload.scene_ids }}"
-        env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          API_SECRET: ${{ secrets.API_SECRET }}
-
-      - name: Generate images
-        run: node scripts/generate-images.js
-        env:
-          NINE_ROUTER_API_KEY: ${{ secrets.NINE_ROUTER_API_KEY }}
-
-      - name: Generate voices
-        run: node scripts/generate-voices.js
-        env:
-          NINE_ROUTER_API_KEY: ${{ secrets.NINE_ROUTER_API_KEY }}
-
-      - name: Render video (Remotion)
-        run: |
-          npx remotion render VideoComposition output/frames/ \
-            --props="./storyboard.json" \
-            --image-format=png \
-            --jpeg-quality=90 \
-            --concurrency=2
-
-      - name: Mux audio + video (FFmpeg)
-        run: node scripts/mux.js
-
-      - name: Upload video to storage
-        id: upload
-        run: node scripts/upload.js
-        env:
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-
-      - name: Update database — completed
-        if: success()
-        run: |
-          node scripts/update-job.js \
-            --status="completed" \
-            --video-url="${{ steps.upload.outputs.video_url }}"
-        env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          API_SECRET: ${{ secrets.API_SECRET }}
-
-      - name: Update database — failed
-        if: failure()
-        run: |
-          node scripts/update-job.js \
-            --status="failed" \
-            --error="Render job failed. Check GitHub Actions logs."
-        env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          API_SECRET: ${{ secrets.API_SECRET }}
+```
+API_BASE_URL          URL Vercel app
+API_SECRET            Token autentikasi API internal
+AI_BASE_URL           Untuk generate images
+AI_API_KEY            Untuk generate images
+PEXELS_API_KEY        Untuk fetch stock video
+R2_ACCOUNT_ID         Upload video
+R2_ACCESS_KEY_ID      Upload video
+R2_SECRET_ACCESS_KEY  Upload video
+R2_BUCKET_NAME        Upload video
+R2_PUBLIC_URL         URL publik video
+TTS_VOICE             Voice ID TTS
 ```
 
 ---
 
-## Trigger dari Next.js API
+## Setup Awal
 
-```typescript
-// app/api/projects/[id]/generate/route.ts
+### 1. Tambahkan semua GitHub Secrets
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { mode = 'full', scene_ids } = await req.json()
+**GitHub → repo → Settings → Secrets and variables → Actions**
 
-  // Buat render job di database
-  const job = await createRenderJob({ project_id: params.id, mode, scene_ids })
+Lihat daftar lengkap di [`docs/ENVIRONMENT.MD`](ENVIRONMENT.MD).
 
-  // Dispatch GitHub Actions
-  await fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      event_type: 'render_video',
-      client_payload: {
-        project_id: params.id,
-        job_id: job.id,
-        mode,
-        scene_ids: scene_ids ?? null,
-      },
-    }),
-  })
+### 2. Pastikan GITHUB_TOKEN punya permission yang benar
 
-  return Response.json({ job_id: job.id })
-}
+Di Vercel env:
 ```
+GITHUB_TOKEN=ghp_xxxxx   (scope: repo → full control)
+GITHUB_REPO=owner/repo
+```
+
+Atau di GitHub → Settings → Actions → General → Workflow permissions:
+- Set ke **"Read and write permissions"**
+
+### 3. Trigger pertama
+
+Dari web, buat project baru dan klik **Generate**.
+Pantau di tab **Actions** GitHub untuk melihat kedua workflow berjalan.
 
 ---
 
-## Secrets yang Dibutuhkan
+## Troubleshooting
 
-Semua secret dikonfigurasi di **GitHub → Repository → Settings → Secrets and variables → Actions**
-
-| Secret | Keterangan |
-|---|---|
-| `API_BASE_URL` | Base URL Next.js API (contoh: `https://storyz.app`) |
-| `API_SECRET` | Secret key untuk autentikasi internal antara runner dan API |
-| `NINE_ROUTER_API_KEY` | API key untuk 9Router (AI provider) |
-| `BLOB_READ_WRITE_TOKEN` | Token Blob storage untuk upload video final |
-
-Environment variable yang dikonfigurasi di **Vercel** (untuk Next.js API):
-
-| Variable | Keterangan |
-|---|---|
-| `GITHUB_TOKEN` | Personal Access Token dengan scope `repo` untuk dispatch workflow |
-| `GITHUB_REPO` | Format: `username/repo-name` |
-| `DATABASE_URL` | Connection string Neon PostgreSQL |
-| `NINE_ROUTER_API_KEY` | API key untuk 9Router |
-
----
-
-## Scripts di Repository
-
-```
-scripts/
-  fetch-storyboard.js    → Ambil storyboard JSON dari API, simpan ke ./storyboard.json
-  generate-images.js     → Generate gambar per scene via 9Router
-  generate-voices.js     → Generate voice per scene via 9Router
-  mux.js                 → FFmpeg: gabung frames + audio → MP4
-  upload.js              → Upload MP4 ke Blob storage
-  update-job.js          → PATCH /api/render-jobs/:id dengan status dan hasil
-```
-
----
-
-## Update Job API (dipanggil oleh runner)
-
-```typescript
-// app/api/render-jobs/[id]/route.ts
-
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  // Validasi API_SECRET dari header
-  const secret = req.headers.get('x-api-secret')
-  if (secret !== process.env.API_SECRET) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { status, video_url, error } = await req.json()
-
-  await db.query(
-    `UPDATE render_jobs SET status = $1, video_url = $2, error = $3,
-     completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END
-     WHERE id = $4`,
-    [status, video_url ?? null, error ?? null, params.id]
-  )
-
-  // Jika completed, update status project
-  if (status === 'completed') {
-    await db.query(
-      `UPDATE projects SET status = 'rendered' WHERE id =
-       (SELECT project_id FROM render_jobs WHERE id = $1)`,
-      [params.id]
-    )
-  }
-
-  return Response.json({ ok: true })
-}
-```
-
----
-
-## Error Handling
-
-- Setiap step di workflow menggunakan `if: failure()` untuk update database ke status `failed`
-- Runner timeout dikonfigurasi ke 60 menit — jika melebihi, job otomatis di-cancel dan bisa di-retry
-- Frontend polling akan mendeteksi status `failed` dan menampilkan pesan error + tombol retry
-- Log GitHub Actions dapat diakses langsung dari GitHub untuk debugging
+| Error | Penyebab | Solusi |
+|---|---|---|
+| `AbortError: This operation was aborted` | Model AI hang (biasanya `creavoo-combo`) | Ganti `AI_MODEL` ke `groq/llama-3.3-70b-versatile` |
+| `DATABASE_URL is not configured` | Secret `DATABASE_URL` belum ditambahkan | Tambahkan di GitHub Secrets |
+| `Cannot find module '@/lib/...'` | tsx dipanggil tanpa `--tsconfig` | Sudah fix di workflow — pastikan pakai versi terbaru |
+| `504 Gateway Timeout` dari curl | Vercel function timeout | Pipeline AI sudah di-move ke GitHub Actions — tidak harusnya terjadi lagi |
+| `durationInFrames` error di Remotion | Frame range melebihi batas komposisi | Pastikan jumlah scenes sesuai dengan `durationInFrames` di komposisi |
