@@ -53,6 +53,7 @@ export async function GET(request: Request, context: RouteContext) {
       return 'idle'
     }
 
+    const aiCompleted = ['ai_completed', 'rendered', 'uploaded'].includes(row.project_status)
     const researchDone = row.research_status === 'completed'
     const directorDone = row.director_status === 'completed'
     const outlineDone = row.outline_status === 'completed'
@@ -68,7 +69,8 @@ export async function GET(request: Request, context: RouteContext) {
         research: resolveStage(row.research_status, true),
         director: resolveStage(row.director_status, researchDone),
         outline: resolveStage(row.outline_status, directorDone),
-        scenes: resolveStage(row.scenes_status, outlineDone),
+        // scenes = done kalau AI pipeline selesai (ai_completed/rendered/uploaded)
+        scenes: aiCompleted ? 'completed' : resolveStage(row.scenes_status, outlineDone),
         render: row.render_status || 'idle'
       },
       renderDetail: {

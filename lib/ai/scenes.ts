@@ -28,7 +28,7 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
     ? `Struktur Lengkap Outline:\n${input.fullOutline.map(s => `- [${s.type.toUpperCase()}] ${s.title}`).join('\n')}`
     : ''
 
-  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 9
+  const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 10
 
   const content = await chat([
     {
@@ -42,14 +42,14 @@ Konteks: ${input.section.description}
 Style: ${input.director.image_style}, ${input.director.emotion}
 
 Buat TEPAT ${numScenes} scene, order_index mulai dari ${input.orderOffset}.
-Narasi: kalimat lengkap dramatis 20-35 kata, fakta spesifik, BUKAN judul/frasa kosong.
-Contoh narasi BAIK: "Pukul 10:02 pagi, gelombang panas 800°C menyapu pantai Anyer dalam 2 menit — 295 kilometer dari pusat ledakan."
+Narasi: WAJIB 35-55 kata per scene (2-3 kalimat). Fakta spesifik, dramatis, BUKAN judul/frasa kosong.
+Contoh narasi BAIK (hitung katanya — ini ~40 kata): "Pukul 10:02 pagi, gelombang panas 800 derajat Celsius menyapu seluruh pantai Anyer hanya dalam dua menit. Jarak dari pusat ledakan: 295 kilometer. Tidak ada yang sempat berlari. Tidak ada yang sempat berteriak."
 image_prompt: bahasa Inggris, spesifik [subject, style, lighting, mood, angle].
 pexels_query: 1-3 kata Inggris untuk stock video umum, atau "" jika tidak ada.
-duration: 12-15 detik.
+duration: 15-18 detik.
 
 Output JSON mulai dengan { :
-{"scenes":[{"order_index":${input.orderOffset},"narration":"...","subtitle":"...","image_prompt":"...","pexels_query":"...","camera":"static","effect":"none","emotion":"tense","transition":"fade","duration":13}]}`,
+{"scenes":[{"order_index":${input.orderOffset},"narration":"...","subtitle":"...","image_prompt":"...","pexels_query":"...","camera":"static","effect":"none","emotion":"tense","transition":"fade","duration":16}]}`,
     },
   ], true)
 
