@@ -83,8 +83,11 @@ async function runPipeline() {
     let currentOffset = 0
     let globalOrderIndex = 0
 
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+
     for (const section of outline.sections) {
       console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
+      if (globalOrderIndex > 0) await delay(3000) // pace requests to avoid gateway timeout
 
       const scenes = await generateScenes({
         section,

@@ -71,7 +71,12 @@ export async function chat(messages: Message[], json = true, customModel?: strin
     } catch (error) {
       clearTimeout(timeoutId)
       if ((error as any)?.name === 'AbortError') {
-        throw new Error(`AI fetch aborted (timeout or connection failed). URL: ${baseUrl}/chat/completions`)
+        if (attempt < maxRetries) {
+          console.warn(`AI fetch aborted (timeout), retry ${attempt}/${maxRetries} in 15s...`)
+          await new Promise(r => setTimeout(r, 15000))
+          continue
+        }
+        throw new Error(`AI fetch aborted after ${maxRetries} attempts (timeout or connection failed). URL: ${baseUrl}/chat/completions`)
       }
       throw error
     }
