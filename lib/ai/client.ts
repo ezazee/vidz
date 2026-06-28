@@ -84,8 +84,9 @@ export async function chat(messages: Message[], json = true, customModel?: strin
   throw new Error('AI chat: unreachable')
 }
 
-function stripMarkdown(s: string): string {
-  // strip <think>...</think> blocks (reasoning models)
-  s = s.replace(/<think>[\s\S]*?<\/think>/gi, '')
-  return s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+function stripMarkdown(s: unknown): string {
+  if (typeof s !== 'string') s = JSON.stringify(s) ?? ''
+  let str = s as string
+  str = str.replace(/<think>[\s\S]*?<\/think>/gi, '')
+  return str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 }
