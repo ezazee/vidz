@@ -26,21 +26,13 @@ jobs:
           AI_MODEL: ${{ secrets.AI_MODEL }}
         run: |
           echo "Warming up AI endpoint (Fly.io cold start workaround)..."
-          for i in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
-              -X POST "$AI_BASE_URL/chat/completions" \
-              -H "Authorization: Bearer $AI_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d "{\"model\":\"$AI_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":3}" \
-            )
-            echo "Attempt $i: HTTP $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              echo "AI endpoint warm and ready."
-              break
-            fi
-            echo "Not ready yet, waiting 10s..."
-            sleep 10
-          done
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+            -X POST "$AI_BASE_URL/chat/completions" \
+            -H "Authorization: Bearer $AI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"$AI_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":3}" \
+          ) || true
+          echo "Warm-up status: HTTP $STATUS"
 
       - name: Run AI Pipeline
         env:
