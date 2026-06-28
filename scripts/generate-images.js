@@ -3,20 +3,34 @@ const { uploadToR2 } = require('./r2-upload')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
-  if (scene.pexels_video_urls && scene.pexels_video_urls.length > 0) {
-    console.log(`Scene ${scene.order_index + 1}: ✓ Menggunakan ${scene.pexels_video_urls.length} video Pexels (B-Roll) — skip AI image`)
-    return
-  }
-  console.log(`Scene ${scene.order_index + 1}: 🎨 Membuat gambar AI yang sesuai topik...`)
+// Enhance image prompt dengan cinematic prefix & suffix untuk hasil lebih baik
+function buildImagePrompt(scene, director) {
+  const base = scene.image_prompt || `Documentary scene: ${scene.narration?.slice(0, 80)}`
+  const style = director?.image_style || 'cinematic documentary'
 
-  const modelName = process.env.IMAGE_MODEL || process.env.AI_IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+  // Prefix untuk orientasi & style konsisten
+  const prefix = `Wide cinematic shot, ${style},`
+  // Suffix untuk kualitas
+  const suffix = `photorealistic, 8k uhd, film grain, dramatic lighting, sharp focus, no text, no watermark, no logo`
+
+  // Hindari duplikasi kata jika sudah ada
+  const hasPrefix = base.toLowerCase().includes('cinematic') || base.toLowerCase().includes('wide shot')
+  const hasSuffix = base.toLowerCase().includes('8k') || base.toLowerCase().includes('photorealistic')
+
+  return `${hasPrefix ? '' : prefix + ' '}${base}${hasSuffix ? '' : ', ' + suffix}`
+}
+
+async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
+  // Selalu generate AI image — dipakai sebagai foto still (asset ke-2) bahkan jika ada Pexels video
+  console.log(`Scene ${scene.order_index + 1}: Generating AI image...`)
+
+  const modelName = process.env.IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+  const prompt = buildImagePrompt(scene, director)
   const maxRetries = 3
   let attempt = 0
 
   while (attempt < maxRetries) {
     try {
-      console.log(`Generating image for scene ${scene.order_index + 1} (Attempt ${attempt + 1}/${maxRetries})...`)
       const res = await fetch(`${baseUrl}/images/generations`, {
         method: 'POST',
         headers: {
@@ -25,7 +39,7 @@ async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseU
         },
         body: JSON.stringify({
           model: modelName,
-          prompt: scene.image_prompt,
+          prompt,
           n: 1,
           size: '1792x1024',
           response_format: 'url',
@@ -34,12 +48,9 @@ async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseU
 
       if (!res.ok) {
         const errorBody = await res.text().catch(() => '')
-        console.error(`Failed scene ${scene.order_index + 1} on attempt ${attempt + 1}: ${res.status} ${res.statusText}. Error: ${errorBody}`)
+        console.error(`Scene ${scene.order_index + 1} attempt ${attempt + 1} failed: ${res.status} ${errorBody.slice(0, 100)}`)
         attempt++
-        if (attempt < maxRetries) {
-          console.log(`Waiting 2 seconds before retrying scene ${scene.order_index + 1}...`)
-          await delay(2000)
-        }
+        if (attempt < maxRetries) await delay(2000)
         continue
       }
 
@@ -51,63 +62,58 @@ async function generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseU
         const imgRes = await fetch(data.data[0].url)
         buffer = Buffer.from(await imgRes.arrayBuffer())
       } else {
-        console.error(`No image data in response for scene ${scene.order_index + 1} on attempt ${attempt + 1}:`, JSON.stringify(data))
+        console.error(`No image data for scene ${scene.order_index + 1}:`, JSON.stringify(data).slice(0, 200))
         attempt++
         if (attempt < maxRetries) await delay(2000)
         continue
       }
 
-      // 1. Simpan gambar secara lokal (untuk proses rendering lokal oleh Remotion di runner)
+      // Simpan lokal untuk Remotion
       const localPath = `public/images/scene-${scene.order_index}.jpg`
       await fs.writeFile(localPath, buffer)
 
-      // 2. Unggah gambar ke Cloudflare R2 jika kredensial tersedia
-      let publicPath = `images/scene-${scene.order_index}.jpg`
+      // Upload ke R2
+      let imageUrl = `images/scene-${scene.order_index}.jpg`
       if (process.env.R2_ACCESS_KEY_ID) {
         try {
-          console.log(`Uploading image for scene ${scene.order_index + 1} to Cloudflare R2...`)
           const r2Filename = `projects/${projectId}/images/scene-${scene.order_index}.jpg`
-          const r2Url = await uploadToR2(r2Filename, buffer, 'image/jpeg')
-          publicPath = r2Url
-          console.log(`Uploaded image to R2: ${publicPath}`)
+          imageUrl = await uploadToR2(r2Filename, buffer, 'image/jpeg')
         } catch (uploadErr) {
-          console.error(`Failed to upload scene ${scene.order_index + 1} image to Cloudflare R2: ${uploadErr.message}. Using local path fallback.`)
+          console.error(`R2 upload failed scene ${scene.order_index + 1}: ${uploadErr.message}`)
         }
       }
 
-      // 3. Update scene in storyboard json
-      scene.image_url = publicPath
+      scene.image_url = imageUrl
 
-      // 4. Update database via new unified PATCH API
+      // Update DB — hanya set image_url jika belum ada Pexels video
+      // Kalau ada Pexels, image_url di DB sudah diisi oleh fetch-pexels.js (video url)
+      // Kita simpan AI image di field image_url dan Pexels di pexels_video_urls
       if (apiBaseUrl && apiSecret && projectId) {
-        const updateUrl = `${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`
-        console.log(`Updating DB for scene ${scene.order_index + 1} image...`)
-        const patchRes = await fetch(updateUrl, {
+        const hasPexels = scene.pexels_video_urls && scene.pexels_video_urls.length > 0
+        const patchBody = hasPexels
+          ? { image_still_url: imageUrl, image_status: 'completed' }
+          : { image_url: imageUrl, image_status: 'completed' }
+
+        const patchRes = await fetch(`${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`, {
           method: 'PATCH',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'x-api-secret': apiSecret 
-          },
-          body: JSON.stringify({ 
-            image_url: publicPath, 
-            image_status: 'completed' 
-          }),
+          headers: { 'Content-Type': 'application/json', 'x-api-secret': apiSecret },
+          body: JSON.stringify(patchBody),
         })
         if (!patchRes.ok) {
-          console.error(`Failed to update DB for scene ${scene.order_index + 1} image: ${patchRes.status} ${patchRes.statusText}`)
+          console.error(`DB update failed scene ${scene.order_index + 1}: ${patchRes.status}`)
         }
       }
 
-      console.log(`Scene ${scene.order_index + 1} image done.`)
-      return // Success!
+      console.log(`Scene ${scene.order_index + 1}: AI image done → ${imageUrl.slice(0, 60)}...`)
+      return
     } catch (e) {
-      console.error(`Exception during image generation for scene ${scene.order_index + 1} on attempt ${attempt + 1}:`, e.message)
+      console.error(`Exception scene ${scene.order_index + 1} attempt ${attempt + 1}: ${e.message}`)
       attempt++
       if (attempt < maxRetries) await delay(2000)
     }
   }
 
-  console.error(`Scene ${scene.order_index + 1} failed after ${maxRetries} attempts. Continuing pipeline...`)
+  console.error(`Scene ${scene.order_index + 1}: failed after ${maxRetries} attempts`)
 }
 
 async function main() {
@@ -122,16 +128,19 @@ async function main() {
 
   await fs.mkdir('public/images', { recursive: true })
 
-  // Proses gambar dalam kelompok (batch) isi 5 secara paralel
-  const batchSize = 5
+  const director = storyboard.director
+
+  // Batch 4 paralel — SDXL rate limit biasanya ketat
+  const batchSize = 4
   for (let i = 0; i < storyboard.scenes.length; i += batchSize) {
     const batch = storyboard.scenes.slice(i, i + batchSize)
-    console.log(`Processing image batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(storyboard.scenes.length / batchSize)}...`)
-    await Promise.all(batch.map(scene => generateImageForScene(scene, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId)))
+    console.log(`Image batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(storyboard.scenes.length / batchSize)}...`)
+    await Promise.all(batch.map(scene => generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId)))
+    if (i + batchSize < storyboard.scenes.length) await delay(500)
   }
 
-  // write updated storyboard
   await fs.writeFile('storyboard.json', JSON.stringify({ storyboard }, null, 2))
+  console.log(`\nImages: ${storyboard.scenes.filter(s => s.image_url).length}/${storyboard.scenes.length} berhasil`)
 }
 
 main().catch(e => { console.error(e); process.exit(1) })

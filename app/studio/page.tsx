@@ -46,37 +46,55 @@ const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? 'ezazee/vidz'
 
 const STAGE_LOGS: Record<string, string[]> = {
   research: [
-    'Menjalankan Web Scraper (DuckDuckGo Lite)...',
-    'Mengekstrak snippet berita/artikel terkini...',
-    'RAG: Menginjeksi referensi real-time ke memori AI...',
-    'Merangkum fakta-fakta anti-halusinasi...',
+    '[GitHub Actions] Scraping DuckDuckGo untuk referensi terkini...',
+    '[GitHub Actions] Mengekstrak fakta & timeline dari sumber web...',
+    '[GitHub Actions] AI merangkum riset & memvalidasi data...',
+    '[GitHub Actions] Menyimpan hasil riset ke database...',
   ],
   director: [
-    'Menentukan genre dan visual style...',
-    'Menyusun character & environment bible...',
-    'Mengatur camera & motion style...',
+    '[GitHub Actions] AI menganalisis tone & genre video...',
+    '[GitHub Actions] Menyusun visual bible & character guide...',
+    '[GitHub Actions] Menentukan camera style & color palette...',
+    '[GitHub Actions] Finalisasi director output...',
   ],
   outline: [
-    'Menyusun struktur video...',
-    'Membagi chapter...',
-    'Finalisasi outline...',
+    '[GitHub Actions] AI menyusun struktur video (intro + 3 chapter + ending)...',
+    '[GitHub Actions] Mendistribusikan materi riset ke setiap chapter...',
+    '[GitHub Actions] Finalisasi outline & transisi antar bab...',
   ],
   scenes: [
-    'Menulis narasi per scene...',
-    'Menyusun image prompt...',
-    'Mengatur camera movement...',
+    '[GitHub Actions] Menulis narasi 42 scene (target 8-10 menit)...',
+    '[GitHub Actions] Menyusun image prompt per scene...',
+    '[GitHub Actions] Mengatur camera movement & visual effect...',
+    '[GitHub Actions] Menentukan Pexels query untuk B-roll footage...',
+    '[GitHub Actions] Menyimpan semua scene ke database...',
   ],
   storyboard: [
-    'Mengambil data dari database...',
-    'Menyusun storyboard final...',
+    '[GitHub Actions] Menyusun storyboard final...',
+    '[GitHub Actions] Mengumpulkan semua scene & director data...',
+    '[GitHub Actions] AI pipeline selesai — siap render!',
   ],
 }
 
-const RENDER_LOGS: Record<string, string> = {
-  pending: 'GitHub Actions triggered — menunggu runner tersedia...',
-  processing: 'Generating images, voices, dan rendering video...',
-  completed: 'Video berhasil dirender!',
-  failed: 'Render gagal — cek GitHub Actions logs.',
+const RENDER_STAGE_LOGS: Record<string, string[]> = {
+  pending: [
+    '[GitHub Actions] Workflow render_video triggered...',
+    '[GitHub Actions] Menunggu runner Ubuntu tersedia...',
+    '[GitHub Actions] Checkout repo & install dependencies...',
+  ],
+  processing: [
+    '[GitHub Actions] Fetching storyboard dari database...',
+    '[GitHub Actions] Downloading B-roll footage dari Pexels...',
+    '[GitHub Actions] Generating AI images untuk setiap scene...',
+    '[GitHub Actions] Generating voice TTS (Edge TTS) per scene...',
+    '[GitHub Actions] Menghitung durasi audio dengan ffprobe...',
+    '[GitHub Actions] Membagi render menjadi 8 chunk paralel...',
+    '[GitHub Actions] Rendering video chunks dengan Remotion...',
+    '[GitHub Actions] Menggabungkan semua chunk dengan FFmpeg...',
+    '[GitHub Actions] Uploading video final ke Cloudflare R2...',
+  ],
+  completed: ['[GitHub Actions] Video berhasil dirender & diupload ke R2!'],
+  failed: ['[GitHub Actions] Render gagal — lihat log di GitHub Actions untuk detail.'],
 }
 
 function buildStages(): Stage[] {
@@ -144,9 +162,11 @@ export default function StudioPage() {
   const [renderJobId, setRenderJobId] = useState<string | null>(null)
   const [renderStatus, setRenderStatus] = useState<RenderStatus>('idle')
   const [renderLog, setRenderLog] = useState('')
+  const [renderDetail, setRenderDetail] = useState<{ totalScenes: number; imagesDone: number; voicesDone: number; githubRunId: string | null }>({ totalScenes: 0, imagesDone: 0, voicesDone: 0, githubRunId: null })
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const logTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const renderLogTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Restore state from localStorage on mount
   useEffect(() => {
@@ -188,7 +208,23 @@ export default function StudioPage() {
     }, 2500)
   }
 
+  // Start cycling render log messages
+  function startRenderLogCycle(status: RenderStatus) {
+    if (renderLogTimerRef.current) clearInterval(renderLogTimerRef.current)
+    const messages = RENDER_STAGE_LOGS[status] ?? []
+    if (!messages.length) return
+    let i = 0
+    setRenderLog(messages[0])
+    if (messages.length > 1) {
+      renderLogTimerRef.current = setInterval(() => {
+        i = (i + 1) % messages.length
+        setRenderLog(messages[i])
+      }, 3000)
+    }
+  }
+
   // Polling unified pipeline status
+  const prevRenderStatus = useRef<RenderStatus>('idle')
   useEffect(() => {
     if (!projectId || !running) return
     pollRef.current = setInterval(async () => {
@@ -197,42 +233,46 @@ export default function StudioPage() {
         if (!res.ok) return
         const data = await res.json()
         const s = data.stages
-        
+
         setStages(prev => prev.map(st => {
           const dbStatus = s[st.key]
-          // map DB status to UI status
           let uiStatus: StageStatus = 'idle'
           if (dbStatus === 'completed') uiStatus = 'done'
           if (dbStatus === 'processing' || dbStatus === 'pending') uiStatus = 'running'
           if (dbStatus === 'failed') uiStatus = 'error'
-          
-          if (uiStatus === 'running' && !st.log) {
-            startLogCycle(st.key)
-          } else if (uiStatus === 'done' || uiStatus === 'error') {
-             // Let log remain or clear it if handled elsewhere
-          }
+          if (uiStatus === 'running' && !st.log) startLogCycle(st.key)
           return { ...st, status: uiStatus }
         }))
-        
-        setRenderStatus(s.render)
-        if (s.render !== 'idle') {
-           setRenderLog(RENDER_LOGS[s.render] ?? '')
+
+        const newRender: RenderStatus = s.render ?? 'idle'
+        setRenderStatus(newRender)
+        if (data.renderDetail) setRenderDetail(data.renderDetail)
+
+        // start render log cycle only when status changes
+        if (newRender !== prevRenderStatus.current && newRender !== 'idle') {
+          startRenderLogCycle(newRender)
         }
-        
-        if (s.render === 'completed' && data.videoUrl) {
+        prevRenderStatus.current = newRender
+
+        if (newRender === 'completed' && data.videoUrl) {
           setVideoUrl(data.videoUrl)
           setRunning(false)
           clearInterval(pollRef.current!)
+          if (renderLogTimerRef.current) clearInterval(renderLogTimerRef.current)
           localStorage.removeItem('activeProjectId')
         }
-        if (s.render === 'failed' || s.research === 'failed' || s.director === 'failed') {
+        if (newRender === 'failed' || s.research === 'failed' || s.director === 'failed') {
           setRunning(false)
           clearInterval(pollRef.current!)
+          if (renderLogTimerRef.current) clearInterval(renderLogTimerRef.current)
           localStorage.removeItem('activeProjectId')
         }
       } catch {}
     }, 3000)
-    return () => clearInterval(pollRef.current!)
+    return () => {
+      clearInterval(pollRef.current!)
+      if (renderLogTimerRef.current) clearInterval(renderLogTimerRef.current)
+    }
   }, [projectId, running])
 
   function stopLogCycle() {
@@ -544,8 +584,8 @@ export default function StudioPage() {
                   {stages.map((stage: Stage) => <StageRow key={stage.key} stage={stage} />)}
 
                   {/* render row */}
-                  {pipelineDone && renderStatus !== 'idle' && (
-                    <div className="py-3 space-y-1.5">
+                  {renderStatus !== 'idle' && (
+                    <div className="py-3 space-y-2">
                       <div className="flex items-center gap-3">
                         <div className="w-5 shrink-0 flex justify-center">
                           {(renderStatus === 'pending' || renderStatus === 'processing') && <Loader2 className="size-4 animate-spin text-indigo-600" />}
@@ -553,22 +593,47 @@ export default function StudioPage() {
                           {renderStatus === 'failed' && <XCircle className="size-4 text-rose-500" />}
                         </div>
                         <span className={`text-sm font-medium flex-1 ${renderStatus === 'failed' ? 'text-rose-500 font-semibold' : 'text-slate-700'}`}>
-                          GitHub Parallel Rendering (Matrix)
+                          Render Video (GitHub Actions)
                         </span>
                         <a
-                          href={`https://github.com/${GITHUB_REPO}/actions`}
+                          href={renderDetail.githubRunId
+                            ? `https://github.com/${GITHUB_REPO}/actions/runs/${renderDetail.githubRunId}`
+                            : `https://github.com/${GITHUB_REPO}/actions`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-all"
                         >
                           <ExternalLink className="size-3" />
-                          Live Actions Log
+                          Live Log
                         </a>
                       </div>
                       {renderLog && (
                         <p className={`text-xs pl-8 font-mono ${renderStatus === 'failed' ? 'text-rose-500' : renderStatus === 'completed' ? 'text-emerald-600 font-semibold' : 'text-indigo-600 animate-pulse'}`}>
                           {renderLog}
                         </p>
+                      )}
+                      {/* progress bar images & voices */}
+                      {renderStatus === 'processing' && renderDetail.totalScenes > 0 && (
+                        <div className="pl-8 space-y-1.5">
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                              <span>Images</span>
+                              <span>{renderDetail.imagesDone}/{renderDetail.totalScenes}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.imagesDone / renderDetail.totalScenes) * 100}%` }} />
+                            </div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                              <span>Voices (TTS)</span>
+                              <span>{renderDetail.voicesDone}/{renderDetail.totalScenes}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.voicesDone / renderDetail.totalScenes) * 100}%` }} />
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

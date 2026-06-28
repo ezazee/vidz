@@ -15,17 +15,30 @@ export async function generateOutline(topic: string, summary: string): Promise<O
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah Master Storyteller & Pakar Hook YouTube. Balas HANYA JSON valid.
+      content: `Kamu adalah showrunner dokumenter Netflix & Vice kelas dunia. Balas HANYA JSON valid.
 Schema: { "sections": [{ "type": "intro"|"chapter"|"ending", "title": string, "order": number, "description": string }] }
-- 1 intro, 3 chapter, 1 ending (TEPAT 5 sections total, tidak boleh lebih!)
-- SANGAT PENTING: Jangan buat outline yang generik atau membosankan!
-- Intro WAJIB berisi "Curiosity Hook" yang memancing rasa penasaran ekstrem atau ancaman besar.
-- Chapter WAJIB membangun ketegangan (Tension Building), klimaks, dan pengungkapan fakta gila.
-- Setiap bab harus fokus pada kronologi/aspek yang spesifik dan provokatif (target akhir video 8-10 menit).`,
+WAJIB 1 intro + 3 chapter + 1 ending = TEPAT 5 sections.
+
+FORMULA VIRAL YOUTUBE DOCUMENTARY:
+- INTRO: Mulai IN MEDIAS RES — lempar penonton ke momen paling dramatis/mengejutkan. Ajukan pertanyaan yang tidak bisa diabaikan. Buat penonton merasa: "Tunggu, apa ini??"
+- CHAPTER 1: Latar belakang yang bikin syok — fakta yang bertentangan dengan asumsi umum
+- CHAPTER 2: Titik puncak ketegangan — momen di mana segalanya berubah, keputusan kritis, plot twist
+- CHAPTER 3: Konsekuensi & pengungkapan — "siapa yang tahu", "apa yang disembunyikan", dampak nyata
+- ENDING: Bukan penutup generik! Tinggalkan pertanyaan terbuka atau fakta mengejutkan terakhir yang bikin penonton share video
+
+JUDUL setiap chapter WAJIB:
+- Spesifik dan provokatif (pakai angka, nama, atau pernyataan mengejutkan)
+- Contoh BAIK: "48 Jam Sebelum Kehancuran: Keputusan yang Mengubah Segalanya"
+- Contoh BURUK: "Latar Belakang Kejadian"`,
     },
     {
       role: 'user',
-      content: `Buat outline video dokumenter YouTube tentang: "${topic}"\n\nRingkasan:\n${summary}`,
+      content: `Buat outline dokumenter YouTube yang SANGAT menarik tentang: "${topic}"
+
+Ringkasan riset:
+${summary}
+
+INGAT: Ini bukan essay sekolah. Ini dokumenter yang harus membuat orang tidak bisa berhenti menonton dari detik pertama sampai akhir.`,
     },
   ], true)
   try {

@@ -25,67 +25,76 @@ export interface SceneDraft {
 
 export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
   const outlineContext = input.fullOutline
-    ? `Struktur Lengkap Outline Video:\n${input.fullOutline.map(s => `- [${s.type}] ${s.title}: ${s.description}`).join('\n')}`
+    ? `Struktur Lengkap Outline:\n${input.fullOutline.map(s => `- [${s.type.toUpperCase()}] ${s.title}`).join('\n')}`
     : ''
 
-  // 6 scene untuk intro/ending, 10 scene untuk setiap chapter
-  // Total = 6 + (3 * 10) + 6 = 42 scenes.
-  // Kecepatan TTS rata-rata 10-12 detik/scene.
-  // 42 scenes * 11 detik = 462 detik (sekitar 7.7 menit).
-  // Target video 8-10 menit tercapai.
   const numScenes = input.section.type === 'intro' || input.section.type === 'ending' ? 6 : 10
 
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah penulis naskah dokumenter profesional kelas dunia. Balas HANYA JSON valid.
+      content: `Kamu adalah penulis naskah dokumenter Netflix/Vice kelas dunia. Balas HANYA JSON valid.
 Schema: { "scenes": [{ "order_index": number, "narration": string, "subtitle": string, "image_prompt": string, "pexels_query": string, "camera": "static"|"pan_left"|"pan_right"|"zoom_in"|"zoom_out"|"tilt_up"|"tilt_down", "effect": "none"|"light_rays"|"fog"|"dust", "emotion": string, "transition": "cut"|"fade"|"dissolve"|"wipe", "duration": number }] }
-- narration: SANGAT KRITIKAL! Tulis narasi yang *visceral*, emosional, dan penuh ketegangan. WAJIB PENDEK DAN PADAT (Maksimal 20-35 kata, sekitar 1-2 kalimat per scene). Durasi baca TTS harus tepat 12-15 detik! JANGAN PERNAH gunakan kalimat klise/generik. Gunakan teknik "Show, Don't Tell". Langsung tembak dengan fakta gila! Gunakan bahasa Indonesia baku namun dramatis seperti dokumenter Netflix.
-- subtitle: versi pendek narration (max 10 kata)
-- image_prompt: prompt bahasa Inggris detail untuk image AI, sesuai visual_style. Jelaskan objek, komposisi, pencahayaan, dan detail visual secara spesifik.
-- pexels_query: SANGAT KRITIKAL! Ini digunakan untuk mencari video stok (video dunia nyata dari Pexels).
-  - ISI dengan 1-2 kata benda bahasa Inggris HANYA JIKA adegan adalah suasana umum/B-Roll yang pasti tersedia di stok video (contoh: "ocean", "forest", "city night", "sad person", "galaxy", "rain", "crowd").
-  - WAJIB KOSONGKAN ("") JIKA adegan membutuhkan hal spesifik yang tidak mungkin ada di stok video: tokoh sejarah, makhluk mitologi, hewan spesifik bertarung, monster, senjata kuno, adegan perang detail, wajah karakter fiksi, atau objek sangat unik. Jika dikosongkan, sistem akan menggambarnya menggunakan AI Image Generator agar 100% akurat dan sesuai topik.
-- duration: 10-13 detik per scene (sesuai panjang narasi, target total video 8-10 menit)
-- order_index mulai dari ${input.orderOffset}`,
+
+ATURAN NARASI (PALING PENTING):
+- Narasi WAJIB berupa kalimat lengkap — BUKAN judul, BUKAN frasa pendek
+- Terasa seperti Netflix documentary voiceover — dramatis, intim, menghantui
+- WAJIB 20-35 kata per scene (1-2 kalimat, target baca TTS 10-14 detik)
+- MULAI dengan fakta spesifik, angka, atau detail sensoris yang mengejutkan
+- DILARANG: narasi yang hanya berupa judul/frasa seperti "Detik-Detik Terakhir" atau "Kesalahan Fatal"
+
+Contoh narasi BAIK:
+- "Pukul 23:40, sonar RMS Titanic mendeteksi gunung es sejauh 400 meter. Kapten Smith punya 37 detik untuk menghindar — dan ia memilih yang salah."
+- "Reaktor nomor empat meledak dengan kekuatan 400 bom Hiroshima. Radiasi itu tidak terlihat, tidak berbau — tapi dalam tiga jam, 134 pemadam kebakaran sudah terbaring sekarat."
+- "Satu baris kode. Ditulis pada 1969. Dibiarkan selama 30 tahun. Dan pada 1 Januari 2000, ia hampir menghancurkan sistem perbankan seluruh dunia."
+
+Contoh narasi BURUK (DILARANG):
+- "Detik-Detik Terakhir yang Menentukan" ← ini judul, bukan narasi
+- "Tragedi yang Mengguncang Dunia" ← terlalu umum, tidak ada fakta
+- "Kesalahan Fatal yang Mengubah Segalanya" ← frasa kosong tanpa konten
+
+ATURAN IMAGE PROMPT (SANGAT PENTING):
+- image_prompt WAJIB dalam bahasa Inggris
+- Format: [subject/scene], [visual style], [lighting], [mood], [camera angle], [extra detail]
+- Contoh BAIK: "Close-up of a cracked nuclear reactor control panel with red emergency lights flickering, cinematic photography, dramatic chiaroscuro lighting, tense atmosphere, eye-level angle, film grain texture, ultra-detailed"
+- Contoh BURUK: "gambar reaktor nuklir yang rusak"
+- WAJIB spesifik: sebutkan objek konkret, warna, cahaya, angle, dan mood
+- Style: ${input.director.image_style}, photorealistic, 8k uhd, cinematic
+
+ATURAN PEXELS QUERY:
+- ISI dengan 1-3 kata bahasa Inggris HANYA untuk B-roll umum yang PASTI ada di stock video: "ocean waves", "city traffic", "forest rain", "crowd panic", "space stars", "server room", "laboratory", "nuclear plant", "hacker typing"
+- KOSONGKAN ("") untuk: wajah tokoh spesifik, hewan langka, monster, adegan perang detail, objek unik yang tidak mungkin ada di stock video
+- Kalau ragu, KOSONGKAN — AI image lebih akurat untuk hal spesifik`,
     },
     {
       role: 'user',
-      content: `Topik utama video: "${input.topic}"
-
+      content: `Topik video: "${input.topic}"
 ${outlineContext}
 
-Tugas Anda:
-Buatlah adegan untuk bab berikut ini secara spesifik:
-Nama Bab: "${input.section.title}" (${input.section.type})
-Deskripsi Bab: ${input.section.description}
+BAB INI: "${input.section.title}" (${input.section.type})
+Konteks bab: ${input.section.description}
 
-PENTING UNTUK KONSISTENSI & MENCEGAH PENGULANGAN:
-- Harap fokus HANYA pada deskripsi bab ini. JANGAN mengambil fakta, penjelasan, atau materi yang tertulis pada deskripsi bab lain di outline.
-- Tulis narasi yang menyambung secara logis dengan struktur outline keseluruhan, namun mandiri dan tidak tumpang tindih dengan bab lainnya.
-
-Panduan Gaya Sutradara:
+Panduan visual sutradara:
 - Visual style: ${input.director.visual_style}
 - Voice style: ${input.director.voice_style}
 - Image style: ${input.director.image_style}
+- Emotion: ${input.director.emotion}
 
-INSTRUKSI FINAL & KRITIKAL:
-Bab ini membutuhkan TEPAT ${numScenes} scene. Kamu WAJIB mengembalikan array "scenes" yang berisi persis ${numScenes} objek. Jangan kurang, jangan lebih!
-Jika materi/deskripsi terasa sedikit, JANGAN mengurangi jumlah scene! Jabarkan lebih detail secara perlahan (slow pacing) dengan mendeskripsikan visual, suasana, dan emosi yang mendalam agar jumlah scene tetap persis ${numScenes}.`,
+WAJIB buat TEPAT ${numScenes} scene untuk bab ini saja. Jangan overlap dengan bab lain.
+order_index mulai dari ${input.orderOffset}.
+
+Ingat: setiap narasi harus terasa seperti kalimat pembuka yang bisa viral di TikTok/YouTube Shorts — langsung ke inti, dramatis, bikin penasaran.`,
     },
   ], true)
+
   try {
     let cleaned = content.trim()
-    // 1. Hapus pembungkus markdown
     cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim()
-    
-    // 2. Ambil hanya bagian JSON yang valid (antara kurung kurawal pertama dan terakhir)
     const startCurly = cleaned.indexOf('{')
     const endCurly = cleaned.lastIndexOf('}')
     if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
       cleaned = cleaned.substring(startCurly, endCurly + 1)
     }
-
     const parsed = JSON.parse(cleaned) as { scenes: SceneDraft[] }
     return parsed.scenes
   } catch (err) {

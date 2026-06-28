@@ -28,7 +28,11 @@ export async function GET(request: Request, context: RouteContext) {
         ) as scenes_status,
         (SELECT status FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as render_status,
         (SELECT video_url FROM render_jobs WHERE project_id = p.id AND status = 'completed' ORDER BY created_at DESC LIMIT 1) as video_url,
-        (SELECT error FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as render_error
+        (SELECT error FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as render_error,
+        (SELECT github_run_id FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as github_run_id,
+        (SELECT COUNT(*) FROM scenes WHERE project_id = p.id) as total_scenes,
+        (SELECT COUNT(*) FROM scenes WHERE project_id = p.id AND image_status = 'completed') as images_done,
+        (SELECT COUNT(*) FROM scenes WHERE project_id = p.id AND voice_status = 'completed') as voices_done
       FROM projects p
       WHERE p.id = ${id}
     `
@@ -53,6 +57,10 @@ export async function GET(request: Request, context: RouteContext) {
     const directorDone = row.director_status === 'completed'
     const outlineDone = row.outline_status === 'completed'
 
+    const total = Number(row.total_scenes ?? 0)
+    const imagesDone = Number(row.images_done ?? 0)
+    const voicesDone = Number(row.voices_done ?? 0)
+
     return NextResponse.json({
       success: true,
       projectStatus: row.project_status,
@@ -62,6 +70,12 @@ export async function GET(request: Request, context: RouteContext) {
         outline: resolveStage(row.outline_status, directorDone),
         scenes: resolveStage(row.scenes_status, outlineDone),
         render: row.render_status || 'idle'
+      },
+      renderDetail: {
+        githubRunId: row.github_run_id || null,
+        totalScenes: total,
+        imagesDone,
+        voicesDone,
       },
       videoUrl: row.video_url || null,
       error: row.render_error || null

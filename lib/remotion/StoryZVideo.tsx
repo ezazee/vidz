@@ -413,14 +413,67 @@ function SceneTransition() {
 }
 
 function StoryScene({ scene }: SceneProps & { index: number }) {
-  
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const totalFrames = Math.max(1, Math.round(scene.duration * fps))
+
+  // Jika ada Pexels video DAN AI image: tampilkan video sebagai bg utama,
+  // AI image muncul sebagai inset photo di pojok kanan atas (berita/dokumenter style)
+  // selama setengah durasi pertama, lalu fade out
+  const hasVideo = scene.pexels_video_urls && scene.pexels_video_urls.length > 0
+  const hasImage = !!scene.image_url
+  const showInsetPhoto = hasVideo && hasImage
+
+  const insetOpacity = showInsetPhoto
+    ? interpolate(frame, [0, 8, totalFrames * 0.4, totalFrames * 0.55], [0, 1, 1, 0], {
+        extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+      })
+    : 0
+
   return (
     <AbsoluteFill>
-      {/* Background Image / Motion / Video */}
-      {scene.pexels_video_urls && scene.pexels_video_urls.length > 0 ? (
+      {/* Background: Video Pexels atau AI Image */}
+      {hasVideo ? (
         <SceneVideos scene={scene} />
       ) : (
         <SceneImage scene={scene} />
+      )}
+
+      {/* Inset AI photo (documentary "evidence photo" style) — hanya jika ada video Pexels */}
+      {showInsetPhoto && (
+        <div style={{
+          position: 'absolute',
+          top: 40,
+          right: 50,
+          width: 380,
+          height: 220,
+          opacity: insetOpacity,
+          borderRadius: 8,
+          overflow: 'hidden',
+          border: '2px solid rgba(255,255,255,0.15)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.8)',
+          zIndex: 6,
+        }}>
+          <Img
+            src={scene.image_url.startsWith('http') ? scene.image_url : staticFile(scene.image_url)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          {/* Label "EVIDENCE PHOTO" */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0, left: 0, right: 0,
+            background: 'rgba(0,0,0,0.7)',
+            color: '#dca542',
+            fontSize: 12,
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            letterSpacing: 2,
+            textAlign: 'center',
+            padding: '4px 0',
+          }}>
+            PHOTO EVIDENCE
+          </div>
+        </div>
       )}
 
       {/* Cinematic Vignette Overlay (Warm charcoal edges) */}
