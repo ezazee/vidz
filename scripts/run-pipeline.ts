@@ -1,3 +1,4 @@
+try { require('dotenv').config() } catch {} // ponytail: no-op in CI where env comes from secrets
 import { getSql } from '../lib/db/client'
 import { generateResearch } from '../lib/ai/research'
 import { generateDirector } from '../lib/ai/director'
@@ -13,6 +14,9 @@ async function runPipeline() {
   }
   
   console.log(`[Pipeline] Starting execution for project ${id} on GitHub Runner...`)
+  console.log(`[Pipeline] AI_BASE_URL: ${process.env.AI_BASE_URL ?? '(not set)'}`)
+  console.log(`[Pipeline] AI_MODEL: ${process.env.AI_MODEL ?? '(not set)'}`)
+  console.log(`[Pipeline] AI_API_KEY: ${process.env.AI_API_KEY ? '***set***' : '(not set)'}`)
   const sql = getSql()
   
   try {

@@ -34,12 +34,8 @@ async function scrapeWebForTopic(topic: string): Promise<string> {
     if (results.length > 0) {
       return "\n\nBERIKUT ADALAH HASIL PENCARIAN INTERNET TERKINI UNTUK REFERENSI (JANGAN HALUSINASI, GUNAKAN FAKTA INI):\n- " + results.join("\n- ");
     }
-  } catch (err) {
-    if ((err as any).name === 'AbortError') {
-      console.error('Scraping web timed out after 8 seconds, proceeding with AI knowledge...');
-    } else {
-      console.error('Failed to scrape web:', err);
-    }
+  } catch {
+    console.error('Scraping web failed or timed out, proceeding with AI knowledge...');
   } finally {
     clearTimeout(timeoutId);
   }
