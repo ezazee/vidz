@@ -49,7 +49,7 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
         const exactDuration = parseFloat(output.toString().trim())
         if (!isNaN(exactDuration) && exactDuration > 0) {
           // Tambahkan sedikit buffer (0.4 detik) agar kata terakhir dan transisi tidak terpotong tiba-tiba
-          duration = parseFloat((exactDuration + 0.4).toFixed(2)) 
+          duration = parseFloat((exactDuration + 1.0).toFixed(2))
           console.log(`✓ Calculated voice duration for scene ${scene.order_index + 1}: ${duration}s`)
         } else {
           throw new Error('ffprobe returned invalid number')
