@@ -1105,9 +1105,9 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
       const data = await res.json()
       if (res.ok && data.imageUrl) {
         setCustomImageUrl(data.imageUrl)
-        setTextLeft(data.textLeft || 'WAJIB TONTON')
-        setTextRight(data.textRight || 'FAKTA MENCENGANGKAN')
-        setTextBottom(data.textBottom || 'TONTON SEKARANG!')
+        if (data.textLeft) setTextLeft(data.textLeft)
+        if (data.textRight) setTextRight(data.textRight)
+        if (data.textBottom) setTextBottom(data.textBottom)
         setSaveMessage({ type: 'success', text: 'Background dan Teks Clickbait berhasil digenerate oleh AI!' })
       } else {
         setSaveMessage({ type: 'error', text: data.error || 'Gagal generate gambar AI.' })
