@@ -30,28 +30,28 @@ export async function GET(request: Request) {
     for (const schedule of dueSchedules) {
       console.log(`[Cron] Processing schedule: ${schedule.id} (Theme: ${schedule.theme})`)
       
-      // 2. Hitung waktu lari berikutnya
+      // 2. Hitung waktu lari berikutnya (dalam WIB UTC+7)
       const [hours, minutes] = schedule.time_of_day.split(':').map(Number)
-      const now = new Date()
-      let nextRun = new Date(now)
-      nextRun.setHours(hours, minutes, 0, 0)
-      
+      const wibOffset = 7 * 60 * 60 * 1000
+      const nowWib = new Date(Date.now() + wibOffset)
       const allowedDays = schedule.days_of_week ? schedule.days_of_week.split(',').map(Number) : [0,1,2,3,4,5,6]
-      const currentDay = now.getDay()
-      
-      if (allowedDays.includes(currentDay) && nextRun > now) {
-        // Run today at the specified time
-      } else {
-        let daysToAdd = 1
+      const currentDayWib = nowWib.getUTCDay()
+
+      let nextRunWib = new Date(nowWib)
+      nextRunWib.setUTCHours(hours, minutes, 0, 0)
+
+      // Cari hari berikutnya yang valid
+      if (!allowedDays.includes(currentDayWib) || nextRunWib <= nowWib) {
+        let daysToAdd = allowedDays.includes(currentDayWib) && nextRunWib <= nowWib ? 1 : 0
         while (daysToAdd <= 7) {
-          const nextDay = (currentDay + daysToAdd) % 7
-          if (allowedDays.includes(nextDay)) {
-            break
-          }
+          const nextDay = (currentDayWib + daysToAdd) % 7
+          if (allowedDays.includes(nextDay) && daysToAdd > 0) break
           daysToAdd++
         }
-        nextRun.setDate(nextRun.getDate() + daysToAdd)
+        nextRunWib.setUTCDate(nextRunWib.getUTCDate() + daysToAdd)
       }
+
+      const nextRun = new Date(nextRunWib.getTime() - wibOffset)
 
       await sql`
         UPDATE auto_schedules
@@ -61,32 +61,15 @@ export async function GET(request: Request) {
 
       // 3. Hasilkan topik spesifik menggunakan AI berdasarkan tema besar
       let specificTopic = schedule.theme
-      if (process.env.AI_BASE_URL && process.env.AI_API_KEY) {
-        try {
-          const aiRes = await fetch(`${process.env.AI_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.AI_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: process.env.AI_MODEL || 'gpt-4o-mini',
-              messages: [{
-                role: 'system',
-                content: `Kamu adalah asisten pembuat topik YouTube Shorts dokumenter yang viral. Tema besar yang diminta adalah: "${schedule.theme}". Berikan SATU judul/topik spesifik (maksimal 5 kata) yang menarik, unik, dan sedikit misterius. Langsung jawab dengan topiknya, tanpa tanda kutip, tanpa penjelasan.`
-              }]
-            })
-          })
-          if (aiRes.ok) {
-            const aiData = await aiRes.json()
-            const generatedTopic = aiData.choices[0]?.message?.content?.trim()
-            if (generatedTopic) {
-              specificTopic = generatedTopic.replace(/"/g, '')
-            }
-          }
-        } catch (e) {
-          console.error('[Cron] Failed to generate specific topic with AI, falling back to theme', e)
-        }
+      try {
+        const { chat } = await import('@/lib/ai/client')
+        const generated = await chat([
+          { role: 'system', content: 'Kamu adalah pembuat topik dokumenter YouTube viral. Output HANYA judul topik, tanpa tanda kutip, tanpa penjelasan.' },
+          { role: 'user', content: `Tema: "${schedule.theme}". Buat SATU judul topik spesifik yang viral, dramatis, dan edukatif dalam bahasa Indonesia. Maksimal 12 kata.` }
+        ], false)
+        if (generated?.trim()) specificTopic = generated.trim().replace(/^["']|["']$/g, '')
+      } catch (e) {
+        console.error('[Cron] Failed to generate specific topic with AI, falling back to theme', e)
       }
       
       console.log(`[Cron] Generated topic: ${specificTopic}`)

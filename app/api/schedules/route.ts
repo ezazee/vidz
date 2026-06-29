@@ -28,16 +28,16 @@ export async function POST(request: Request) {
   try {
     const body = createScheduleSchema.parse(await request.json())
     
-    // Calculate first run
+    // Calculate first run in WIB (UTC+7)
     const [hours, minutes] = body.time_of_day.split(':').map(Number)
-    const now = new Date()
-    const nextRun = new Date(now)
-    nextRun.setHours(hours, minutes, 0, 0)
-    
-    // If the time today has already passed, schedule for tomorrow
-    if (nextRun <= now) {
-      nextRun.setDate(nextRun.getDate() + 1)
-    }
+    const nowUtc = new Date()
+    const wibOffset = 7 * 60 * 60 * 1000
+    const nowWib = new Date(nowUtc.getTime() + wibOffset)
+    const nextRunWib = new Date(nowWib)
+    nextRunWib.setUTCHours(hours, minutes, 0, 0)
+    if (nextRunWib <= nowWib) nextRunWib.setUTCDate(nextRunWib.getUTCDate() + 1)
+    // Convert back to UTC for storage
+    const nextRun = new Date(nextRunWib.getTime() - wibOffset)
 
     const rows = await sql`
       INSERT INTO auto_schedules (theme, days_of_week, time_of_day, auto_publish, next_run_at, is_active)
