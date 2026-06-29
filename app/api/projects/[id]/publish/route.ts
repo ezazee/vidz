@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { sendTelegram } from '@/lib/telegram'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -170,6 +171,14 @@ export async function POST(
     await sql`
       UPDATE projects SET status = 'uploaded', updated_at = now() WHERE id = ${id}
     `
+
+    // Notif Telegram
+    const ytLink = youtubeUrl || `https://youtube.com/watch?v=${postId}`
+    await sendTelegram(
+      `✅ <b>Video berhasil diupload ke YouTube!</b>\n\n` +
+      `📹 <b>${project.seo_title || project.topic}</b>\n` +
+      `🔗 ${ytLink}`
+    )
 
     return NextResponse.json({
       success: true,

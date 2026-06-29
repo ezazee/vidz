@@ -132,31 +132,31 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { zernio_api_key } = body
+    const { zernio_api_key, telegram_bot_token, telegram_chat_id } = body
+
+    // Save Telegram
+    if (telegram_bot_token && telegram_chat_id) {
+      await sql`INSERT INTO integrations (key, value) VALUES ('telegram_bot_token', ${telegram_bot_token.trim()}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
+      await sql`INSERT INTO integrations (key, value) VALUES ('telegram_chat_id', ${telegram_chat_id.trim()}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
+      return NextResponse.json({ message: 'Telegram berhasil disimpan' })
+    }
 
     if (!zernio_api_key || zernio_api_key.trim() === '') {
       return NextResponse.json({ error: 'Zernio API Key wajib diisi' }, { status: 400 })
     }
 
     const trimmedKey = zernio_api_key.trim()
-
-    // Gunakan upsert untuk memasukkan atau memperbarui Zernio API Key
     await sql`
       INSERT INTO integrations (key, value)
       VALUES ('zernio_api_key', ${trimmedKey})
-      ON CONFLICT (key) 
+      ON CONFLICT (key)
       DO UPDATE SET value = EXCLUDED.value, updated_at = now()
     `
 
-    // Picu sinkronisasi YouTube secara instan setelah menyimpan API key baru
     const synced = await syncYouTubeAccount(sql, trimmedKey)
-
-    return NextResponse.json({ 
-      message: 'Zernio API Key berhasil disimpan',
-      youtubeSynced: !!synced 
-    })
+    return NextResponse.json({ message: 'Zernio API Key berhasil disimpan', youtubeSynced: !!synced })
   } catch (error) {
-    console.error('Error saving Zernio API Key:', error)
-    return NextResponse.json({ error: 'Gagal menyimpan Zernio API Key' }, { status: 500 })
+    console.error('Error saving integration:', error)
+    return NextResponse.json({ error: 'Gagal menyimpan' }, { status: 500 })
   }
 }

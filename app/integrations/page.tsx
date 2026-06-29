@@ -10,7 +10,10 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Bell,
+  BellOff
 } from 'lucide-react'
 
 interface IntegrationStatus {
@@ -31,6 +34,13 @@ export default function IntegrationsPage() {
   const [zernioInputKey, setZernioInputKey] = useState('')
   const [savingKey, setSavingKey] = useState(false)
   const [connectingYoutube, setConnectingYoutube] = useState(false)
+
+  // Telegram
+  const [telegramToken, setTelegramToken] = useState('')
+  const [telegramChatId, setTelegramChatId] = useState('')
+  const [telegramConnected, setTelegramConnected] = useState(false)
+  const [savingTelegram, setSavingTelegram] = useState(false)
+  const [testingTelegram, setTestingTelegram] = useState(false)
 
   // Status/Notifications from URL parameters
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -107,6 +117,36 @@ export default function IntegrationsPage() {
     } finally {
       setSavingKey(false)
     }
+  }
+
+  const handleSaveTelegram = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!telegramToken.trim() || !telegramChatId.trim()) return
+    setSavingTelegram(true)
+    try {
+      const res = await fetch('/api/integrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_bot_token: telegramToken, telegram_chat_id: telegramChatId }),
+      })
+      if (res.ok) {
+        setTelegramConnected(true)
+        setSuccessMessage('Telegram berhasil disimpan!')
+      } else {
+        setErrorMessage('Gagal menyimpan Telegram.')
+      }
+    } catch { setErrorMessage('Terjadi kesalahan koneksi.') }
+    finally { setSavingTelegram(false) }
+  }
+
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true)
+    try {
+      const res = await fetch('/api/integrations/telegram/test', { method: 'POST' })
+      if (res.ok) setSuccessMessage('Notif test berhasil dikirim ke Telegram!')
+      else setErrorMessage('Gagal kirim notif. Cek token & chat ID.')
+    } catch { setErrorMessage('Terjadi kesalahan.') }
+    finally { setTestingTelegram(false) }
   }
 
   const handleConnectYoutube = async () => {
@@ -338,7 +378,67 @@ export default function IntegrationsPage() {
                     )}
                   </div>
                 </div>
+              {/* Telegram Card — full width */}
+              <div className="md:col-span-12">
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+                    <div className="p-2 bg-sky-50 text-sky-600 rounded-lg">
+                      <Send className="size-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-slate-800 text-sm">Telegram Notifikasi</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Terima notif otomatis setiap video selesai diupload ke YouTube</p>
+                    </div>
+                    {telegramConnected && <span className="text-[9px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-100 flex items-center gap-1"><Bell className="size-2.5" />AKTIF</span>}
+                  </div>
+
+                  <form onSubmit={handleSaveTelegram} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Bot Token</label>
+                      <input
+                        type="password"
+                        placeholder="123456:AAEF1oUS7ai5..."
+                        value={telegramToken}
+                        onChange={e => setTelegramToken(e.target.value)}
+                        className="w-full text-xs px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-mono"
+                      />
+                      <p className="text-[10px] text-slate-400">Dari <span className="font-bold">@BotFather</span> → /newbot</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Chat ID</label>
+                      <input
+                        type="text"
+                        placeholder="8145595315"
+                        value={telegramChatId}
+                        onChange={e => setTelegramChatId(e.target.value)}
+                        className="w-full text-xs px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-mono"
+                      />
+                      <p className="text-[10px] text-slate-400">Buka <span className="font-mono">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</span></p>
+                    </div>
+                    <div className="md:col-span-2 flex gap-3">
+                      <button
+                        type="submit"
+                        disabled={savingTelegram || !telegramToken.trim() || !telegramChatId.trim()}
+                        className="flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 text-xs font-semibold disabled:opacity-40 transition-all shadow-sm"
+                      >
+                        {savingTelegram ? <Loader2 className="size-3.5 animate-spin" /> : <Bell className="size-3.5" />}
+                        Simpan & Aktifkan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTestTelegram}
+                        disabled={testingTelegram}
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 text-xs font-semibold disabled:opacity-40 transition-all"
+                      >
+                        {testingTelegram ? <Loader2 className="size-3.5 animate-spin" /> : <BellOff className="size-3.5" />}
+                        Test Notif
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
+
+            </div>
             ) : (
               <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 shadow-sm">
                 Gagal memuat status integrasi.

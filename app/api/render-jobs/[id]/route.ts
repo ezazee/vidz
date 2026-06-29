@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { env } from '@/lib/env'
 import { getSql } from '@/lib/db/client'
+import { sendTelegram } from '@/lib/telegram'
 
 const updateJobSchema = z.object({
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
@@ -54,12 +55,15 @@ export async function PATCH(request: Request, context: RouteContext) {
       WHERE id = ${projectId}
     `
 
+    let topic = 'Dokumenter'
+    let autoPublish = false
     try {
       // 1. Ambil detail proyek dan scene pertama
       const projectDetails = await sql`
         SELECT topic, auto_publish FROM projects WHERE id = ${projectId} LIMIT 1
       `
-      const topic = projectDetails[0]?.topic || 'Dokumenter'
+      topic = projectDetails[0]?.topic || 'Dokumenter'
+      autoPublish = !!projectDetails[0]?.auto_publish
 
       // 2. Ambil gambar scene pertama sebagai background thumbnail (paling relevan dengan topik)
       const firstScene = await sql`
@@ -168,6 +172,22 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
     } catch (err) {
       console.error('Failed to generate thumbnail or publish:', err)
+    }
+
+    // Auto-publish ke YouTube kalau diaktifkan
+    if (autoPublish) {
+      try {
+        const origin = process.env.API_BASE_URL || 'https://vidz-factory.vercel.app'
+        await fetch(`${origin}/api/projects/${projectId}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.API_SECRET || '' },
+          body: JSON.stringify({}),
+        })
+        console.log(`[AutoPublish] Triggered for project ${projectId}`)
+      } catch (pubErr) {
+        console.error('[AutoPublish] Failed:', pubErr)
+        await sendTelegram(`⚠️ <b>Auto-publish gagal</b>\n\nProyek: ${topic}\nCek log Vercel untuk detail.`)
+      }
     }
   }
 
