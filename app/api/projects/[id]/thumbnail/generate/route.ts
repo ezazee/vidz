@@ -46,7 +46,7 @@ OUTPUT EXCLUSIVELY A RAW JSON OBJECT with these 4 keys. DO NOT wrap in markdown 
       ], false, 'gemini-flash-grade') // json=false to prevent model hangs
       
       const timeoutPromise = new Promise<string>((_, reject) => 
-        setTimeout(() => reject(new Error('LLM Enhance Timeout')), 10000)
+        setTimeout(() => reject(new Error('LLM Enhance Timeout')), 25000)
       )
       
       const result = await Promise.race([enhancePromise, timeoutPromise])
