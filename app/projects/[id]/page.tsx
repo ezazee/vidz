@@ -1037,32 +1037,22 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
         const bottomText = textBottom.toUpperCase()
         
         ctx.font = "italic 900 58px 'Montserrat', 'Arial Black', sans-serif"
-        const bTextMetrics = ctx.measureText(bottomText)
-        const bWidth = bTextMetrics.width + 80
         const bHeight = 85
-        
-        const bX = 640
         const bY = 640
-        
+
+        // Full-width banner
         ctx.fillStyle = '#ffea00'
         ctx.shadowColor = 'rgba(0,0,0,0.8)'
         ctx.shadowBlur = 15
         ctx.shadowOffsetX = 0
         ctx.shadowOffsetY = 10
-        
-        ctx.beginPath()
-        ctx.moveTo(bX - bWidth/2 - 20, bY - bHeight/2)
-        ctx.lineTo(bX + bWidth/2, bY - bHeight/2)
-        ctx.lineTo(bX + bWidth/2 + 20, bY + bHeight/2)
-        ctx.lineTo(bX - bWidth/2, bY + bHeight/2)
-        ctx.closePath()
-        ctx.fill()
-        
+        ctx.fillRect(0, bY - bHeight / 2, 1280, bHeight)
+
         ctx.shadowColor = 'transparent'
         ctx.shadowOffsetX = 0
         ctx.shadowOffsetY = 0
         ctx.fillStyle = '#000000'
-        ctx.fillText(bottomText, bX, bY)
+        ctx.fillText(bottomText, 640, bY)
       }
     }
 
