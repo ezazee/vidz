@@ -44,7 +44,7 @@ Emosi: ${input.director.emotion}
 Buat TEPAT ${numScenes} scene, order_index mulai dari ${input.orderOffset}.
 Narasi: WAJIB 18-25 kata per scene (1-2 kalimat pendek). Fakta spesifik, dramatis, BUKAN judul/frasa kosong.
 Contoh narasi BAIK (~20 kata): "Pukul 10:02 pagi, gelombang panas 800 derajat Celsius menyapu seluruh pantai Anyer hanya dalam dua menit."
-image_prompt: bahasa Inggris. WAJIB berupa AKSI/ADEGAN yang menggambarkan narasi, dengan format: "[what the main character is doing], [setting/background detail], [mood]". JANGAN sebut gaya gambar atau deskripsi fisik karakter — itu ditambahkan otomatis oleh sistem. Contoh: "standing on a fortress wall pointing at incoming warships, ancient harbor city with wooden ships in background, tense atmosphere".
+image_prompt: bahasa Inggris. WAJIB berupa PEMANDANGAN/SETTING yang menggambarkan narasi: "[tempat/kejadian], [detail lingkungan], [mood]". JANGAN sebut karakter/orang utama dan JANGAN sebut gaya gambar — keduanya ditambahkan otomatis oleh sistem. Contoh: "ancient harbor city under attack, wooden warships firing cannons on turquoise sea, fortress walls and jungle hills, tense dramatic atmosphere".
 pexels_query: selalu "" (kosong).
 duration: 10-12 detik.
 

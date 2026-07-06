@@ -98,7 +98,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
         if (aiBaseUrl && aiApiKey) {
           console.log(`Thumbnail: Tidak ada gambar scene, generate AI background...`)
-          const thumbnailImagePrompt = `flat 2D hand-drawn cartoon illustration, storybook comic style, a simple minimalist stick figure character with pure white round head in a dramatic scene about: ${topic}. YouTube thumbnail composition, bold warm colors, high contrast, no text, no logos.`
+          const thumbnailImagePrompt = `vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, rich saturated colors, a cute stick figure character with white round head and black stick limbs in a dramatic scene about: ${topic}. YouTube thumbnail composition, high contrast, richly detailed background, no text, no logos.`
           
           const aiRes = await fetch(`${aiBaseUrl}/images/generations`, {
             method: 'POST',

@@ -3,22 +3,18 @@ const { uploadToR2 } = require('./r2-upload')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-// Karakter maskot tetap "Cabang Sejarah" — HARUS identik dengan MASCOT_ANCHOR di lib/ai/director.ts
-const MASCOT_ANCHOR =
-  'a simple minimalist stick figure character with pure white round head, plain white body, ' +
-  'two small black dot eyes, no mouth, thin clean black outline'
+const { mascotOverlay } = require('./mascot')
 
+// Background-only dari AI — maskot stickman di-overlay deterministik oleh scripts/mascot.js
+// (SDXL tidak konsisten menggambar stickman: kadang hilang, kadang jadi manusia detail)
 const CARTOON_STYLE =
-  'flat 2D hand-drawn cartoon illustration, storybook comic style, warm muted colors, ' +
-  'clean thick outlines, simple shapes, detailed illustrated background'
+  'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, ' +
+  'rich saturated colors, flat cel shading, richly detailed scenery, ' +
+  'lively composition, children storybook art, warm sunlight'
 
-// Assemble prompt final: style kartun + maskot (dengan kostum kontekstual dari director) + aksi scene
-function buildImagePrompt(scene, director) {
-  const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
-  // director.character_bible.prompt_anchor sudah berisi MASCOT_ANCHOR + kostum era (di-set run-pipeline)
-  const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
-
-  return `${CARTOON_STYLE}. ${character}, ${action}. no text, no watermark, no logo, no photorealism`
+function buildImagePrompt(scene) {
+  const action = scene.image_prompt || `scene about: ${scene.narration?.slice(0, 80)}`
+  return `${CARTOON_STYLE}. Scene: ${action}. no text, no watermark, no logo, no photorealism, no realistic humans, not monochrome`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
@@ -67,6 +63,13 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
         attempt++
         if (attempt < maxRetries) await delay(2000)
         continue
+      }
+
+      // Composite maskot stickman "Si Cabang" ke background (pose bergilir per scene)
+      try {
+        buffer = await mascotOverlay(buffer, scene.order_index)
+      } catch (overlayErr) {
+        console.error(`Mascot overlay failed scene ${scene.order_index + 1}: ${overlayErr.message}. Using raw background.`)
       }
 
       // Simpan lokal untuk Remotion

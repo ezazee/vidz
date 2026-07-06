@@ -10,12 +10,13 @@ export interface DirectorInput {
 // Karakter maskot tetap channel "Cabang Sejarah" — anchor di-hardcode (bukan dari AI)
 // supaya deskripsi visualnya identik di SETIAP scene & SETIAP video.
 export const MASCOT_ANCHOR =
-  'a simple minimalist stick figure character with pure white round head, plain white body, ' +
-  'two small black dot eyes, no mouth, thin clean black outline'
+  'a cute stick figure character with plain white round head, two black dot eyes, ' +
+  'simple thin black stick arms and legs, expressive pose'
 
 export const CARTOON_STYLE =
-  'flat 2D hand-drawn cartoon illustration, storybook comic style, warm muted colors, ' +
-  'clean thick outlines, simple shapes, detailed illustrated background'
+  'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, ' +
+  'rich saturated colors, flat cel shading, richly detailed scenery background, ' +
+  'lively composition, children storybook art'
 
 export async function generateDirector(input: DirectorInput): Promise<DirectorOutput> {
   const content = await chat([
