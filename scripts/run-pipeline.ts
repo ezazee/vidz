@@ -131,8 +131,8 @@ async function runPipeline() {
     // 6. Thumbnail (auto-generate from director thumbnail_bible)
     console.log('[Pipeline] Generating thumbnail...')
     try {
-      const thumbnailPrompt = (director as any).thumbnail_bible?.composition
-        || `${topic} - cinematic documentary thumbnail, dramatic lighting, high contrast`
+      const { MASCOT_ANCHOR, CARTOON_STYLE } = await import('../lib/ai/director')
+      const thumbnailPrompt = `${CARTOON_STYLE}. ${MASCOT_ANCHOR}, dramatic pose related to: ${topic}. YouTube thumbnail composition, bold colors, high contrast, no text`
 
       const thumbnailRes = await fetch(
         `${process.env.AI_BASE_URL}/images/generations`,

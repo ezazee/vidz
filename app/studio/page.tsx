@@ -13,21 +13,21 @@ import {
   ExternalLink,
   RefreshCw,
   Compass,
-  MoonStar,
+  Globe2,
   Rocket,
-  HelpCircle,
   Swords,
+  Flame,
   Plus,
-  Cpu
+  Users
 } from 'lucide-react'
 
 const THEMES = [
-  { id: 'Ancient History', label: 'Sejarah Kuno', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { id: 'Unsolved Mysteries', label: 'Misteri & Kriminal', icon: MoonStar, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  { id: 'Space & Astronomy', label: 'Luar Angkasa', icon: Rocket, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
-  { id: 'What-If Scenarios', label: 'Skenario "What-If"', icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  { id: 'Mythology & Folklore', label: 'Mitologi & Legenda', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
-  { id: 'Technology & IT', label: 'Teknologi & IT', icon: Cpu, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200' }
+  { id: 'What-If Sejarah Nusantara', label: 'What-If Sejarah Nusantara', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { id: 'What-If Tokoh Terkenal', label: 'What-If Tokoh Terkenal', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  { id: 'What-If Sains & Teknologi', label: 'What-If Sains & Teknologi', icon: Rocket, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  { id: 'What-If Perang & Konflik', label: 'What-If Perang & Konflik', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+  { id: 'What-If Bencana Alam', label: 'What-If Bencana Alam', icon: Flame, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200' }
 ]
 
 type StageStatus = 'idle' | 'running' | 'done' | 'error'
@@ -154,7 +154,7 @@ export default function StudioPage() {
 
   // Studio States
   const [topic, setTopic] = useState('')
-  const [selectedTheme, setSelectedTheme] = useState('Unsolved Mysteries')
+  const [selectedTheme, setSelectedTheme] = useState('What-If Sejarah Nusantara')
   const [running, setRunning] = useState(false)
   const [stages, setStages] = useState<Stage[]>(buildStages())
   const [projectId, setProjectId] = useState<string | null>(null)

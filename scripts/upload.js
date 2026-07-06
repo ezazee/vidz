@@ -2,17 +2,17 @@ const fs = require('fs/promises')
 const { uploadToR2 } = require('./r2-upload')
 
 async function main() {
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID
-  if (!accessKeyId) throw new Error('R2 credentials required (R2_ACCESS_KEY_ID)')
+  const accessKeyId = process.env.MINIO_ACCESS_KEY
+  if (!accessKeyId) throw new Error('MinIO credentials required (MINIO_ACCESS_KEY)')
 
   const videoPath = 'output/final.mp4'
   const buffer = await fs.readFile(videoPath)
   const projectId = process.env.PROJECT_ID || 'global'
   const filename = `projects/${projectId}/videos/${Date.now()}-final.mp4`
 
-  console.log(`Uploading final video ${videoPath} to Cloudflare R2 using SDK...`)
+  console.log(`Uploading final video ${videoPath} to MinIO using SDK...`)
 
-  // Mengunggah video final ke Cloudflare R2
+  // Mengunggah video final ke MinIO
   const videoUrl = await uploadToR2(filename, buffer, 'video/mp4')
   console.log(`VIDEO_URL=${videoUrl}`)
 
@@ -21,6 +21,6 @@ async function main() {
 }
 
 main().catch(e => {
-  console.error('R2 Video upload failed:', e.message)
+  console.error('MinIO video upload failed:', e.message)
   process.exit(1)
 })

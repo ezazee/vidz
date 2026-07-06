@@ -26,18 +26,18 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
       await fs.rename(`${tmpDir}/audio.mp3`, finalPath)
       await fs.rm(tmpDir, { recursive: true })
 
-      // 1. Unggah berkas audio ke Cloudflare R2 jika kredensial tersedia
+      // 1. Unggah berkas audio ke MinIO jika kredensial tersedia
       let publicPath = `voices/scene-${scene.order_index}.mp3`
-      if (process.env.R2_ACCESS_KEY_ID) {
+      if (process.env.MINIO_ACCESS_KEY) {
         try {
-          console.log(`Uploading voice for scene ${scene.order_index + 1} to Cloudflare R2...`)
+          console.log(`Uploading voice for scene ${scene.order_index + 1} to MinIO...`)
           const audioBuffer = await fs.readFile(finalPath)
           const r2Filename = `projects/${projectId}/voices/scene-${scene.order_index}.mp3`
           const r2Url = await uploadToR2(r2Filename, audioBuffer, 'audio/mpeg')
           publicPath = r2Url
           console.log(`Uploaded voice to R2: ${publicPath}`)
         } catch (uploadErr) {
-          console.error(`Failed to upload scene ${scene.order_index + 1} voice to Cloudflare R2: ${uploadErr.message}. Using local path fallback.`)
+          console.error(`Failed to upload scene ${scene.order_index + 1} voice to MinIO: ${uploadErr.message}. Using local path fallback.`)
         }
       }
 

@@ -97,7 +97,7 @@ export async function DELETE(
     `
 
     const urlsToDelete: string[] = []
-    const r2PublicDomain = (process.env.R2_PUBLIC_URL || '').replace(/^https?:\/\//, '')
+    const r2PublicDomain = (process.env.MINIO_PUBLIC_URL || '').replace(/^https?:\/\//, '')
     
     // Tambahkan URL gambar dan suara scene (mendukung Vercel Blob lama & Cloudflare R2 baru)
     for (const scene of scenes) {

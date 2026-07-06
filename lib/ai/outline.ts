@@ -15,17 +15,17 @@ export async function generateOutline(topic: string, summary: string): Promise<O
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah showrunner dokumenter Netflix & Vice. Output HANYA JSON mentah, tanpa teks lain, tanpa markdown, tanpa penjelasan.`,
+      content: `Kamu adalah showrunner video "what-if" sejarah alternatif (storytelling naratif yang seru, bukan dokumenter formal). Output HANYA JSON mentah, tanpa teks lain, tanpa markdown, tanpa penjelasan.`,
     },
     {
       role: 'user',
-      content: `Buat outline dokumenter YouTube viral tentang: "${topic}"
+      content: `Buat outline video YouTube what-if viral tentang: "${topic}"
 
 Ringkasan riset:
 ${summary}
 
 WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending):
-{"sections":[{"type":"intro","title":"...momen paling dramatis...","order":0,"description":"..."},{"type":"chapter","title":"...fakta mengejutkan...","order":1,"description":"..."},{"type":"chapter","title":"...plot twist/keputusan kritis...","order":2,"description":"..."},{"type":"chapter","title":"...konsekuensi & pengungkapan...","order":3,"description":"..."},{"type":"ending","title":"...pertanyaan terbuka atau fakta terakhir yang bikin share...","order":4,"description":"..."}]}
+{"sections":[{"type":"intro","title":"...sejarah asli & titik krusial yang akan diubah...","order":0,"description":"..."},{"type":"chapter","title":"...momen percabangan: apa yang terjadi berbeda...","order":1,"description":"..."},{"type":"chapter","title":"...konsekuensi langsung skenario alternatif...","order":2,"description":"..."},{"type":"chapter","title":"...efek domino jangka panjang ke dunia modern...","order":3,"description":"..."},{"type":"ending","title":"...refleksi & pertanyaan terbuka yang bikin share...","order":4,"description":"..."}]}
 
 Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`,
     },

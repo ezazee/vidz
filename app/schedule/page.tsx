@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { CalendarClock, CalendarDays, Plus, Trash2, Loader2, Menu, CheckCircle2, Clock, X, Info, Compass, MoonStar, Rocket, HelpCircle, Swords, Cpu, Play } from 'lucide-react'
+import { CalendarClock, CalendarDays, Plus, Trash2, Loader2, Menu, CheckCircle2, Clock, X, Info, Compass, Globe2, Rocket, Users, Swords, Flame, Play } from 'lucide-react'
 
 interface Schedule {
   id: string
@@ -15,12 +15,12 @@ interface Schedule {
 }
 
 const THEMES = [
-  { id: 'Ancient History', label: 'Sejarah Kuno', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { id: 'Unsolved Mysteries', label: 'Misteri & Kriminal', icon: MoonStar, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  { id: 'Space & Astronomy', label: 'Luar Angkasa', icon: Rocket, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
-  { id: 'What-If Scenarios', label: 'Skenario "What-If"', icon: HelpCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  { id: 'Mythology & Folklore', label: 'Mitologi & Legenda', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
-  { id: 'Technology & IT', label: 'Teknologi & IT', icon: Cpu, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200' }
+  { id: 'What-If Sejarah Nusantara', label: 'What-If Sejarah Nusantara', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { id: 'What-If Tokoh Terkenal', label: 'What-If Tokoh Terkenal', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  { id: 'What-If Sains & Teknologi', label: 'What-If Sains & Teknologi', icon: Rocket, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  { id: 'What-If Perang & Konflik', label: 'What-If Perang & Konflik', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+  { id: 'What-If Bencana Alam', label: 'What-If Bencana Alam', icon: Flame, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200' }
 ]
 
 const DAYS = [
@@ -40,7 +40,7 @@ export default function SchedulePage() {
   
   // Modal State
   const [activeDay, setActiveDay] = useState<{ id: number, label: string } | null>(null)
-  const [theme, setTheme] = useState('Unsolved Mysteries')
+  const [theme, setTheme] = useState('What-If Sejarah Nusantara')
   const [timeOfDay, setTimeOfDay] = useState('19:00')
   const [autoPublish, setAutoPublish] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -84,12 +84,12 @@ export default function SchedulePage() {
       setEditingScheduleId(existing.id)
       // Check if existing theme is in our THEMES array, if not default to first
       const matchedTheme = THEMES.find(t => t.id === existing.theme || t.label === existing.theme)
-      setTheme(matchedTheme ? matchedTheme.id : 'Unsolved Mysteries')
+      setTheme(matchedTheme ? matchedTheme.id : 'What-If Sejarah Nusantara')
       setTimeOfDay(existing.time_of_day)
       setAutoPublish(existing.auto_publish)
     } else {
       setEditingScheduleId(null)
-      setTheme('Unsolved Mysteries')
+      setTheme('What-If Sejarah Nusantara')
       setTimeOfDay('19:00')
       setAutoPublish(true)
     }

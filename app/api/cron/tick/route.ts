@@ -64,8 +64,8 @@ export async function GET(request: Request) {
       try {
         const { chat } = await import('@/lib/ai/client')
         const generated = await chat([
-          { role: 'system', content: 'Kamu adalah pembuat topik dokumenter YouTube viral. Output HANYA judul topik, tanpa tanda kutip, tanpa penjelasan.' },
-          { role: 'user', content: `Tema: "${schedule.theme}". Buat SATU judul topik spesifik yang viral, dramatis, dan edukatif dalam bahasa Indonesia. Maksimal 12 kata.` }
+          { role: 'system', content: 'Kamu adalah pembuat topik video "what-if" sejarah alternatif untuk channel YouTube Cabang Sejarah. Output HANYA judul topik, tanpa tanda kutip, tanpa penjelasan.' },
+          { role: 'user', content: `Tema: "${schedule.theme}". Buat SATU judul skenario "Bagaimana Jika..." yang spesifik, viral, dan bikin penasaran dalam bahasa Indonesia. Judul WAJIB diawali "Bagaimana Jika". Maksimal 12 kata.` }
         ], false)
         if (generated?.trim()) specificTopic = generated.trim().replace(/^["']|["']$/g, '')
       } catch (e) {
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
         
         await fetch(fetchUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.API_SECRET || '' }
         })
         console.log(`[Cron] Pipeline triggered for ${projectId}`)
       } catch (err) {

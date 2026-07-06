@@ -26,7 +26,7 @@ export async function POST(request: Request, context: RouteContext) {
     // Run text AI and image generation in parallel
     const [textResult, imageRes] = await Promise.all([
       chat([
-        { role: 'system', content: `YouTube Thumbnail Strategist. Output ONLY a raw JSON object, no markdown:\n{"imagePrompt":"cinematic English image prompt","textLeft":"2-3 kata Indonesia clickbait","textRight":"2-3 kata Indonesia clickbait","textBottom":"3-4 kata Indonesia banner"}` },
+        { role: 'system', content: `YouTube Thumbnail Strategist untuk channel kartun ilustrasi "Cabang Sejarah". Output ONLY a raw JSON object, no markdown:\n{"imagePrompt":"English prompt: flat 2D hand-drawn cartoon illustration, simple white stick figure character in a dramatic scene about the topic, bold warm colors, no text","textLeft":"2-3 kata Indonesia clickbait","textRight":"2-3 kata Indonesia clickbait","textBottom":"3-4 kata Indonesia banner"}` },
         { role: 'user', content: prompt }
       ], false, 'gemini-flash-grade').then(result => {
         const start = result.indexOf('{'), end = result.lastIndexOf('}')

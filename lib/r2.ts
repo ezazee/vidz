@@ -1,26 +1,28 @@
 import { S3Client, PutObjectCommand, DeleteObjectsCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
-const accountId = process.env.R2_ACCOUNT_ID
-const accessKeyId = process.env.R2_ACCESS_KEY_ID
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-const bucketName = process.env.R2_BUCKET_NAME
-const publicUrl = process.env.R2_PUBLIC_URL // e.g. https://pub-xxx.r2.dev
+const endpoint = process.env.MINIO_ENDPOINT
+const accessKeyId = process.env.MINIO_ACCESS_KEY
+const secretAccessKey = process.env.MINIO_SECRET_KEY
+const bucketName = process.env.MINIO_BUCKET
+const region = process.env.MINIO_REGION || 'us-east-1'
+const publicUrl = process.env.MINIO_PUBLIC_URL // e.g. https://minio-api.zaportfolio.my.id
 
 export const s3Client = new S3Client({
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  endpoint,
   credentials: {
     accessKeyId: accessKeyId || '',
     secretAccessKey: secretAccessKey || '',
   },
-  region: 'auto',
+  region,
+  forcePathStyle: true, // required for MinIO
 })
 
 /**
- * Mengunggah buffer berkas ke Cloudflare R2 dan mengembalikan URL publiknya
+ * Mengunggah buffer berkas ke MinIO dan mengembalikan URL publiknya
  */
 export async function uploadToR2(filename: string, buffer: Buffer, contentType: string): Promise<string> {
   if (!bucketName || !publicUrl) {
-    throw new Error('R2_BUCKET_NAME and R2_PUBLIC_URL are required')
+    throw new Error('MINIO_BUCKET and MINIO_PUBLIC_URL are required')
   }
 
   const command = new PutObjectCommand({
@@ -33,24 +35,20 @@ export async function uploadToR2(filename: string, buffer: Buffer, contentType: 
   await s3Client.send(command)
 
   const cleanPublicUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
-  return `${cleanPublicUrl}/${filename}`
+  return `${cleanPublicUrl}/${bucketName}/${filename}`
 }
 
 /**
- * Menghapus satu atau beberapa aset dari Cloudflare R2 berdasarkan URL publiknya
+ * Menghapus satu atau beberapa aset dari MinIO berdasarkan URL publiknya
  */
 export async function deleteFromR2(urls: string[]): Promise<void> {
   if (!bucketName || !publicUrl || urls.length === 0) return
 
   const cleanPublicUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
+  const prefix = `${cleanPublicUrl}/${bucketName}/`
 
   const keys = urls
-    .map(url => {
-      if (url.includes(cleanPublicUrl)) {
-        return url.replace(`${cleanPublicUrl}/`, '')
-      }
-      return null
-    })
+    .map(url => (url.includes(prefix) ? url.replace(prefix, '') : null))
     .filter((key): key is string => !!key)
 
   if (keys.length === 0) return
@@ -69,8 +67,8 @@ export async function deleteFromR2(urls: string[]): Promise<void> {
         },
       }))
     }
-    console.log(`Successfully deleted ${keys.length} assets from Cloudflare R2`)
+    console.log(`Successfully deleted ${keys.length} assets from MinIO`)
   } catch (err) {
-    console.error('Failed to delete assets from Cloudflare R2:', err)
+    console.error('Failed to delete assets from MinIO:', err)
   }
 }

@@ -3,21 +3,22 @@ const { uploadToR2 } = require('./r2-upload')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-// Enhance image prompt dengan cinematic prefix & suffix untuk hasil lebih baik
+// Karakter maskot tetap "Cabang Sejarah" — HARUS identik dengan MASCOT_ANCHOR di lib/ai/director.ts
+const MASCOT_ANCHOR =
+  'a simple minimalist stick figure character with pure white round head, plain white body, ' +
+  'two small black dot eyes, no mouth, thin clean black outline'
+
+const CARTOON_STYLE =
+  'flat 2D hand-drawn cartoon illustration, storybook comic style, warm muted colors, ' +
+  'clean thick outlines, simple shapes, detailed illustrated background'
+
+// Assemble prompt final: style kartun + maskot (dengan kostum kontekstual dari director) + aksi scene
 function buildImagePrompt(scene, director) {
-  const base = scene.image_prompt || `Documentary scene: ${scene.narration?.slice(0, 80)}`
-  const style = director?.image_style || 'cinematic documentary'
+  const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
+  // director.character_bible.prompt_anchor sudah berisi MASCOT_ANCHOR + kostum era (di-set run-pipeline)
+  const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
 
-  // Prefix untuk orientasi & style konsisten
-  const prefix = `Wide cinematic shot, ${style},`
-  // Suffix untuk kualitas
-  const suffix = `photorealistic, 8k uhd, film grain, dramatic lighting, sharp focus, no text, no watermark, no logo`
-
-  // Hindari duplikasi kata jika sudah ada
-  const hasPrefix = base.toLowerCase().includes('cinematic') || base.toLowerCase().includes('wide shot')
-  const hasSuffix = base.toLowerCase().includes('8k') || base.toLowerCase().includes('photorealistic')
-
-  return `${hasPrefix ? '' : prefix + ' '}${base}${hasSuffix ? '' : ', ' + suffix}`
+  return `${CARTOON_STYLE}. ${character}, ${action}. no text, no watermark, no logo, no photorealism`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
@@ -72,14 +73,14 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
       const localPath = `public/images/scene-${scene.order_index}.jpg`
       await fs.writeFile(localPath, buffer)
 
-      // Upload ke R2
+      // Upload ke MinIO
       let imageUrl = `images/scene-${scene.order_index}.jpg`
-      if (process.env.R2_ACCESS_KEY_ID) {
+      if (process.env.MINIO_ACCESS_KEY) {
         try {
           const r2Filename = `projects/${projectId}/images/scene-${scene.order_index}.jpg`
           imageUrl = await uploadToR2(r2Filename, buffer, 'image/jpeg')
         } catch (uploadErr) {
-          console.error(`R2 upload failed scene ${scene.order_index + 1}: ${uploadErr.message}`)
+          console.error(`MinIO upload failed scene ${scene.order_index + 1}: ${uploadErr.message}`)
         }
       }
 

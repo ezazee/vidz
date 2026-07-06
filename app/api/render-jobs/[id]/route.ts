@@ -79,7 +79,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         try {
           const sceneImgUrl = firstScene[0].image_url.startsWith('http')
             ? firstScene[0].image_url
-            : `${process.env.R2_PUBLIC_URL}/${firstScene[0].image_url}`
+            : `${process.env.MINIO_PUBLIC_URL}/${process.env.MINIO_BUCKET}/${firstScene[0].image_url}`
           console.log(`Thumbnail: Menggunakan gambar scene pertama sebagai background...`)
           const bgImgRes = await fetch(sceneImgUrl)
           if (bgImgRes.ok) {
@@ -98,7 +98,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
         if (aiBaseUrl && aiApiKey) {
           console.log(`Thumbnail: Tidak ada gambar scene, generate AI background...`)
-          const thumbnailImagePrompt = `A high-contrast, dramatic, cinematic YouTube thumbnail background for a documentary about: ${topic}. Epic lighting, highly detailed, 8k, photorealistic, no text, no logos.`
+          const thumbnailImagePrompt = `flat 2D hand-drawn cartoon illustration, storybook comic style, a simple minimalist stick figure character with pure white round head in a dramatic scene about: ${topic}. YouTube thumbnail composition, bold warm colors, high contrast, no text, no logos.`
           
           const aiRes = await fetch(`${aiBaseUrl}/images/generations`, {
             method: 'POST',

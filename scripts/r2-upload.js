@@ -1,26 +1,28 @@
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
 
-const accountId = process.env.R2_ACCOUNT_ID
-const accessKeyId = process.env.R2_ACCESS_KEY_ID
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-const bucketName = process.env.R2_BUCKET_NAME
-const publicUrl = process.env.R2_PUBLIC_URL
+const endpoint = process.env.MINIO_ENDPOINT
+const accessKeyId = process.env.MINIO_ACCESS_KEY
+const secretAccessKey = process.env.MINIO_SECRET_KEY
+const bucketName = process.env.MINIO_BUCKET
+const region = process.env.MINIO_REGION || 'us-east-1'
+const publicUrl = process.env.MINIO_PUBLIC_URL
 
 const s3Client = new S3Client({
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  endpoint,
   credentials: {
     accessKeyId: accessKeyId || '',
     secretAccessKey: secretAccessKey || '',
   },
-  region: 'auto',
+  region,
+  forcePathStyle: true, // required for MinIO
 })
 
 /**
- * Mengunggah buffer berkas ke Cloudflare R2 di tingkat skrip runner Node.js
+ * Mengunggah buffer berkas ke MinIO di tingkat skrip runner Node.js
  */
 async function uploadToR2(filename, buffer, contentType) {
   if (!bucketName || !publicUrl) {
-    throw new Error('R2_BUCKET_NAME and R2_PUBLIC_URL are required')
+    throw new Error('MINIO_BUCKET and MINIO_PUBLIC_URL are required')
   }
 
   const command = new PutObjectCommand({
@@ -33,7 +35,7 @@ async function uploadToR2(filename, buffer, contentType) {
   await s3Client.send(command)
 
   const cleanPublicUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
-  return `${cleanPublicUrl}/${filename}`
+  return `${cleanPublicUrl}/${bucketName}/${filename}`
 }
 
 module.exports = { uploadToR2 }

@@ -134,7 +134,7 @@ export async function GET(_request: Request, context: RouteContext) {
       motion_bible: director?.motion_bible ?? {},
       thumbnail_bible: director?.thumbnail_bible ?? {},
       genre,
-      visual_style: director?.visual_style ?? 'cinematic documentary',
+      visual_style: director?.visual_style ?? 'flat 2D cartoon illustration',
       emotion,
       lighting: director?.lighting ?? 'natural light',
       color_palette: director?.color_palette ?? [],
@@ -142,7 +142,7 @@ export async function GET(_request: Request, context: RouteContext) {
       voice_style: director?.voice_style ?? 'calm narration',
       camera_style: director?.camera_style ?? 'slow movement',
       transition: director?.transition ?? 'fade',
-      image_style: director?.image_style ?? 'photorealistic',
+      image_style: director?.image_style ?? 'flat 2D hand-drawn cartoon illustration',
     },
     scenes: scenes.map((scene) => ({
       id: scene.id,

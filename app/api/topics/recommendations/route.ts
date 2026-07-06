@@ -21,11 +21,11 @@ export async function GET(request: Request) {
     const messages = [
       {
         role: 'system' as const,
-        content: `Kamu strategi konten YouTube. Balas HANYA JSON: {"topics":["...","...","...","...","..."]}`
+        content: `Kamu strategi konten channel YouTube "Cabang Sejarah" (video what-if sejarah alternatif). Balas HANYA JSON: {"topics":["...","...","...","...","..."]}`
       },
       {
         role: 'user' as const,
-        content: `Buat 5 topik video dokumenter YouTube bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText} Topik harus spesifik, dramatis, dan edukatif.`
+        content: `Buat 5 topik video "Bagaimana Jika..." bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText} Setiap topik WAJIB diawali "Bagaimana Jika", spesifik, dramatis, dan bikin penasaran.`
       }
     ]
 
@@ -42,11 +42,11 @@ export async function GET(request: Request) {
     console.error('Failed to generate topic recommendations:', error)
     // Fallback topics in case the AI provider fails or times out
     const fallbackTopics = [
-      "Detik-detik Meletusnya Gunung Krakatau 1883",
-      "Misteri Hilangnya Peradaban Atlantis",
-      "Gajah Mada: Sumpah Palapa dan Penyatuan Nusantara",
-      "Bagaimana Jika Bumi Berhenti Berputar?",
-      "Konspirasi Area 51 dan Pendaratan di Bulan"
+      "Bagaimana Jika Indonesia Tidak Pernah Dijajah Belanda?",
+      "Bagaimana Jika Majapahit Tidak Pernah Runtuh?",
+      "Bagaimana Jika Gunung Krakatau Tidak Meletus Tahun 1883?",
+      "Bagaimana Jika Jepang Menang Perang Dunia II?",
+      "Bagaimana Jika Internet Ditemukan 100 Tahun Lebih Awal?"
     ]
     return NextResponse.json({
       success: true,
