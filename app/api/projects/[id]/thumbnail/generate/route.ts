@@ -93,3 +93,5 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: `Gagal: ${error instanceof Error ? error.message : String(error)}` }, { status: 500 })
   }
 }
+
+export const maxDuration = 300

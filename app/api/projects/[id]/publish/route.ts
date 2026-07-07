@@ -185,3 +185,5 @@ export async function POST(
     return NextResponse.json({ error: `Gagal memublikasikan video ke YouTube: ${errMsg}` }, { status: 500 })
   }
 }
+
+export const maxDuration = 60

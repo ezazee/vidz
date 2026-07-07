@@ -167,3 +167,5 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   return NextResponse.json({ render_job: rows[0] })
 }
+
+export const maxDuration = 300

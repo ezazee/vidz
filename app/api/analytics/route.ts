@@ -156,3 +156,5 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })
   }
 }
+
+export const maxDuration = 60
