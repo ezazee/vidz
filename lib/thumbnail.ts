@@ -17,15 +17,71 @@ const W = 1280
 const H = 720
 const HALF = W / 2
 
-// Maskot pose kaget — versi thumbnail: kepala besar, alis naik, mulut terbuka (ekspresif)
-function mascotSvg(): Buffer {
-  const limbs = [
-    [110, 130, 110, 225], // badan
-    [110, 148, 42, 78],   // lengan kiri ke atas
-    [110, 148, 178, 78],  // lengan kanan ke atas
-    [110, 225, 72, 315],  // kaki kiri
-    [110, 225, 148, 315], // kaki kanan
-  ]
+// Maskot ekspresif — ekspresi berubah sesuai mood topik
+export type MascotMood = 'shocked' | 'angry' | 'sad' | 'happy' | 'thinking'
+
+const EXPRESSIONS: Record<MascotMood, { limbs: number[][]; face: string }> = {
+  // Kaget: alis naik, mata besar, mulut terbuka, dua tangan ke atas
+  shocked: {
+    limbs: [[110, 130, 110, 225], [110, 148, 42, 78], [110, 148, 178, 78], [110, 225, 72, 315], [110, 225, 148, 315]],
+    face: `
+      <path d="M 74 42 Q 86 34 98 40" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+      <path d="M 122 40 Q 134 34 146 42" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="88" cy="62" r="11" fill="#111111"/><circle cx="132" cy="62" r="11" fill="#111111"/>
+      <circle cx="91" cy="58" r="4" fill="#ffffff"/><circle cx="135" cy="58" r="4" fill="#ffffff"/>
+      <ellipse cx="110" cy="100" rx="16" ry="21" fill="#111111"/>
+      <ellipse cx="110" cy="107" rx="9" ry="10" fill="#e74c3c"/>`,
+  },
+  // Marah: alis turun ke tengah, mata sipit, mulut cemberut, tangan mengepal ke bawah
+  angry: {
+    limbs: [[110, 130, 110, 225], [110, 150, 55, 200], [110, 150, 165, 200], [110, 225, 72, 315], [110, 225, 148, 315]],
+    face: `
+      <path d="M 72 44 L 100 56" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 148 44 L 120 56" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="88" cy="68" r="9" fill="#111111"/><circle cx="132" cy="68" r="9" fill="#111111"/>
+      <path d="M 88 105 Q 110 92 132 105" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>`,
+  },
+  // Sedih: alis miring ke luar, mata kecil, mulut melengkung turun + air mata
+  sad: {
+    limbs: [[110, 130, 110, 225], [110, 150, 62, 215], [110, 150, 158, 215], [110, 225, 78, 315], [110, 225, 142, 315]],
+    face: `
+      <path d="M 76 48 Q 88 42 98 48" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round" transform="rotate(14 87 45)"/>
+      <path d="M 122 48 Q 132 42 144 48" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round" transform="rotate(-14 133 45)"/>
+      <circle cx="88" cy="66" r="8" fill="#111111"/><circle cx="132" cy="66" r="8" fill="#111111"/>
+      <path d="M 90 106 Q 110 94 130 106" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 78 78 Q 74 90 78 98" fill="none" stroke="#5bb8e8" stroke-width="7" stroke-linecap="round"/>`,
+  },
+  // Senang: mata melengkung senyum, mulut senyum lebar, dua tangan ke atas merayakan
+  happy: {
+    limbs: [[110, 130, 110, 225], [110, 148, 44, 72], [110, 148, 176, 72], [110, 225, 72, 315], [110, 225, 148, 315]],
+    face: `
+      <path d="M 78 62 Q 88 52 98 62" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 122 62 Q 132 52 142 62" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M 82 92 Q 110 118 138 92" fill="none" stroke="#111111" stroke-width="9" stroke-linecap="round"/>`,
+  },
+  // Mikir: satu alis naik, mata melirik, mulut datar kecil, tangan ke dagu
+  thinking: {
+    limbs: [[110, 130, 110, 225], [110, 155, 82, 118], [110, 150, 168, 205], [110, 225, 78, 315], [110, 225, 142, 315]],
+    face: `
+      <path d="M 74 46 Q 86 40 98 44" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+      <path d="M 122 38 Q 134 32 146 38" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="92" cy="64" r="9" fill="#111111"/><circle cx="136" cy="60" r="9" fill="#111111"/>
+      <path d="M 96 102 L 126 102" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>`,
+  },
+}
+
+// Deteksi mood dari topik — keyword bahasa Indonesia
+export function detectMood(title: string): MascotMood {
+  const t = title.toLowerCase()
+  if (/(perang|hancur|serang|invasi|konflik|lawan|bertempur|kalah)/.test(t)) return 'angry'
+  if (/(punah|hilang|mati|runtuh|tenggelam|musnah|gagal|tragedi|bencana)/.test(t)) return 'sad'
+  if (/(menang|berhasil|jaya|makmur|maju|kaya|merdeka|bangkit)/.test(t)) return 'happy'
+  if (/(misteri|rahasia|aneh|kenapa|mengapa|bagaimana cara|siapa)/.test(t)) return 'thinking'
+  return 'shocked'
+}
+
+function mascotSvg(mood: MascotMood): Buffer {
+  const { limbs, face } = EXPRESSIONS[mood]
   const halo = limbs.map(([a, b, c, d]) =>
     `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>`).join('')
   const ink = limbs.map(([a, b, c, d]) =>
@@ -34,17 +90,7 @@ function mascotSvg(): Buffer {
     ${halo}${ink}
     <circle cx="110" cy="70" r="62" fill="#ffffff" stroke="#ffffff" stroke-width="18"/>
     <circle cx="110" cy="70" r="62" fill="#ffffff" stroke="#111111" stroke-width="10"/>
-    <!-- alis naik (kaget) -->
-    <path d="M 74 42 Q 86 34 98 40" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
-    <path d="M 122 40 Q 134 34 146 42" fill="none" stroke="#111111" stroke-width="7" stroke-linecap="round"/>
-    <!-- mata besar -->
-    <circle cx="88" cy="62" r="11" fill="#111111"/>
-    <circle cx="132" cy="62" r="11" fill="#111111"/>
-    <circle cx="91" cy="58" r="4" fill="#ffffff"/>
-    <circle cx="135" cy="58" r="4" fill="#ffffff"/>
-    <!-- mulut terbuka kaget -->
-    <ellipse cx="110" cy="100" rx="16" ry="21" fill="#111111"/>
-    <ellipse cx="110" cy="107" rx="9" ry="10" fill="#e74c3c"/>
+    ${face}
   </svg>`)
 }
 
@@ -80,6 +126,7 @@ export interface ThumbnailInput {
   bgLeft: Buffer          // sejarah asli (akan dibuat suram)
   bgRight?: Buffer        // skenario alternatif (cerah). Kalau kosong: pakai bgLeft
   title: string
+  mood?: MascotMood       // ekspresi maskot; default: deteksi otomatis dari judul
 }
 
 // Render judul via canvas + font bundelan (bukan SVG <text> yang butuh font sistem)
@@ -139,7 +186,7 @@ export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
 
   const mascotH = Math.round(H * 0.56)
   const mascotW = Math.round(mascotH * (220 / 335))
-  const mascot = await sharp(mascotSvg()).resize(mascotW, mascotH).png().toBuffer()
+  const mascot = await sharp(mascotSvg(input.mood ?? detectMood(input.title))).resize(mascotW, mascotH).png().toBuffer()
 
   return sharp({ create: { width: W, height: H, channels: 3, background: '#000000' } })
     .composite([

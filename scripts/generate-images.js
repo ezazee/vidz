@@ -21,7 +21,7 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
   // Selalu generate AI image — dipakai sebagai foto still (asset ke-2) bahkan jika ada Pexels video
   console.log(`Scene ${scene.order_index + 1}: Generating AI image...`)
 
-  const modelName = process.env.IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+  const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
   const prompt = buildImagePrompt(scene, director)
   const maxRetries = 3
   let attempt = 0

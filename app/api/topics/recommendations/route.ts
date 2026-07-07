@@ -19,6 +19,22 @@ export async function GET(request: Request) {
       ? ` Jangan gunakan topik ini: ${usedTopics.slice(0, 15).join('; ')}.`
       : ''
 
+    // Rekomendasi evaluasi mingguan (dari AI hari Minggu) — prioritas topik & gaya judul
+    let weeklyHint = ''
+    try {
+      const recRows = await sql`SELECT value FROM integrations WHERE key = 'weekly_recommendations' LIMIT 1`
+      if (recRows[0]) {
+        const rec = JSON.parse(recRows[0].value)
+        const fresh = (Date.now() - new Date(rec.savedAt).getTime()) / 86400000 <= 8
+        if (fresh) {
+          const planTopics = (rec.plan ?? []).map((p: { topic: string }) => p.topic).filter(Boolean)
+          const ideas = [...planTopics, ...(rec.topics ?? [])]
+          if (ideas.length) weeklyHint += ` PRIORITASKAN ide dari evaluasi mingguan ini (pilih/kembangkan yang paling cocok dengan tema): ${ideas.slice(0, 8).join('; ')}.`
+          if (rec.titleStyle) weeklyHint += ` Gaya judul WAJIB ikuti arahan evaluasi: ${rec.titleStyle}.`
+        }
+      }
+    } catch { /* rekomendasi opsional — lanjut tanpa */ }
+
     const messages = [
       {
         role: 'system' as const,
@@ -26,7 +42,7 @@ export async function GET(request: Request) {
       },
       {
         role: 'user' as const,
-        content: `Buat 5 topik video "Bagaimana Jika..." bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText} Setiap topik WAJIB diawali "Bagaimana Jika", spesifik, dramatis, dan bikin penasaran.`
+        content: `Buat 5 topik video "Bagaimana Jika..." bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText}${weeklyHint} Setiap topik WAJIB diawali "Bagaimana Jika", spesifik, dramatis, dan bikin penasaran.`
       }
     ]
 

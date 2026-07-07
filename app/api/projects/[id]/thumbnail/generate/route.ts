@@ -37,7 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
   const baseUrl = process.env.AI_BASE_URL
   const apiKey = process.env.AI_API_KEY
-  const modelName = process.env.IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+  const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
 
   if (!baseUrl || !apiKey) {
     return NextResponse.json({ error: 'Kredensial AI belum lengkap.' }, { status: 500 })

@@ -68,7 +68,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       // 2. Background split: dunia asli (kiri) vs skenario alternatif (kanan)
       const aiBaseUrl = process.env.AI_BASE_URL
       const aiApiKey = process.env.AI_API_KEY
-      const modelName = process.env.IMAGE_MODEL || 'cf/@cf/stabilityai/stable-diffusion-xl-base-1.0'
+      const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
       const { THUMBNAIL_BG_STYLE, composeThumbnail } = await import('@/lib/thumbnail')
       const cleanTopic = topic.replace(/\s*\[THEME:.*?\]\s*/gi, '')
 
