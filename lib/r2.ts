@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectsCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 const endpoint = process.env.MINIO_ENDPOINT
 const accessKeyId = process.env.MINIO_ACCESS_KEY
@@ -53,21 +53,14 @@ export async function deleteFromR2(urls: string[]): Promise<void> {
 
   if (keys.length === 0) return
 
+  // ponytail: delete satu-satu — MinIO menolak DeleteObjectsCommand (batch) tanpa header Content-MD5
   try {
-    if (keys.length === 1) {
-      await s3Client.send(new DeleteObjectCommand({
-        Bucket: bucketName,
-        Key: keys[0],
-      }))
-    } else {
-      await s3Client.send(new DeleteObjectsCommand({
-        Bucket: bucketName,
-        Delete: {
-          Objects: keys.map(key => ({ Key: key })),
-        },
-      }))
-    }
-    console.log(`Successfully deleted ${keys.length} assets from MinIO`)
+    await Promise.all(keys.map(key =>
+      s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key })).catch((e: unknown) =>
+        console.error(`Failed to delete ${key}:`, (e as Error).message)
+      )
+    ))
+    console.log(`Deleted ${keys.length} assets from MinIO`)
   } catch (err) {
     console.error('Failed to delete assets from MinIO:', err)
   }
