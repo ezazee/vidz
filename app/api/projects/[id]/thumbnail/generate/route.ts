@@ -1,9 +1,36 @@
 import { NextResponse } from 'next/server'
 import { uploadToR2 } from '@/lib/r2'
 import { chat } from '@/lib/ai/client'
+import { composeThumbnail, THUMBNAIL_BG_STYLE } from '@/lib/thumbnail'
 
 interface RouteContext {
   params: Promise<{ id: string }>
+}
+
+async function generateBg(baseUrl: string, apiKey: string, model: string, scene: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        prompt: `${THUMBNAIL_BG_STYLE}. Scene: ${scene}. no text, no watermark, no photorealism, no realistic humans`,
+        n: 1,
+        size: '1792x1024',
+        response_format: 'url',
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.data?.[0]?.b64_json) return Buffer.from(data.data[0].b64_json, 'base64')
+    if (data.data?.[0]?.url) {
+      const imgRes = await fetch(data.data[0].url)
+      if (imgRes.ok) return Buffer.from(await imgRes.arrayBuffer())
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -23,49 +50,43 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    // Run text AI and image generation in parallel
-    const [textResult, imageRes] = await Promise.all([
-      chat([
-        { role: 'system', content: `YouTube Thumbnail Strategist untuk channel kartun ilustrasi "Cabang Sejarah". Output ONLY a raw JSON object, no markdown:\n{"imagePrompt":"English prompt: vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black outlines, rich saturated colors, cute stick figure character with white round head in a dramatic scene about the topic, richly detailed background, no text","textLeft":"2-3 kata Indonesia clickbait","textRight":"2-3 kata Indonesia clickbait","textBottom":"3-4 kata Indonesia banner"}` },
-        { role: 'user', content: prompt }
-      ], false, 'gemini-flash-grade').then(result => {
-        const start = result.indexOf('{'), end = result.lastIndexOf('}')
-        if (start === -1 || end <= start) return null
-        return JSON.parse(result.substring(start, end + 1))
-      }).catch(() => null),
+    // 1. AI: judul pendek + 2 deskripsi scene (dunia asli vs skenario alternatif)
+    const textResult = await chat([
+      { role: 'system', content: `Output ONLY raw JSON, no markdown:\n{"title":"judul thumbnail Indonesia 3-7 kata punchy, diawali JIKA untuk topik what-if","sceneLeft":"English: the REAL history scene (what actually happened), environment only, no people, 12-20 words","sceneRight":"English: the ALTERNATE what-if scenario scene (epic, contrasting), environment only, no people, 12-20 words"}` },
+      { role: 'user', content: prompt }
+    ], false, 'gemini-flash-grade').then(result => {
+      const start = result.indexOf('{'), end = result.lastIndexOf('}')
+      if (start === -1 || end <= start) return null
+      return JSON.parse(result.substring(start, end + 1))
+    }).catch(() => null)
 
-      fetch(`${baseUrl}/images/generations`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: modelName, prompt, n: 1, size: '1792x1024', response_format: 'url' }),
-      })
+    const sceneLeft = textResult?.sceneLeft || `the real historical events of ${prompt}, dark dramatic atmosphere`
+    const sceneRight = textResult?.sceneRight || `epic alternate reality scenario of ${prompt}, glorious prosperous atmosphere`
+
+    // 2. Generate 2 background paralel
+    const [bgLeft, bgRight] = await Promise.all([
+      generateBg(baseUrl, apiKey, modelName, sceneLeft),
+      generateBg(baseUrl, apiKey, modelName, sceneRight),
     ])
 
-    if (!imageRes.ok) {
-      const err = await imageRes.text().catch(() => '')
-      throw new Error(`Image generation failed: ${imageRes.status}. ${err}`)
-    }
+    if (!bgLeft && !bgRight) throw new Error('Kedua background gagal digenerate.')
 
-    const data = await imageRes.json()
-    let buffer: Buffer
+    // 3. Compose template split-screen
+    const finalBuffer = await composeThumbnail({
+      bgLeft: (bgLeft ?? bgRight)!,
+      bgRight: bgRight ?? undefined,
+      title: textResult?.title || prompt,
+    })
 
-    if (data.data?.[0]?.b64_json) {
-      buffer = Buffer.from(data.data[0].b64_json, 'base64')
-    } else if (data.data?.[0]?.url) {
-      const imgRes = await fetch(data.data[0].url)
-      buffer = Buffer.from(await imgRes.arrayBuffer())
-    } else {
-      throw new Error('Tidak ada data gambar dari API.')
-    }
+    const r2Url = await uploadToR2(`projects/${id}/thumbnails/raw-${Date.now()}.jpg`, finalBuffer, 'image/jpeg')
 
-    const r2Url = await uploadToR2(`projects/${id}/thumbnails/raw-${Date.now()}.jpg`, buffer, 'image/jpeg')
-
+    // Teks kosong: thumbnail sudah final ter-compose, client tidak perlu overlay lagi
     return NextResponse.json({
       success: true,
       imageUrl: r2Url,
-      textLeft: textResult?.textLeft?.toUpperCase() || '',
-      textRight: textResult?.textRight?.toUpperCase() || '',
-      textBottom: textResult?.textBottom?.toUpperCase() || '',
+      textLeft: '',
+      textRight: '',
+      textBottom: '',
     })
   } catch (error) {
     console.error('Error generating thumbnail:', error)

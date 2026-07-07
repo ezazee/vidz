@@ -1029,30 +1029,31 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
           })
         }
 
-        drawViralText(textLeft, 40, 40, '#ffffff', '#ff6b00', 'left')
-        drawViralText(textRight, 1240, 40, '#ffffff', '#ffd500', 'right')
+        if (textLeft.trim()) drawViralText(textLeft, 40, 40, '#ffffff', '#ff6b00', 'left')
+        if (textRight.trim()) drawViralText(textRight, 1240, 40, '#ffffff', '#ffd500', 'right')
 
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        const bottomText = textBottom.toUpperCase()
-        
-        ctx.font = "italic 900 58px 'Montserrat', 'Arial Black', sans-serif"
-        const bHeight = 85
-        const bY = 640
+        // Banner bawah hanya kalau ada teksnya (thumbnail hasil template server sudah final, tanpa overlay)
+        const bottomText = textBottom.trim().toUpperCase()
+        if (bottomText) {
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.font = "italic 900 58px 'Montserrat', 'Arial Black', sans-serif"
+          const bHeight = 85
+          const bY = 640
 
-        // Full-width banner
-        ctx.fillStyle = '#ffea00'
-        ctx.shadowColor = 'rgba(0,0,0,0.8)'
-        ctx.shadowBlur = 15
-        ctx.shadowOffsetX = 0
-        ctx.shadowOffsetY = 10
-        ctx.fillRect(0, bY - bHeight / 2, 1280, bHeight)
+          ctx.fillStyle = '#ffea00'
+          ctx.shadowColor = 'rgba(0,0,0,0.8)'
+          ctx.shadowBlur = 15
+          ctx.shadowOffsetX = 0
+          ctx.shadowOffsetY = 10
+          ctx.fillRect(0, bY - bHeight / 2, 1280, bHeight)
 
-        ctx.shadowColor = 'transparent'
-        ctx.shadowOffsetX = 0
-        ctx.shadowOffsetY = 0
-        ctx.fillStyle = '#000000'
-        ctx.fillText(bottomText, 640, bY)
+          ctx.shadowColor = 'transparent'
+          ctx.shadowOffsetX = 0
+          ctx.shadowOffsetY = 0
+          ctx.fillStyle = '#000000'
+          ctx.fillText(bottomText, 640, bY)
+        }
       }
     }
 
@@ -1091,9 +1092,9 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
     setSaveMessage(null)
     
     // Clear hardcoded text while generating to indicate progress
-    setTextLeft('MERENDER...')
-    setTextRight('HARAP TUNGGU')
-    setTextBottom('AI SEDANG BERPIKIR')
+    setTextLeft('')
+    setTextRight('')
+    setTextBottom('')
     
     try {
       const res = await fetch(`/api/projects/${projectId}/thumbnail/generate`, {

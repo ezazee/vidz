@@ -33,7 +33,7 @@ export async function generateScenes(input: SceneInput): Promise<SceneDraft[]> {
   const content = await chat([
     {
       role: 'system',
-      content: `Kamu adalah penulis naskah video "what-if" sejarah alternatif bergaya kartun ilustrasi. Output HANYA JSON mentah, tanpa teks lain.`,
+      content: `Kamu adalah storyteller YouTube kelas atas — gaya bertutur seperti mendongeng ke teman, bukan membaca ensiklopedia. Output HANYA JSON mentah, tanpa teks lain.`,
     },
     {
       role: 'user',
@@ -42,14 +42,21 @@ Konteks: ${input.section.description}
 Emosi: ${input.director.emotion}
 
 Buat TEPAT ${numScenes} scene, order_index mulai dari ${input.orderOffset}.
-Narasi: WAJIB 18-25 kata per scene (1-2 kalimat pendek). Fakta spesifik, dramatis, BUKAN judul/frasa kosong.
-Contoh narasi BAIK (~20 kata): "Pukul 10:02 pagi, gelombang panas 800 derajat Celsius menyapu seluruh pantai Anyer hanya dalam dua menit."
+
+NARASI — aturan WAJIB:
+- 28-38 kata per scene (2-3 kalimat, panjang kalimatnya bervariasi: ada yang pendek menghentak, ada yang mengalir).
+- Sapa penonton dengan "kamu" minimal di beberapa scene. Pakai pertanyaan retoris sesekali ("Tapi apa jadinya kalau...?").
+- Detail KONKRET: angka, tahun, nama orang, nama tempat. BUKAN frasa kosong seperti "sangat menarik", "luar biasa", "tidak dapat dipercaya".
+- Bangun rasa penasaran: scene TERAKHIR bab ini harus menggantung (cliffhanger) supaya penonton lanjut nonton.
+- Alur antar scene harus nyambung seperti cerita mengalir, bukan daftar fakta terpisah.
+Contoh narasi BAIK (~33 kata): "Bayangkan kamu berdiri di pelabuhan Sunda Kelapa tahun 1595. Kapal-kapal asing muncul di cakrawala. Tapi kali ini... mereka bukan datang untuk menjajah. Mereka datang untuk bernegosiasi dengan kerajaan yang jauh lebih kuat."
+
 image_prompt: bahasa Inggris. WAJIB berupa PEMANDANGAN/SETTING yang menggambarkan narasi: "[tempat/kejadian], [detail lingkungan], [mood]". JANGAN sebut karakter/orang utama dan JANGAN sebut gaya gambar — keduanya ditambahkan otomatis oleh sistem. Contoh: "ancient harbor city under attack, wooden warships firing cannons on turquoise sea, fortress walls and jungle hills, tense dramatic atmosphere".
 pexels_query: selalu "" (kosong).
-duration: 10-12 detik.
+duration: 13-16 detik.
 
 Output JSON mulai dengan { :
-{"scenes":[{"order_index":${input.orderOffset},"narration":"...","subtitle":"...","image_prompt":"...","pexels_query":"","camera":"static","effect":"none","emotion":"tense","transition":"fade","duration":11}]}`,
+{"scenes":[{"order_index":${input.orderOffset},"narration":"...","subtitle":"...","image_prompt":"...","pexels_query":"","camera":"static","effect":"none","emotion":"tense","transition":"fade","duration":14}]}`,
     },
   ], true)
 
