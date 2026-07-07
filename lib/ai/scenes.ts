@@ -51,7 +51,7 @@ NARASI — aturan WAJIB:
 - Alur antar scene harus nyambung seperti cerita mengalir, bukan daftar fakta terpisah.
 Contoh narasi BAIK (~33 kata): "Bayangkan kamu berdiri di pelabuhan Sunda Kelapa tahun 1595. Kapal-kapal asing muncul di cakrawala. Tapi kali ini... mereka bukan datang untuk menjajah. Mereka datang untuk bernegosiasi dengan kerajaan yang jauh lebih kuat."
 
-image_prompt: bahasa Inggris. WAJIB berupa PEMANDANGAN/SETTING yang menggambarkan narasi: "[tempat/kejadian], [detail lingkungan], [mood]". JANGAN sebut karakter/orang utama dan JANGAN sebut gaya gambar — keduanya ditambahkan otomatis oleh sistem. Contoh: "ancient harbor city under attack, wooden warships firing cannons on turquoise sea, fortress walls and jungle hills, tense dramatic atmosphere".
+image_prompt: bahasa Inggris. Format: "[AKSI karakter utama sesuai narasi], [orang/kerumunan/tokoh lain di scene — boleh sebut tokoh nyata seperti Hitler, Gajah Mada, dll], [setting & mood]". Karakter utama JANGAN dideskripsikan fisiknya dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Buat scene HIDUP: ada orang, aksi, interaksi — bukan pemandangan kosong. Contoh: "standing on a fortress wall pointing at enemy ships, soldiers running with torches behind him, cartoon Hitler figure commanding from a podium in distance, burning harbor city at dusk, tense atmosphere".
 pexels_query: selalu "" (kosong).
 duration: 13-16 detik.
 

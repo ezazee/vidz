@@ -5,16 +5,22 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 const { mascotOverlay } = require('./mascot')
 
-// Background-only dari AI — maskot stickman di-overlay deterministik oleh scripts/mascot.js
-// (SDXL tidak konsisten menggambar stickman: kadang hilang, kadang jadi manusia detail)
+// Maskot digambar AI langsung DI DALAM scene (FLUX handal soal ini, beda dengan SDXL dulu):
+// anchor fisik tetap + kostum kontekstual per topik dari director.character_bible.
+// Plus: narator stickman polos (SVG) di-composite ke pojok tiap scene — scripts/mascot.js
+const MASCOT_ANCHOR =
+  'a simple white stickman character with plain round white head and two black dot eyes'
+
 const CARTOON_STYLE =
   'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, ' +
   'rich saturated colors, flat cel shading, richly detailed scenery, ' +
-  'lively composition, children storybook art, warm sunlight'
+  'lively composition, children storybook art'
 
-function buildImagePrompt(scene) {
-  const action = scene.image_prompt || `scene about: ${scene.narration?.slice(0, 80)}`
-  return `${CARTOON_STYLE}. Scene: ${action}. no text, no watermark, no logo, no photorealism, no realistic humans, not monochrome`
+function buildImagePrompt(scene, director) {
+  const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
+  // prompt_anchor dari director = MASCOT_ANCHOR + kostum era/topik (di-set lib/ai/director.ts)
+  const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
+  return `${CARTOON_STYLE}. Main subject: ${character}, ${action}. no text, no watermark, no logo, no photorealism, not monochrome, no swastika, no nazi symbols, no hate symbols`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
@@ -65,11 +71,11 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
         continue
       }
 
-      // Composite maskot stickman "Si Cabang" ke background (pose bergilir per scene)
+      // Composite narator "Si Cabang" ke pojok (ekspresi ikut emotion scene, sisi bergilir)
       try {
-        buffer = await mascotOverlay(buffer, scene.order_index)
+        buffer = await mascotOverlay(buffer, scene.order_index, scene.emotion)
       } catch (overlayErr) {
-        console.error(`Mascot overlay failed scene ${scene.order_index + 1}: ${overlayErr.message}. Using raw background.`)
+        console.error(`Narrator overlay failed scene ${scene.order_index + 1}: ${overlayErr.message}. Using raw image.`)
       }
 
       // Simpan lokal untuk Remotion

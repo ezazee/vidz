@@ -9,9 +9,9 @@ export interface DirectorInput {
 
 // Karakter maskot tetap channel "Cabang Sejarah" — anchor di-hardcode (bukan dari AI)
 // supaya deskripsi visualnya identik di SETIAP scene & SETIAP video.
+// Kostum kontekstual per topik ditambahkan dari director (character_bible.clothing).
 export const MASCOT_ANCHOR =
-  'a cute stick figure character with plain white round head, two black dot eyes, ' +
-  'simple thin black stick arms and legs, expressive pose'
+  'a simple white stickman character with plain round white head and two black dot eyes'
 
 export const CARTOON_STYLE =
   'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, ' +
