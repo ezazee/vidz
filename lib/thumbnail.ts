@@ -1,4 +1,12 @@
 import sharp from 'sharp'
+import path from 'path'
+import { GlobalFonts, createCanvas } from '@napi-rs/canvas'
+
+// Font dibundel di repo — Vercel/GitHub runner tidak punya font sistem (SVG <text> jadi kotak-kotak)
+const FONT_PATH = path.join(process.cwd(), 'assets', 'fonts', 'Anton-Regular.ttf')
+if (!GlobalFonts.has('Anton')) {
+  try { GlobalFonts.registerFromPath(FONT_PATH, 'Anton') } catch (e) { console.error('Font register failed:', e) }
+}
 
 // Template thumbnail "Cabang Sejarah" v2 — split screen dua dunia:
 // kiri = sejarah asli (suram, desaturasi), kanan = skenario alternatif (cerah, saturasi naik),
@@ -8,10 +16,6 @@ import sharp from 'sharp'
 const W = 1280
 const H = 720
 const HALF = W / 2
-
-function escapeXml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
 
 // Maskot pose kaget — versi thumbnail: kepala besar, alis naik, mulut terbuka (ekspresif)
 function mascotSvg(): Buffer {
@@ -78,12 +82,42 @@ export interface ThumbnailInput {
   title: string
 }
 
+// Render judul via canvas + font bundelan (bukan SVG <text> yang butuh font sistem)
+function renderTitlePng(lines: string[]): Buffer {
+  const canvas = createCanvas(W, H)
+  const ctx = canvas.getContext('2d')
+
+  // Cari fontSize yang muat: ukur beneran pakai measureText
+  let fontSize = 104
+  const maxWidth = W * 0.9
+  while (fontSize > 42) {
+    ctx.font = `${fontSize}px Anton`
+    const widest = Math.max(...lines.map(l => ctx.measureText(l).width))
+    if (widest <= maxWidth) break
+    fontSize -= 4
+  }
+
+  const lineHeight = fontSize * 1.16
+  ctx.font = `${fontSize}px Anton`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(8, Math.round(fontSize * 0.18))
+  ctx.strokeStyle = '#000000'
+
+  lines.forEach((line, i) => {
+    const y = 36 + i * lineHeight
+    ctx.strokeText(line, W / 2, y)
+    ctx.fillStyle = i % 2 === 0 ? '#ffd23f' : '#ffffff'
+    ctx.fillText(line, W / 2, y)
+  })
+
+  return canvas.toBuffer('image/png')
+}
+
 export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
   const title = cleanThumbnailTitle(input.title)
   const lines = wrapLines(title, 18, 3)
-  const longest = Math.max(...lines.map(l => l.length))
-  const fontSize = Math.max(48, Math.min(100, Math.floor((W * 0.88) / (longest * 0.68))))
-  const lineHeight = fontSize * 1.14
 
   // Kiri: suram (desaturasi + gelap). Kanan: vivid (saturasi naik)
   const left = await sharp(input.bgLeft)
@@ -100,15 +134,8 @@ export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
     <polygon points="${HALF - 16},0 ${HALF + 4},0 ${HALF + 16},${H} ${HALF - 4},${H}" fill="#e01e1e" stroke="#7a0000" stroke-width="3"/>
   </svg>`)
 
-  // Judul: baris ganjil kuning, genap putih (kayak referensi)
-  const textSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
-    ${lines.map((line, i) => `
-      <text x="${W / 2}" y="${40 + fontSize + i * lineHeight}"
-        font-family="Impact, 'Arial Black', 'DejaVu Sans', sans-serif" font-weight="900"
-        font-size="${fontSize}" text-anchor="middle"
-        fill="${i % 2 === 0 ? '#ffd23f' : '#ffffff'}" stroke="#000000" stroke-width="${Math.round(fontSize * 0.16)}"
-        paint-order="stroke" stroke-linejoin="round">${escapeXml(line)}</text>`).join('')}
-  </svg>`)
+  // Judul: baris ganjil kuning, genap putih (kayak referensi) — dirender canvas + font bundelan
+  const textPng = renderTitlePng(lines)
 
   const mascotH = Math.round(H * 0.56)
   const mascotW = Math.round(mascotH * (220 / 335))
@@ -120,7 +147,7 @@ export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
       { input: right, left: HALF, top: 0 },
       { input: divider, left: 0, top: 0 },
       { input: mascot, left: W - mascotW - 36, top: H - mascotH - 16 },
-      { input: textSvg, left: 0, top: 0 },
+      { input: textPng, left: 0, top: 0 },
     ])
     .jpeg({ quality: 90 })
     .toBuffer()

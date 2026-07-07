@@ -15,6 +15,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/lib-storage": "^3.1080.0",
+    "@napi-rs/canvas": "^1.0.2",
     "@neondatabase/serverless": "^1.0.1",
     "@remotion/cli": "^4.0.320",
     "@remotion/media-utils": "^4.0.320",

@@ -52,7 +52,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     // 1. AI: judul pendek + 2 deskripsi scene (dunia asli vs skenario alternatif)
     const textResult = await chat([
-      { role: 'system', content: `Output ONLY raw JSON, no markdown:\n{"title":"judul thumbnail Indonesia 3-7 kata punchy, diawali JIKA untuk topik what-if","sceneLeft":"English: the REAL history scene (what actually happened), environment only, no people, 12-20 words","sceneRight":"English: the ALTERNATE what-if scenario scene (epic, contrasting), environment only, no people, 12-20 words"}` },
+      { role: 'system', content: `Output ONLY raw JSON, no markdown:\n{"title":"judul thumbnail Indonesia 3-7 kata punchy, diawali JIKA untuk topik what-if","sceneLeft":"English: the REAL history scene (what actually happened), MUST be dark gloomy grim ruins/war/oppression mood, environment only, no people, 12-20 words","sceneRight":"English: the ALTERNATE what-if scenario, MUST be the OPPOSITE mood — golden glorious prosperous futuristic, VISUALLY VERY DIFFERENT from sceneLeft (different buildings, colors, era), environment only, no people, 12-20 words"}` },
       { role: 'user', content: prompt }
     ], false, 'gemini-flash-grade').then(result => {
       const start = result.indexOf('{'), end = result.lastIndexOf('}')
@@ -60,8 +60,8 @@ export async function POST(request: Request, context: RouteContext) {
       return JSON.parse(result.substring(start, end + 1))
     }).catch(() => null)
 
-    const sceneLeft = textResult?.sceneLeft || `the real historical events of ${prompt}, dark dramatic atmosphere`
-    const sceneRight = textResult?.sceneRight || `epic alternate reality scenario of ${prompt}, glorious prosperous atmosphere`
+    const sceneLeft = textResult?.sceneLeft || `the real historical events of ${prompt}, dark gloomy grim atmosphere, ruins and smoke, muted colors`
+    const sceneRight = textResult?.sceneRight || `epic alternate reality of ${prompt}, golden glorious prosperous city, bright vivid colors, triumphant atmosphere`
 
     // 2. Generate 2 background paralel
     const [bgLeft, bgRight] = await Promise.all([

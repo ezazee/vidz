@@ -100,8 +100,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
 
       let [bgLeft, bgRight] = await Promise.all([
-        genBg(`the real historical events related to ${cleanTopic}, dark dramatic atmosphere`),
-        genBg(`epic alternate reality scenario of ${cleanTopic}, glorious prosperous atmosphere`),
+        genBg(`the real historical events related to ${cleanTopic}, dark gloomy grim atmosphere, ruins and smoke, muted colors`),
+        genBg(`epic alternate reality of ${cleanTopic}, golden glorious prosperous city, bright vivid colors, triumphant atmosphere`),
       ])
 
       // Fallback: gambar scene pertama
