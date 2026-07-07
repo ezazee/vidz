@@ -11,6 +11,17 @@ export async function POST(request: Request) {
   const body = createProjectSchema.parse(await request.json())
   const sql = getSql()
 
+  // Guard anti-duplikat: tolak topik yang sama persis (tanpa tag THEME, case-insensitive)
+  const normalized = body.topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim().toLowerCase()
+  const dup = await sql`
+    SELECT id FROM projects
+    WHERE lower(trim(regexp_replace(topic, '\\s*\\[THEME:.*?\\]\\s*', '', 'gi'))) = ${normalized}
+    LIMIT 1
+  `
+  if (dup[0]) {
+    return NextResponse.json({ error: 'Topik duplikat — sudah pernah dibuat', existingId: dup[0].id }, { status: 409 })
+  }
+
   const rows = await sql`
     INSERT INTO projects (user_id, topic)
     VALUES (${body.user_id ?? '00000000-0000-0000-0000-000000000000'}, ${body.topic})

@@ -8,14 +8,15 @@ export async function GET(request: Request) {
     const theme = searchParams.get('theme') || 'umum'
 
     const sql = getSql()
-    // Fetch last 20 projects to avoid repeating recent topics
-    const recentProjects = await sql`SELECT topic FROM projects ORDER BY created_at DESC LIMIT 5`
+    // Semua topik yang pernah dipakai — anti duplikat konten
+    const recentProjects = await sql`SELECT topic FROM projects ORDER BY created_at DESC LIMIT 300`
     const usedTopics = recentProjects
       .map(p => p.topic.replace(/\s*\[THEME:.*?\]\s*/g, '').trim())
       .filter(Boolean)
 
+    // Prompt exclusion cukup 15 terbaru (batas panjang prompt); sisanya difilter server-side
     const exclusionText = usedTopics.length > 0
-      ? ` Jangan gunakan topik ini: ${usedTopics.join('; ')}.`
+      ? ` Jangan gunakan topik ini: ${usedTopics.slice(0, 15).join('; ')}.`
       : ''
 
     const messages = [
@@ -33,9 +34,28 @@ export async function GET(request: Request) {
     const rawResult = await chat(messages, true)
     const result = JSON.parse(rawResult)
 
+    // Filter server-side: buang kandidat yang mirip topik lama (AI kadang tidak nurut exclusion)
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3)
+    const usedSets = usedTopics.map(t => new Set(normalize(t)))
+    const isDuplicate = (candidate: string) => {
+      const cand = new Set(normalize(candidate))
+      if (cand.size === 0) return false
+      return usedSets.some(used => {
+        if (used.size === 0) return false
+        let overlap = 0
+        for (const w of cand) if (used.has(w)) overlap++
+        return overlap / Math.min(cand.size, used.size) >= 0.6
+      })
+    }
+
+    const rawTopics: string[] = result.topics || []
+    const freshTopics = rawTopics.filter(t => !isDuplicate(t))
+
     return NextResponse.json({
       success: true,
-      topics: result.topics || []
+      topics: freshTopics.length > 0 ? freshTopics : rawTopics,
+      filteredOut: rawTopics.length - freshTopics.length
     })
 
   } catch (error) {

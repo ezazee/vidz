@@ -153,6 +153,9 @@ export async function POST(request: Request) {
       DO UPDATE SET value = EXCLUDED.value, updated_at = now()
     `
 
+    // Key baru = mungkin akun Zernio baru — buang cache akun lama supaya tidak nyangkut
+    await sql`DELETE FROM integrations WHERE key IN ('youtube_account_id', 'youtube_channel_name', 'youtube_channel_thumbnail')`
+
     const synced = await syncYouTubeAccount(sql, trimmedKey)
     return NextResponse.json({ message: 'Zernio API Key berhasil disimpan', youtubeSynced: !!synced })
   } catch (error) {
