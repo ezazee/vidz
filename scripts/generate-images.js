@@ -150,7 +150,15 @@ async function main() {
   }
 
   await fs.writeFile('storyboard.json', JSON.stringify({ storyboard }, null, 2))
-  console.log(`\nImages: ${storyboard.scenes.filter(s => s.image_url).length}/${storyboard.scenes.length} berhasil`)
+  const ok = storyboard.scenes.filter(s => s.image_url).length
+  console.log(`\nImages: ${ok}/${storyboard.scenes.length} berhasil`)
+
+  // Guard: kalau mayoritas gambar gagal (mis. kuota Cloudflare AI habis),
+  // hentikan pipeline — JANGAN render & publish video kosong ke YouTube
+  if (ok < storyboard.scenes.length * 0.8) {
+    console.error(`FATAL: hanya ${ok}/${storyboard.scenes.length} gambar berhasil (<80%). Render dibatalkan.`)
+    process.exit(1)
+  }
 }
 
 main().catch(e => { console.error(e); process.exit(1) })
