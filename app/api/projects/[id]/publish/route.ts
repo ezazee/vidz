@@ -117,13 +117,12 @@ export async function POST(
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
     // Zernio: title field diabaikan, YouTube title diambil dari baris pertama content
-    // Thumbnail harus masuk sebagai mediaItems type "image" (bukan options)
+    // Zernio kompatibel dengan skema Ayrshare — thumbnail YouTube dikirim lewat
+    // platform options `youTubeOptions.thumbNail`, BUKAN mediaItems (mediaItems kedua
+    // sempat dicoba tapi diabaikan Zernio → YouTube fallback ke thumbnail auto-generated).
     const mediaItems: { url: string; type: string }[] = []
     if (project.video_url) {
       mediaItems.push({ url: project.video_url, type: 'video' })
-    }
-    if (project.thumbnail_url) {
-      mediaItems.push({ url: project.thumbnail_url, type: 'image' })
     }
 
     // YouTube title = baris pertama content — pisah dengan newline
@@ -142,9 +141,13 @@ export async function POST(
         platforms: [{
           platform: 'youtube',
           accountId: config.youtube_account_id,
-          options: { privacyStatus: 'public' }
+          options: {
+            privacyStatus: 'public',
+            ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {}),
+          }
         }],
         mediaItems,
+        ...(project.thumbnail_url ? { youTubeOptions: { thumbNail: project.thumbnail_url } } : {}),
         publishNow: !scheduledAt,
         ...(scheduledAt ? { scheduleDate: scheduledAt } : {}),
       }),
