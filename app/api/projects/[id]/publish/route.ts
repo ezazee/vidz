@@ -117,16 +117,23 @@ export async function POST(
     console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
 
     // Zernio: title field diabaikan, YouTube title diambil dari baris pertama content
-    // Zernio kompatibel dengan skema Ayrshare — thumbnail YouTube dikirim lewat
-    // platform options `youTubeOptions.thumbNail`, BUKAN mediaItems (mediaItems kedua
-    // sempat dicoba tapi diabaikan Zernio → YouTube fallback ke thumbnail auto-generated).
-    const mediaItems: { url: string; type: string }[] = []
+    // Per docs.zernio.com/platforms/youtube: thumbnail masuk sebagai field `thumbnail`
+    // di DALAM item video pada mediaItems (bukan options/youTubeOptions/mediaItem terpisah).
+    const mediaItems: { url: string; type: string; thumbnail?: string }[] = []
     if (project.video_url) {
-      mediaItems.push({ url: project.video_url, type: 'video' })
+      mediaItems.push({
+        url: project.video_url,
+        type: 'video',
+        ...(project.thumbnail_url ? { thumbnail: project.thumbnail_url } : {}),
+      })
     }
 
     // YouTube title = baris pertama content — pisah dengan newline
     const contentWithTitle = `${finalTitle}\n\n${finalDescription}`
+
+    // Pinned comment otomatis (docs.zernio.com: platformSpecificData.firstComment) —
+    // menambah sentuhan editorial/ajakan diskusi, bukan cuma video hasil generate mentah.
+    const firstComment = `Menurutmu, seberapa besar kemungkinan skenario "${project.topic}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
 
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {
@@ -141,13 +148,10 @@ export async function POST(
         platforms: [{
           platform: 'youtube',
           accountId: config.youtube_account_id,
-          options: {
-            privacyStatus: 'public',
-            ...(project.thumbnail_url ? { thumbNail: project.thumbnail_url, thumbnailUrl: project.thumbnail_url } : {}),
-          }
+          options: { privacyStatus: 'public' },
+          platformSpecificData: { firstComment },
         }],
         mediaItems,
-        ...(project.thumbnail_url ? { youTubeOptions: { thumbNail: project.thumbnail_url } } : {}),
         publishNow: !scheduledAt,
         ...(scheduledAt ? { scheduleDate: scheduledAt } : {}),
       }),
