@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { env } from '@/lib/env'
 import { getSql } from '@/lib/db/client'
 import { sendTelegram } from '@/lib/telegram'
+import { resolveChannelId, getChannel } from '@/lib/channels'
 
 const updateJobSchema = z.object({
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
@@ -16,7 +17,7 @@ interface RouteContext {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(_request))
   const rows = await sql`SELECT * FROM render_jobs WHERE id = ${id} LIMIT 1`
   if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ render_job: rows[0] })
@@ -31,7 +32,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { id } = await context.params
   const body = updateJobSchema.parse(await request.json())
-  const sql = getSql()
+  const channelId = resolveChannelId(request)
+  const sql = getSql(channelId)
 
   const rows = await sql`
     UPDATE render_jobs
@@ -74,10 +76,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       const {
         THUMBNAIL_LAYOUTS, STICKMAN_POSITIONS, TEXT_TREATMENTS, pickExcluding, paletteFor,
       } = await import('@/lib/ai/variation')
-      const { getChannel } = await import('@/lib/channels')
-      // TODO(multi-channel automation): route ini belum terima channelId dari request —
-      // dipakai channel default sampai wiring GH Actions/n8n multi-channel (fase berikutnya).
-      const activeChannel = getChannel()
+      const activeChannel = getChannel(channelId)
       const cleanTopic = topic.replace(/\s*\[THEME:.*?\]\s*/gi, '')
       const palette = paletteFor(category, activeChannel.categoryPalette)
       const paletteHint = palette ? `, ${palette}` : ''
@@ -182,7 +181,11 @@ export async function PATCH(request: Request, context: RouteContext) {
         const origin = process.env.API_BASE_URL || 'https://vidz-factory.vercel.app'
         await fetch(`${origin}/api/projects/${projectId}/publish`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-secret': process.env.API_SECRET || '' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-secret': process.env.API_SECRET || '',
+            ...(channelId ? { 'x-channel-id': channelId } : {}),
+          },
           body: JSON.stringify({}),
         })
         console.log(`[AutoPublish] Triggered for project ${projectId}`)

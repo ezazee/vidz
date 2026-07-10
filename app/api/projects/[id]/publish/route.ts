@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -10,8 +11,8 @@ export async function POST(
   context: RouteContext
 ) {
   const { id } = await context.params
-  const sql = getSql()
-  
+  const sql = getSql(resolveChannelId(request))
+
   const body = await request.json().catch(() => ({}))
   // #8 Jitter jam posting: geser +7..+38 menit acak supaya tidak selalu tayang
   // di menit bulat yang sama tiap hari (pola bot). Hanya maju, tak pernah mundur ke masa lalu.

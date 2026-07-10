@@ -21,6 +21,7 @@ async function main() {
     headers: {
       'content-type': 'application/json',
       'x-api-secret': apiSecret,
+      ...(process.env.CHANNEL_ID ? { 'x-channel-id': process.env.CHANNEL_ID } : {}),
     },
     body: JSON.stringify({
       status,
