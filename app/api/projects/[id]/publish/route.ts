@@ -139,7 +139,9 @@ export async function POST(
 
     // Pinned comment otomatis (docs.zernio.com: platformSpecificData.firstComment) —
     // menambah sentuhan editorial/ajakan diskusi, bukan cuma video hasil generate mentah.
-    const firstComment = `Menurutmu, seberapa besar kemungkinan skenario "${project.topic}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
+    // project.topic mentah masih bawa tag [THEME:...] — wajib dibersihkan sebelum ditampilkan.
+    const topicForComment = project.topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim()
+    const firstComment = `Menurutmu, seberapa besar kemungkinan skenario "${topicForComment}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
 
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {

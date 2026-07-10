@@ -17,6 +17,7 @@ async function main() {
   const response = await fetch(url, {
     headers: {
       'x-api-secret': apiSecret,
+      ...(process.env.CHANNEL_ID ? { 'x-channel-id': process.env.CHANNEL_ID } : {}),
     },
   })
 

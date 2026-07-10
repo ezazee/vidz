@@ -5,6 +5,7 @@ const optionalUrl = z.preprocess((value) => (value === '' ? undefined : value), 
 
 const envSchema = z.object({
   DATABASE_URL: optionalUrl,
+  DATABASE_URL_BRAINWHY: optionalUrl,
   GITHUB_TOKEN: optionalString,
   GITHUB_REPO: optionalString,
   API_SECRET: optionalString,

@@ -7,7 +7,8 @@ import { generateOutline } from '../lib/ai/outline'
 import { generateScenes } from '../lib/ai/scenes'
 import { generateSeoMetadata } from '../lib/ai/seo'
 import { generateClosingInsight } from '../lib/ai/closing'
-import { parseCategory, OPENING_STYLES, buildCameraSequence, pickExcluding } from '../lib/ai/variation'
+import { parseCategory, buildCameraSequence, pickExcluding } from '../lib/ai/variation'
+import { getChannel, type ChannelId } from '../lib/channels'
 
 async function runPipeline() {
   const id = process.argv[2]
@@ -15,20 +16,25 @@ async function runPipeline() {
     console.error('Project ID is required')
     process.exit(1)
   }
-  
-  console.log(`[Pipeline] Starting execution for project ${id} on GitHub Runner...`)
+
+  // CHANNEL_ID menentukan schema DB (getSql) DAN "kepribadian" konten (getChannel) —
+  // default 'cabang-sejarah' kalau tidak di-set, backward compatible dengan pipeline lama.
+  const channelId = (process.env.CHANNEL_ID || 'cabang-sejarah') as ChannelId
+  const channel = getChannel(channelId)
+
+  console.log(`[Pipeline] Starting execution for project ${id} on channel "${channel.id}"...`)
   console.log(`[Pipeline] AI_BASE_URL: ${process.env.AI_BASE_URL ?? '(not set)'}`)
   console.log(`[Pipeline] AI_MODEL: ${process.env.AI_MODEL ?? '(not set)'}`)
   console.log(`[Pipeline] AI_API_KEY: ${process.env.AI_API_KEY ? '***set***' : '(not set)'}`)
-  const sql = getSql()
-  
+  const sql = getSql(channelId === 'cabang-sejarah' ? undefined : channelId)
+
   try {
     const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
     if (!projects[0]) throw new Error('Project not found')
     const topic = projects[0].topic
 
     // Kategori (dari [THEME:...]) — disimpan untuk palette per-kategori & rotasi.
-    const category = parseCategory(topic)
+    const category = parseCategory(topic, channel.categories)
 
     // #2 Opening style: hindari gaya 3 video terakhir, paksa lewat prompt.
     const recentOpenings = await sql`
@@ -37,8 +43,8 @@ async function runPipeline() {
       ORDER BY created_at DESC LIMIT 3
     `
     const openingStyle = pickExcluding(
-      OPENING_STYLES,
-      recentOpenings.map(r => OPENING_STYLES.find(o => o.id === r.opening_style_used)!).filter(Boolean),
+      channel.openingStyles,
+      recentOpenings.map(r => channel.openingStyles.find(o => o.id === r.opening_style_used)!).filter(Boolean),
     )
 
     await sql`UPDATE projects SET category = ${category}, opening_style_used = ${openingStyle.id} WHERE id = ${id}`
@@ -63,7 +69,7 @@ async function runPipeline() {
     // 2. Director
     console.log('[Pipeline] Running Director...')
     await sql`DELETE FROM director WHERE project_id = ${id}`
-    const director = await generateDirector({ topic, research })
+    const director = await generateDirector({ topic, research, channelId })
     await sql`
       INSERT INTO director (
         project_id, genre, visual_style, emotion, lighting, color_palette,
@@ -85,7 +91,7 @@ async function runPipeline() {
     // 3. Outline
     console.log('[Pipeline] Running Outline...')
     await sql`DELETE FROM outlines WHERE project_id = ${id}`
-    const outline = await generateOutline(topic, research.summary, openingStyle.instruction)
+    const outline = await generateOutline(topic, research.summary, openingStyle.instruction, channelId)
     await sql`
       INSERT INTO outlines (project_id, structure, status)
       VALUES (${id}, ${JSON.stringify(outline)}::jsonb, 'completed')
@@ -109,6 +115,7 @@ async function runPipeline() {
         director,
         orderOffset: globalOrderIndex,
         fullOutline: outline.sections,
+        channelId,
       })
 
       for (const scene of scenes) {
@@ -131,7 +138,7 @@ async function runPipeline() {
     // #1 Closing insight — opini/refleksi analitis, disimpan + jadi scene penutup (dibacakan).
     console.log('[Pipeline] Generating closing insight...')
     const narrationSoFar = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')
-    const closingInsight = await generateClosingInsight(topic, narrationSoFar)
+    const closingInsight = await generateClosingInsight(topic, narrationSoFar, channelId)
     if (closingInsight) {
       const closingRow = await sql`
         INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, pexels_query, camera, effect, emotion, transition, duration, image_status, voice_status)
@@ -160,6 +167,7 @@ async function runPipeline() {
       topic,
       summary: research.summary,
       narrationText,
+      channelId,
     })
     await sql`
       INSERT INTO seo_metadata (project_id, title, description, tags, hashtags, status)

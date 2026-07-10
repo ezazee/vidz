@@ -26,12 +26,25 @@ const CATEGORY_PALETTE = {
   'What-If Bencana Alam': 'dark stormy purple and ash grey, ominous cinematic palette',
 }
 
+// Ditemukan (uji lokal BrainWhy): FLUX kadang menyelipkan swastika/simbol kebencian
+// sebagai "generic wall poster/insignia" filler di background, bahkan di scene yang
+// topiknya tidak berkaitan sejarah/perang sama sekali. Negative prompt lama tidak cukup —
+// diperkuat + eksplisit larang elemen dekorasi dinding yang jadi sumber masalahnya.
+const SAFETY_NEGATIVE =
+  'no text, no watermark, no logo, no signature, no gibberish text, no photorealism, not monochrome, ' +
+  'no swastika, no nazi symbols, no hate symbols, no political symbols, no national flags, ' +
+  'no religious symbols, no propaganda imagery, no offensive symbols, ' +
+  'no wall posters with symbols or insignia, no framed wall art with symbols, no banners with emblems'
+
 function buildImagePrompt(scene, director, category) {
   const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
   // prompt_anchor dari director = MASCOT_ANCHOR + kostum era/topik (di-set lib/ai/director.ts)
   const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
   const palette = (category && CATEGORY_PALETTE[category]) ? `, ${CATEGORY_PALETTE[category]}` : ''
-  return `${CARTOON_STYLE}${palette}. Main subject: ${character}, ${action}. no text, no watermark, no logo, no photorealism, not monochrome, no swastika, no nazi symbols, no hate symbols`
+  // "EXACTLY as described" + "do not redesign" ditambahkan setelah uji lokal menunjukkan FLUX
+  // kadang mengganti desain karakter jadi gaya webcomic detail penuh (rambut, wajah realistis)
+  // alih-alih anchor stickman sederhana yang diminta.
+  return `${CARTOON_STYLE}${palette}. Main subject: EXACTLY as described, do not redesign or add extra facial/hair details — ${character}. Action: ${action}. Keep background props plain and generic (plants, furniture, blank windows) — avoid wall posters, flags, or decorative insignia. ${SAFETY_NEGATIVE}`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId, category) {
@@ -117,7 +130,11 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
 
         const patchRes = await fetch(`${apiBaseUrl}/api/projects/${projectId}/scenes/${scene.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-api-secret': apiSecret },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-secret': apiSecret,
+            ...(process.env.CHANNEL_ID ? { 'x-channel-id': process.env.CHANNEL_ID } : {}),
+          },
           body: JSON.stringify(patchBody),
         })
         if (!patchRes.ok) {

@@ -1,53 +1,21 @@
 // Pool variasi anti-templated-pattern — dipakai lintas pipeline (script, storyboard,
 // thumbnail) supaya antar-video tidak identik. Semua pilihan disimpan ke DB per video
 // untuk rotasi (exclude yang baru dipakai) & bahan memory/similarity system nanti.
+//
+// Kategori & opening style sekarang per-channel (lihat lib/channels.ts) — fungsi di sini
+// generik, menerima daftar dari channel manapun, bukan hardcode 1 channel.
 
-export const CATEGORIES = [
-  'What-If Sejarah Nusantara',
-  'What-If Sejarah Dunia',
-  'What-If Tokoh Terkenal',
-  'What-If Sains & Teknologi',
-  'What-If Perang & Konflik',
-  'What-If Bencana Alam',
-] as const
-
-// Palette & mood per kategori — hint ditempel ke prompt gambar/thumbnail (#5).
-export const CATEGORY_PALETTE: Record<string, string> = {
-  'What-If Sejarah Nusantara': 'warm sepia and gold tones, tropical earthy palette, batik-inspired accents',
-  'What-If Sejarah Dunia': 'classic warm amber and parchment tones, vintage muted palette',
-  'What-If Tokoh Terkenal': 'dramatic high-contrast portrait lighting, bold red and cream accents',
-  'What-If Sains & Teknologi': 'cool blue and teal neon tones, clean futuristic palette',
-  'What-If Perang & Konflik': 'desaturated steel grey and ember orange, smoky dramatic palette',
-  'What-If Bencana Alam': 'dark stormy purple and ash grey, ominous cinematic palette',
-}
-
-export function parseCategory(topic: string): string | null {
+export function parseCategory(topic: string, categories: readonly string[]): string | null {
   const m = topic.match(/\[THEME:\s*(.*?)\]/i)
   if (!m) return null
   const t = m[1].trim()
-  return CATEGORIES.find(c => c.toLowerCase() === t.toLowerCase()) ?? t
+  return categories.find(c => c.toLowerCase() === t.toLowerCase()) ?? t
 }
 
-export function paletteFor(category: string | null): string {
+export function paletteFor(category: string | null, palette: Record<string, string>): string {
   if (!category) return ''
-  return CATEGORY_PALETTE[category] ?? ''
+  return palette[category] ?? ''
 }
-
-// --- #2 Opening style ---------------------------------------------------------
-// Setiap gaya = instruksi eksplisit yang DIPAKSA ke prompt (bukan biar AI pilih bebas),
-// supaya `opening_style_used` yang disimpan benar-benar mencerminkan hasil.
-export const OPENING_STYLES: { id: string; instruction: string }[] = [
-  { id: 'pertanyaan_retoris', instruction: 'Buka dengan pertanyaan retoris yang menohok langsung ke penonton.' },
-  { id: 'statement_kontroversial', instruction: 'Buka dengan pernyataan berani/kontroversial yang memancing perdebatan.' },
-  { id: 'fakta_historis', instruction: 'Buka dengan satu fakta sejarah singkat yang mengejutkan (dengan angka/tahun konkret).' },
-  { id: 'hipotesis_langsung', instruction: 'Buka langsung dengan hipotesis "Bayangkan jika..." tanpa basa-basi.' },
-  { id: 'adegan_sinematik', instruction: 'Buka dengan deskripsi adegan sinematik yang menempatkan penonton di tengah momen krusial.' },
-  { id: 'kontras_waktu', instruction: 'Buka dengan mengontraskan dunia nyata sekarang vs dunia alternatif yang akan dibahas.' },
-  { id: 'tokoh_pov', instruction: 'Buka dari sudut pandang tokoh sejarah kunci di detik-detik penentu.' },
-  { id: 'angka_mengejutkan', instruction: 'Buka dengan statistik atau angka mengejutkan yang relevan dengan topik.' },
-  { id: 'teka_teki', instruction: 'Buka dengan teka-teki/misteri "apa yang sebenarnya terjadi seandainya..." yang menggantung.' },
-  { id: 'analogi_relatable', instruction: 'Buka dengan analogi sederhana yang relatable dari kehidupan sehari-hari penonton.' },
-]
 
 // --- #4 Visual effect sequence ------------------------------------------------
 export const CAMERA_POOL = [

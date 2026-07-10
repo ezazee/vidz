@@ -1,4 +1,5 @@
 import { chat } from './client'
+import { getChannel, type ChannelId } from '@/lib/channels'
 
 export interface OutlineSection {
   type: 'intro' | 'chapter' | 'ending'
@@ -11,27 +12,46 @@ export interface OutlineOutput {
   sections: OutlineSection[]
 }
 
-export async function generateOutline(topic: string, summary: string, openingInstruction = ''): Promise<OutlineOutput> {
+export async function generateOutline(topic: string, summary: string, openingInstruction = '', channelId?: ChannelId): Promise<OutlineOutput> {
+  const channel = getChannel(channelId)
+  const isEn = channel.language === 'en'
+
   const openingLine = openingInstruction
-    ? `\nGAYA PEMBUKA (WAJIB diterapkan di intro): ${openingInstruction}\n`
+    ? (isEn
+        ? `\nOPENING STYLE (MUST be applied to the intro): ${openingInstruction}\n`
+        : `\nGAYA PEMBUKA (WAJIB diterapkan di intro): ${openingInstruction}\n`)
     : ''
-  const content = await chat([
-    {
-      role: 'system',
-      content: `Kamu adalah showrunner video "what-if" sejarah alternatif (storytelling naratif yang seru, bukan dokumenter formal). Output HANYA JSON mentah, tanpa teks lain, tanpa markdown, tanpa penjelasan.`,
-    },
-    {
-      role: 'user',
-      content: `Buat outline video YouTube what-if viral tentang: "${topic}"
+
+  const userPrompt = isEn
+    ? `Create a viral YouTube video outline about: "${topic}"
+${openingLine}
+Research summary:
+${summary}
+
+Structure: ${channel.prompts.outlineStructure}
+
+Output JSON exactly like this (5 sections: 1 intro + 3 chapter + 1 ending):
+{"sections":[{"type":"intro","title":"...","order":0,"description":"..."},{"type":"chapter","title":"...","order":1,"description":"..."},{"type":"chapter","title":"...","order":2,"description":"..."},{"type":"chapter","title":"...","order":3,"description":"..."},{"type":"ending","title":"...","order":4,"description":"..."}]}
+
+Titles must be provocative with specific numbers/names. Start output with { and nothing else.`
+    : `Buat outline video YouTube viral tentang: "${topic}"
 ${openingLine}
 Ringkasan riset:
 ${summary}
 
-WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending):
-{"sections":[{"type":"intro","title":"...sejarah asli & titik krusial yang akan diubah...","order":0,"description":"..."},{"type":"chapter","title":"...momen percabangan: apa yang terjadi berbeda...","order":1,"description":"..."},{"type":"chapter","title":"...konsekuensi langsung skenario alternatif...","order":2,"description":"..."},{"type":"chapter","title":"...efek domino jangka panjang ke dunia modern...","order":3,"description":"..."},{"type":"ending","title":"...refleksi & pertanyaan terbuka yang bikin share...","order":4,"description":"..."}]}
+Struktur: ${channel.prompts.outlineStructure}
 
-Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`,
+WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending):
+{"sections":[{"type":"intro","title":"...","order":0,"description":"..."},{"type":"chapter","title":"...","order":1,"description":"..."},{"type":"chapter","title":"...","order":2,"description":"..."},{"type":"chapter","title":"...","order":3,"description":"..."},{"type":"ending","title":"...","order":4,"description":"..."}]}
+
+Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`
+
+  const content = await chat([
+    {
+      role: 'system',
+      content: `${channel.prompts.narratorPersona} Output ONLY raw JSON, no other text, no markdown, no explanation.`,
     },
+    { role: 'user', content: userPrompt },
   ], true)
   try {
     let cleaned = content.trim()

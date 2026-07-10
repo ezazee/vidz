@@ -275,3 +275,12 @@ export const THUMBNAIL_BG_STYLE =
   'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, ' +
   'rich saturated colors, flat cel shading, dramatic epic composition, high contrast lighting, ' +
   'children storybook art'
+
+// FLUX kadang menyelipkan swastika/simbol kebencian sebagai "generic wall poster/insignia/flag"
+// filler di background, bahkan di scene yang tidak berkaitan sejarah/perang sama sekali —
+// diverifikasi lewat uji lokal. Negative prompt diperkuat + eksplisit larang elemen sumbernya.
+export const SAFETY_NEGATIVE_PROMPT =
+  'no text, no watermark, no logo, no signature, no gibberish text, no photorealism, ' +
+  'no swastika, no nazi symbols, no hate symbols, no political symbols, no national flags, ' +
+  'no religious symbols, no propaganda imagery, no offensive symbols, ' +
+  'no wall posters with symbols or insignia, no framed wall art with symbols, no banners with emblems'

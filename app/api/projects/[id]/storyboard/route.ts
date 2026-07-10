@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 import type { CameraMovement, SceneEffect, TransitionType } from '@/lib/pipeline/types'
 
 interface RouteContext {
@@ -69,7 +70,7 @@ function getBackgroundMusic(genre: string, emotion: string, explicitTheme: strin
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(_request))
 
   // Ambil dan simpan GITHUB_RUN_ID jika dikirimkan oleh runner
   const { searchParams } = new URL(_request.url)

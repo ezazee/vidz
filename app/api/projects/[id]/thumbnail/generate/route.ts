@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { uploadToR2 } from '@/lib/r2'
 import { chat } from '@/lib/ai/client'
-import { composeThumbnail, THUMBNAIL_BG_STYLE } from '@/lib/thumbnail'
+import { composeThumbnail, THUMBNAIL_BG_STYLE, SAFETY_NEGATIVE_PROMPT } from '@/lib/thumbnail'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -14,7 +14,7 @@ async function generateBg(baseUrl: string, apiKey: string, model: string, scene:
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
-        prompt: `${THUMBNAIL_BG_STYLE}. Scene: ${scene}. no text, no watermark, no photorealism, no realistic humans`,
+        prompt: `${THUMBNAIL_BG_STYLE}. Scene: ${scene}. Keep background plain — avoid wall posters, flags, or decorative insignia. no realistic humans. ${SAFETY_NEGATIVE_PROMPT}`,
         n: 1,
         size: '1792x1024',
         response_format: 'url',

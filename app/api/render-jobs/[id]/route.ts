@@ -70,12 +70,16 @@ export async function PATCH(request: Request, context: RouteContext) {
       const aiBaseUrl = process.env.AI_BASE_URL
       const aiApiKey = process.env.AI_API_KEY
       const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
-      const { THUMBNAIL_BG_STYLE, composeThumbnail } = await import('@/lib/thumbnail')
+      const { THUMBNAIL_BG_STYLE, composeThumbnail, SAFETY_NEGATIVE_PROMPT } = await import('@/lib/thumbnail')
       const {
         THUMBNAIL_LAYOUTS, STICKMAN_POSITIONS, TEXT_TREATMENTS, pickExcluding, paletteFor,
       } = await import('@/lib/ai/variation')
+      const { getChannel } = await import('@/lib/channels')
+      // TODO(multi-channel automation): route ini belum terima channelId dari request —
+      // dipakai channel default sampai wiring GH Actions/n8n multi-channel (fase berikutnya).
+      const activeChannel = getChannel()
       const cleanTopic = topic.replace(/\s*\[THEME:.*?\]\s*/gi, '')
-      const palette = paletteFor(category)
+      const palette = paletteFor(category, activeChannel.categoryPalette)
       const paletteHint = palette ? `, ${palette}` : ''
 
       // #7 Rotasi komposisi: hindari kombinasi layout+stickman yang sama dgn 3 thumbnail terakhir.
@@ -96,7 +100,7 @@ export async function PATCH(request: Request, context: RouteContext) {
             headers: { Authorization: `Bearer ${aiApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: modelName,
-              prompt: `${THUMBNAIL_BG_STYLE}${paletteHint}. Scene: ${scene}. no text, no watermark, no photorealism, no realistic humans`,
+              prompt: `${THUMBNAIL_BG_STYLE}${paletteHint}. Scene: ${scene}. Keep background plain — avoid wall posters, flags, or decorative insignia. no realistic humans. ${SAFETY_NEGATIVE_PROMPT}`,
               n: 1,
               size: '1792x1024',
               response_format: 'url',

@@ -68,11 +68,12 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
         console.log(`Updating DB for scene ${scene.order_index + 1} voice & duration...`)
         const patchRes = await fetch(updateUrl, {
           method: 'PATCH',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'x-api-secret': apiSecret 
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-secret': apiSecret,
+            ...(process.env.CHANNEL_ID ? { 'x-channel-id': process.env.CHANNEL_ID } : {}),
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             voice_url: publicPath, 
             voice_status: 'completed',
             duration: duration
@@ -100,7 +101,10 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
 
 async function main() {
   const storyboard = JSON.parse(await fs.readFile('storyboard.json', 'utf8')).storyboard
-  const voice = process.env.TTS_VOICE || 'id-ID-ArdiNeural'
+  // Voice per-channel menang duluan (supaya .env TTS_VOICE global — dipakai channel default —
+  // tidak ke-override paksa ke channel lain). TTS_VOICE cuma fallback untuk channel default.
+  const CHANNEL_VOICE = { brainwhy: 'en-US-GuyNeural' }
+  const voice = CHANNEL_VOICE[process.env.CHANNEL_ID] || process.env.TTS_VOICE || 'id-ID-ArdiNeural'
   const apiSecret = process.env.API_SECRET
   const apiBaseUrl = process.env.API_BASE_URL
   const projectId = process.env.PROJECT_ID

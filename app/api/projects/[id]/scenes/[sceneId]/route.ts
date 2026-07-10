@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 
 interface RouteContext {
   params: Promise<{ id: string; sceneId: string }>
@@ -11,7 +12,7 @@ export async function PATCH(
 ) {
   const { id, sceneId } = await context.params
   const apiSecret = request.headers.get('x-api-secret')
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(request))
 
   // Validasi token keamanan API secret
   if (!apiSecret || apiSecret !== process.env.API_SECRET) {
