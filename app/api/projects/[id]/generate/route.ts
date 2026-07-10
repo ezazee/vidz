@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSql } from '@/lib/db/client'
 import { dispatchRenderWorkflow } from '@/lib/github/dispatch'
+import { resolveChannelId } from '@/lib/channels'
 
 const generateSchema = z.object({
   mode: z.enum(['full', 'partial']).default('full'),
@@ -15,7 +16,8 @@ interface RouteContext {
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params
   const body = generateSchema.parse(await request.json().catch(() => ({})))
-  const sql = getSql()
+  const channelId = resolveChannelId(request)
+  const sql = getSql(channelId)
 
   const jobs = await sql`
     INSERT INTO render_jobs (project_id, mode, scene_ids, status)
@@ -28,6 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
     jobId: jobs[0].id,
     mode: body.mode,
     sceneIds: body.scene_ids,
+    channelId,
   })
 
   return NextResponse.json({ render_job: jobs[0] }, { status: 202 })

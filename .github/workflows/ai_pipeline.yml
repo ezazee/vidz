@@ -37,6 +37,8 @@ jobs:
       - name: Run AI Pipeline
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_BRAINWHY: ${{ secrets.DATABASE_URL_BRAINWHY }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
@@ -57,4 +59,5 @@ jobs:
           curl -sSf -X POST "${{ secrets.API_BASE_URL }}/api/projects/${{ github.event.client_payload.project_id }}/generate" \
             -H "Content-Type: application/json" \
             -H "x-api-secret: ${{ secrets.API_SECRET }}" \
+            -H "x-channel-id: ${{ github.event.client_payload.channel_id }}" \
             -d '{"mode": "full"}'

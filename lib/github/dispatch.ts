@@ -6,6 +6,7 @@ interface DispatchRenderInput {
   jobId: string
   mode: RenderMode
   sceneIds?: string[]
+  channelId?: string
 }
 
 export async function dispatchRenderWorkflow(input: DispatchRenderInput) {
@@ -27,6 +28,7 @@ export async function dispatchRenderWorkflow(input: DispatchRenderInput) {
         job_id: input.jobId,
         mode: input.mode,
         scene_ids: input.sceneIds ?? null,
+        channel_id: input.channelId ?? null,
       },
     }),
   })
@@ -36,7 +38,7 @@ export async function dispatchRenderWorkflow(input: DispatchRenderInput) {
   }
 }
 
-export async function dispatchAiPipeline(projectId: string, baseUrl: string) {
+export async function dispatchAiPipeline(projectId: string, baseUrl: string, channelId?: string) {
   if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
     throw new Error('GITHUB_TOKEN and GITHUB_REPO are required to dispatch AI pipeline')
   }
@@ -53,6 +55,7 @@ export async function dispatchAiPipeline(projectId: string, baseUrl: string) {
       client_payload: {
         project_id: projectId,
         base_url: baseUrl,
+        channel_id: channelId ?? null,
       },
     }),
   })

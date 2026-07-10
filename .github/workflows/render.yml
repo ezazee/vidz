@@ -37,6 +37,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           GITHUB_RUN_ID: ${{ github.run_id }}
 
       - name: Generate images
@@ -45,6 +46,7 @@ jobs:
           AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
@@ -61,6 +63,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
@@ -183,6 +186,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
 
   status-failure:
     runs-on: ubuntu-latest
@@ -197,3 +201,4 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}

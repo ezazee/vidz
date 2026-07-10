@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 
 const createProjectSchema = z.object({
   topic: z.string().min(3),
@@ -9,7 +10,7 @@ const createProjectSchema = z.object({
 
 export async function POST(request: Request) {
   const body = createProjectSchema.parse(await request.json())
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(request))
 
   // Guard anti-duplikat: tolak topik yang sama persis (tanpa tag THEME, case-insensitive)
   const normalized = body.topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim().toLowerCase()
