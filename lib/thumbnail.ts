@@ -94,10 +94,21 @@ function mascotSvg(mood: MascotMood): Buffer {
   </svg>`)
 }
 
-// Bersihkan judul: buang [THEME:...], kutip, "Bagaimana Jika" → "JIKA" biar pendek & punchy
+// Bersihkan judul: buang [THEME:...], kutip, "Bagaimana Jika" → "JIKA" biar pendek & punchy.
+// Judul panjang dengan subtitle ("X: Y") dipotong di titik dua — subtitle bikin 3+ baris raksasa
+// yang menutupi karakter di thumbnail (ditemukan lewat review manual hasil render).
 export function cleanThumbnailTitle(raw: string): string {
   let t = raw.replace(/\s*\[THEME:.*?\]\s*/gi, '').replace(/^["']|["']$/g, '').trim()
   t = t.replace(/^bagaimana jika/i, 'JIKA')
+
+  const colonIdx = t.indexOf(':')
+  if (colonIdx > 10 && colonIdx < t.length - 5) {
+    t = t.slice(0, colonIdx)
+  }
+  if (t.length > 60) {
+    t = t.slice(0, 57).replace(/\s+\S*$/, '') + '…'
+  }
+
   return t.toUpperCase()
 }
 
@@ -123,35 +134,46 @@ function wrapLines(text: string, maxChars: number, maxLines: number): string[] {
 }
 
 // #7 Rotasi komposisi thumbnail — biar tidak selalu split-vertikal + stickman kanan-bawah.
-export type ThumbLayout = 'split_vertical' | 'split_diagonal' | 'full_overlay' | 'split_horizontal'
-export type StickmanPos = 'bottom_right' | 'bottom_left' | 'bottom_center_small' | 'none'
-export type TextTreatmentName = 'yellow_top' | 'white_red_center' | 'white_blue_bottom' | 'yellow_bottom'
+// 'flat_minimal': background warna solid + stickman besar + judul tebal — 100% tanpa AI image,
+// jadi nol risiko simbol/teks ngaco (referensi: channel edukasi bergaya stickman flat).
+export type ThumbLayout = 'split_vertical' | 'split_diagonal' | 'full_overlay' | 'split_horizontal' | 'flat_minimal'
+export type StickmanPos = 'bottom_right' | 'bottom_left' | 'bottom_center_small' | 'center_large' | 'none'
+export type TextTreatmentName =
+  | 'yellow_top' | 'white_red_center' | 'white_blue_bottom' | 'yellow_bottom'
+  | 'white_top' | 'cyan_top'
 
 const TEXT_TREATMENTS: Record<TextTreatmentName, { colors: [string, string]; position: 'top' | 'center' | 'bottom' }> = {
   yellow_top: { colors: ['#ffd23f', '#ffffff'], position: 'top' },
   white_red_center: { colors: ['#ffffff', '#ff4d4d'], position: 'center' },
   white_blue_bottom: { colors: ['#ffffff', '#7ec8ff'], position: 'bottom' },
   yellow_bottom: { colors: ['#ffd23f', '#ffffff'], position: 'bottom' },
+  // Varian 'top' tambahan — dipakai layout 'flat_minimal' (mascot besar di bawah, teks harus di atas).
+  white_top: { colors: ['#ffffff', '#ffd23f'], position: 'top' },
+  cyan_top: { colors: ['#7ec8ff', '#ffffff'], position: 'top' },
 }
 
+// Treatment yang aman dipakai di layout 'flat_minimal' (posisi 'top' saja — mascot menutupi center/bottom).
+export const TOP_TEXT_TREATMENTS: TextTreatmentName[] = ['yellow_top', 'white_top', 'cyan_top']
+
 export interface ThumbnailInput {
-  bgLeft: Buffer          // sejarah asli (akan dibuat suram)
+  bgLeft: Buffer          // sejarah asli (akan dibuat suram). Diabaikan kalau layout 'flat_minimal'.
   bgRight?: Buffer        // skenario alternatif (cerah). Kalau kosong: pakai bgLeft
   title: string
   mood?: MascotMood       // ekspresi maskot; default: deteksi otomatis dari judul
   layout?: ThumbLayout
   stickman?: StickmanPos
   textTreatment?: TextTreatmentName
+  bgColor?: string        // warna dasar untuk layout 'flat_minimal', mis. "#2d3a8c" — scene 100% kode (lihat flatSceneSvg)
 }
 
 // Render judul via canvas + font bundelan (bukan SVG <text> yang butuh font sistem)
-function renderTitlePng(lines: string[], treatment: TextTreatmentName): Buffer {
+function renderTitlePng(lines: string[], treatment: TextTreatmentName, maxFontSize = 104): Buffer {
   const spec = TEXT_TREATMENTS[treatment] ?? TEXT_TREATMENTS.yellow_top
   const canvas = createCanvas(W, H)
   const ctx = canvas.getContext('2d')
 
   // Cari fontSize yang muat: ukur beneran pakai measureText
-  let fontSize = 104
+  let fontSize = maxFontSize
   const maxWidth = W * 0.9
   while (fontSize > 42) {
     ctx.font = `${fontSize}px Anton`
@@ -184,12 +206,61 @@ function renderTitlePng(lines: string[], treatment: TextTreatmentName): Buffer {
   return canvas.toBuffer('image/png')
 }
 
+// Scene flat-vector 100% kode (bukan AI) — dipakai layout 'flat_minimal'. 4 varian dirotasi acak,
+// tiap varian cuma bentuk-bentuk geometris dasar (langit + tanah + 1-2 objek), tanpa teks sama sekali.
+function shade(hex: string, amount: number): string {
+  const n = parseInt(hex.replace('#', ''), 16)
+  const r = Math.min(255, Math.max(0, ((n >> 16) & 0xff) + amount))
+  const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amount))
+  const b = Math.min(255, Math.max(0, (n & 0xff) + amount))
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`
+}
+
+function flatSceneSvg(baseColor: string): Buffer {
+  const sky = shade(baseColor, 60)
+  const ground = shade(baseColor, -20)
+  const accent = shade(baseColor, 100)
+  const variants = [
+    // Bukit + matahari
+    `<circle cx="${W - 220}" cy="180" r="90" fill="${accent}"/>
+     <path d="M 0 ${H * 0.62} Q ${W * 0.3} ${H * 0.5} ${W * 0.6} ${H * 0.62} T ${W} ${H * 0.58} V ${H} H 0 Z" fill="${ground}"/>`,
+    // Rumah sederhana + jalan
+    `<path d="M 0 ${H * 0.7} Q ${W * 0.5} ${H * 0.62} ${W} ${H * 0.7} V ${H} H 0 Z" fill="${ground}"/>
+     <rect x="${W - 420}" y="${H * 0.42}" width="240" height="200" fill="${accent}"/>
+     <polygon points="${W - 440},${H * 0.42} ${W - 300},${H * 0.28} ${W - 160},${H * 0.42}" fill="${accent}"/>`,
+    // Pohon + tanah
+    `<path d="M 0 ${H * 0.66} Q ${W * 0.5} ${H * 0.56} ${W} ${H * 0.66} V ${H} H 0 Z" fill="${ground}"/>
+     <rect x="${W * 0.14}" y="${H * 0.5}" width="18" height="120" fill="${shade(baseColor, -60)}"/>
+     <circle cx="${W * 0.15}" cy="${H * 0.44}" r="90" fill="${accent}"/>`,
+    // Gedung silhouette
+    `<path d="M 0 ${H * 0.72} H ${W} V ${H} H 0 Z" fill="${ground}"/>
+     <rect x="${W - 340}" y="${H * 0.38}" width="90" height="${H * 0.34}" fill="${accent}"/>
+     <rect x="${W - 220}" y="${H * 0.48}" width="90" height="${H * 0.24}" fill="${accent}"/>
+     <rect x="${W - 460}" y="${H * 0.44}" width="90" height="${H * 0.28}" fill="${accent}"/>`,
+  ]
+  const scene = variants[Math.floor(Math.random() * variants.length)]
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+    <rect width="${W}" height="${H}" fill="${sky}"/>
+    ${scene}
+  </svg>`)
+}
+
 // Bikin background sesuai layout — kembalikan array composite layer (bg + divider).
-async function buildBackground(layout: ThumbLayout, bgLeft: Buffer, bgRightRaw?: Buffer) {
+async function buildBackground(layout: ThumbLayout, bgLeft: Buffer, bgRightRaw?: Buffer, bgColor?: string) {
   const dim = { saturation: 0.45, brightness: 0.78 }
   const vivid = { saturation: 1.2, brightness: 1.05 }
   const bgRight = bgRightRaw ?? bgLeft
   const layers: sharp.OverlayOptions[] = []
+
+  if (layout === 'flat_minimal') {
+    // Scene 100% kode (SVG deterministik) — AI-generated background (FLUX) terbukti berulang kali
+    // menghalusinasi teks palsu/ngaco meski prompt eksplisit melarangnya (diverifikasi 4x uji lokal
+    // berturut-turut gagal). Zero AI di layout ini = zero risiko teks/simbol ngaco selamanya.
+    const color = bgColor ?? '#2d3a8c'
+    const svg = flatSceneSvg(color)
+    layers.push({ input: svg, left: 0, top: 0 })
+    return layers
+  }
 
   if (layout === 'full_overlay') {
     // Satu gambar penuh + gradient gelap di bawah biar teks kebaca
@@ -239,6 +310,14 @@ async function buildBackground(layout: ThumbLayout, bgLeft: Buffer, bgRightRaw?:
 // Posisi & ukuran stickman sesuai pool rotasi. null = tanpa stickman.
 async function buildMascotLayer(pos: StickmanPos, mood: MascotMood): Promise<sharp.OverlayOptions | null> {
   if (pos === 'none') return null
+  if (pos === 'center_large') {
+    // Stickman di tengah-bawah — dipakai layout 'flat_minimal'. Skala dijaga cukup kecil supaya
+    // kepala mascot tidak ketiban judul (ditemukan lewat review manual: 0.82 kena tabrak).
+    const mascotH = Math.round(H * 0.58)
+    const mascotW = Math.round(mascotH * (220 / 335))
+    const mascot = await sharp(mascotSvg(mood)).resize(mascotW, mascotH).png().toBuffer()
+    return { input: mascot, left: Math.round((W - mascotW) / 2), top: H - mascotH }
+  }
   const scale = pos === 'bottom_center_small' ? 0.4 : 0.56
   const mascotH = Math.round(H * scale)
   const mascotW = Math.round(mascotH * (220 / 335))
@@ -252,13 +331,15 @@ async function buildMascotLayer(pos: StickmanPos, mood: MascotMood): Promise<sha
 
 export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
   const title = cleanThumbnailTitle(input.title)
-  const lines = wrapLines(title, 18, 3)
+  const lines = wrapLines(title, 18, 2)
   const layout = input.layout ?? 'split_vertical'
   const stickman = input.stickman ?? 'bottom_right'
   const textTreatment = input.textTreatment ?? 'yellow_top'
 
-  const bgLayers = await buildBackground(layout, input.bgLeft, input.bgRight)
-  const textPng = renderTitlePng(lines, textTreatment)
+  const bgLayers = await buildBackground(layout, input.bgLeft, input.bgRight, input.bgColor)
+  // flat_minimal: mascot menempati ~58% tinggi frame dari bawah, judul dipaksa kecil supaya
+  // selalu muat di ruang atas tanpa nabrak kepala mascot.
+  const textPng = renderTitlePng(lines, textTreatment, layout === 'flat_minimal' ? 62 : 104)
   const mascotLayer = await buildMascotLayer(stickman, input.mood ?? detectMood(input.title))
 
   const layers: sharp.OverlayOptions[] = [...bgLayers]

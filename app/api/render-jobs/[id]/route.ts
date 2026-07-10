@@ -68,11 +68,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       autoPublish = !!projectDetails[0]?.auto_publish
       const category = projectDetails[0]?.category || null
 
-      // 2. Background split: dunia asli (kiri) vs skenario alternatif (kanan)
+      // 2. Style 'flat' (BrainWhy dkk): warna solid + stickman besar, TANPA AI image sama sekali —
+      // nol risiko simbol/teks ngaco. Style 'split' (Cabang Sejarah): AI generate 2 background
+      // (konsep dari lib/channels.ts thumbnailConcept — JANGAN hardcode framing di sini).
       const aiBaseUrl = process.env.AI_BASE_URL
       const aiApiKey = process.env.AI_API_KEY
-      const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
-      const { THUMBNAIL_BG_STYLE, composeThumbnail, SAFETY_NEGATIVE_PROMPT } = await import('@/lib/thumbnail')
+      const thumbnailModel = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
+      const { THUMBNAIL_BG_STYLE, composeThumbnail, TOP_TEXT_TREATMENTS } = await import('@/lib/thumbnail')
       const {
         THUMBNAIL_LAYOUTS, STICKMAN_POSITIONS, TEXT_TREATMENTS, pickExcluding, paletteFor,
       } = await import('@/lib/ai/variation')
@@ -87,19 +89,20 @@ export async function PATCH(request: Request, context: RouteContext) {
         WHERE thumbnail_layout IS NOT NULL AND id != ${projectId}
         ORDER BY updated_at DESC LIMIT 3
       `
-      const layout = pickExcluding(THUMBNAIL_LAYOUTS, recentThumbs.map(r => r.thumbnail_layout))
-      const stickman = pickExcluding(STICKMAN_POSITIONS, recentThumbs.map(r => r.stickman_position))
-      const textTreatment = pickExcluding(TEXT_TREATMENTS, recentThumbs.map(r => r.text_treatment))
+      const isFlatStyle = activeChannel.thumbnailStyle === 'flat'
 
-      const genBg = async (scene: string): Promise<Buffer | null> => {
+      // FLUX kadang gagal generate (network/API error) atau kadang halusinasi teks/simbol ngaco —
+      // yang kedua tidak bisa dideteksi otomatis (vision-check sudah dicoba, tidak reliable).
+      // Retry di sini menutup kegagalan teknis dan memberi kesempatan sampel ulang yang beda random.
+      const genBgOnce = async (scene: string): Promise<Buffer | null> => {
         if (!aiBaseUrl || !aiApiKey) return null
         try {
           const aiRes = await fetch(`${aiBaseUrl}/images/generations`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${aiApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: modelName,
-              prompt: `${THUMBNAIL_BG_STYLE}${paletteHint}. Scene: ${scene}. Keep background plain — avoid wall posters, flags, or decorative insignia. no realistic humans. ${SAFETY_NEGATIVE_PROMPT}`,
+              model: thumbnailModel,
+              prompt: `${THUMBNAIL_BG_STYLE}${paletteHint}. Scene: ${scene}.`,
               n: 1,
               size: '1792x1024',
               response_format: 'url',
@@ -118,46 +121,35 @@ export async function PATCH(request: Request, context: RouteContext) {
         }
       }
 
-      let [bgLeft, bgRight] = await Promise.all([
-        genBg(`the real historical events related to ${cleanTopic}, dark gloomy grim atmosphere, ruins and smoke, muted colors`),
-        genBg(`epic alternate reality of ${cleanTopic}, golden glorious prosperous city, bright vivid colors, triumphant atmosphere`),
-      ])
-
-      // Fallback: gambar scene pertama
-      if (!bgLeft && !bgRight) {
-        const firstScene = await sql`
-          SELECT image_url FROM scenes
-          WHERE project_id = ${projectId} AND image_url IS NOT NULL AND image_url != ''
-          ORDER BY order_index ASC LIMIT 1
-        `
-        if (firstScene[0]?.image_url) {
-          try {
-            const sceneImgUrl = firstScene[0].image_url.startsWith('http')
-              ? firstScene[0].image_url
-              : `${process.env.MINIO_PUBLIC_URL}/${process.env.MINIO_BUCKET}/${firstScene[0].image_url}`
-            const bgImgRes = await fetch(sceneImgUrl)
-            if (bgImgRes.ok) bgLeft = Buffer.from(await bgImgRes.arrayBuffer())
-          } catch (e) {
-            console.error('Failed to fetch first scene image for thumbnail:', e)
-          }
+      const genBg = async (scene: string, retries = 2): Promise<Buffer | null> => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          const result = await genBgOnce(scene)
+          if (result) return result
         }
+        return null
       }
 
-      if (bgLeft || bgRight) {
-        // 3. Compose template split-screen konsisten
+      if (isFlatStyle) {
+        // Scene 100% kode (lib/thumbnail.ts flatSceneSvg) + stickman besar — ZERO AI, zero risiko
+        // teks/simbol ngaco. AI background dicoba 2 pendekatan berbeda sebelumnya (negative_prompt,
+        // lalu prompt positif) dan keduanya tetap gagal konsisten (4x uji berturut-turut masih
+        // menghalusinasi teks palsu) — diputuskan pindah total ke pendekatan deterministik.
+        const bgColor = pickExcluding(activeChannel.thumbnailBgColors, recentThumbs.map(r => r.thumbnail_layout))
+        const textTreatment = pickExcluding(TOP_TEXT_TREATMENTS, recentThumbs.map(r => r.text_treatment))
+
         const compositeBuffer = await composeThumbnail({
-          bgLeft: (bgLeft ?? bgRight)!,
-          bgRight: bgRight ?? undefined,
+          bgLeft: Buffer.alloc(0),
           title: cleanTopic,
-          layout,
-          stickman,
+          layout: 'flat_minimal',
+          stickman: 'center_large',
           textTreatment,
+          bgColor,
         })
 
         const { uploadToR2 } = await import('@/lib/r2')
         const filename = `projects/${projectId}/thumbnails/auto-${Date.now()}.jpg`
         const thumbnailUrl = await uploadToR2(filename, compositeBuffer, 'image/jpeg')
-        console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl} [${layout}/${stickman}/${textTreatment}]`)
+        console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl} [flat_minimal/${bgColor}/${textTreatment}]`)
 
         await sql`
           INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
@@ -165,11 +157,67 @@ export async function PATCH(request: Request, context: RouteContext) {
         `
         await sql`
           UPDATE projects
-          SET thumbnail_layout = ${layout}, stickman_position = ${stickman}, text_treatment = ${textTreatment}
+          SET thumbnail_layout = ${bgColor}, stickman_position = 'center_large', text_treatment = ${textTreatment}
           WHERE id = ${projectId}
         `
       } else {
-        console.warn('Tidak bisa membuat thumbnail: tidak ada background tersedia.')
+        const layout = pickExcluding(THUMBNAIL_LAYOUTS, recentThumbs.map(r => r.thumbnail_layout))
+        const stickman = pickExcluding(STICKMAN_POSITIONS, recentThumbs.map(r => r.stickman_position))
+        const textTreatment = pickExcluding(TEXT_TREATMENTS, recentThumbs.map(r => r.text_treatment))
+
+        let [bgLeft, bgRight] = await Promise.all([
+          genBg(activeChannel.thumbnailConcept.left(cleanTopic)),
+          genBg(activeChannel.thumbnailConcept.right(cleanTopic)),
+        ])
+
+        // Fallback: gambar scene pertama
+        if (!bgLeft && !bgRight) {
+          const firstScene = await sql`
+            SELECT image_url FROM scenes
+            WHERE project_id = ${projectId} AND image_url IS NOT NULL AND image_url != ''
+            ORDER BY order_index ASC LIMIT 1
+          `
+          if (firstScene[0]?.image_url) {
+            try {
+              const sceneImgUrl = firstScene[0].image_url.startsWith('http')
+                ? firstScene[0].image_url
+                : `${process.env.MINIO_PUBLIC_URL}/${process.env.MINIO_BUCKET}/${firstScene[0].image_url}`
+              const bgImgRes = await fetch(sceneImgUrl)
+              if (bgImgRes.ok) bgLeft = Buffer.from(await bgImgRes.arrayBuffer())
+            } catch (e) {
+              console.error('Failed to fetch first scene image for thumbnail:', e)
+            }
+          }
+        }
+
+        if (bgLeft || bgRight) {
+          // 3. Compose template split-screen konsisten
+          const compositeBuffer = await composeThumbnail({
+            bgLeft: (bgLeft ?? bgRight)!,
+            bgRight: bgRight ?? undefined,
+            title: cleanTopic,
+            layout,
+            stickman,
+            textTreatment,
+          })
+
+          const { uploadToR2 } = await import('@/lib/r2')
+          const filename = `projects/${projectId}/thumbnails/auto-${Date.now()}.jpg`
+          const thumbnailUrl = await uploadToR2(filename, compositeBuffer, 'image/jpeg')
+          console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl} [${layout}/${stickman}/${textTreatment}]`)
+
+          await sql`
+            INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
+            VALUES (${projectId}, 'render_auto', ${thumbnailUrl}, ${cleanTopic}, 'completed')
+          `
+          await sql`
+            UPDATE projects
+            SET thumbnail_layout = ${layout}, stickman_position = ${stickman}, text_treatment = ${textTreatment}
+            WHERE id = ${projectId}
+          `
+        } else {
+          console.warn('Tidak bisa membuat thumbnail: tidak ada background tersedia.')
+        }
       }
     } catch (err) {
       console.error('Failed to generate thumbnail or publish:', err)

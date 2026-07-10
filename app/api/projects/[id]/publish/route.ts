@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
-import { resolveChannelId } from '@/lib/channels'
+import { resolveChannelId, getChannel } from '@/lib/channels'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -11,7 +11,9 @@ export async function POST(
   context: RouteContext
 ) {
   const { id } = await context.params
-  const sql = getSql(resolveChannelId(request))
+  const channelId = resolveChannelId(request)
+  const sql = getSql(channelId)
+  const channel = getChannel(channelId)
 
   const body = await request.json().catch(() => ({}))
   // #8 Jitter jam posting: geser +7..+38 menit acak supaya tidak selalu tayang
@@ -142,7 +144,9 @@ export async function POST(
     // menambah sentuhan editorial/ajakan diskusi, bukan cuma video hasil generate mentah.
     // project.topic mentah masih bawa tag [THEME:...] — wajib dibersihkan sebelum ditampilkan.
     const topicForComment = project.topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim()
-    const firstComment = `Menurutmu, seberapa besar kemungkinan skenario "${topicForComment}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
+    const firstComment = channel.language === 'en'
+      ? `Have you ever caught yourself doing this? Drop your own experience in the comments below! 🧠`
+      : `Menurutmu, seberapa besar kemungkinan skenario "${topicForComment}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
 
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {

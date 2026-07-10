@@ -22,6 +22,17 @@ export interface ChannelConfig {
   cartoonStyle: string
   openingStyles: ChannelOpeningStyle[]
   fallbackTopics: string[]
+  // Konsep split-screen thumbnail (kiri/kanan) — beda niche butuh framing beda,
+  // JANGAN pakai framing "sejarah asli vs alternate reality" di luar Cabang Sejarah.
+  thumbnailConcept: {
+    left: (topic: string) => string
+    right: (topic: string) => string
+  }
+  // 'split' = dua dunia bersanding + garis merah (khas Cabang Sejarah).
+  // 'flat' = warna solid + stickman besar + judul tebal, 100% tanpa AI image (dipakai channel lain).
+  thumbnailStyle: 'split' | 'flat'
+  // Rotasi warna solid untuk thumbnailStyle 'flat'. Diabaikan kalau 'split'.
+  thumbnailBgColors: string[]
   prompts: {
     // Instruksi "kepribadian" narator, disisipkan ke semua system prompt AI
     narratorPersona: string
@@ -77,6 +88,12 @@ const CABANG_SEJARAH: ChannelConfig = {
     'Bagaimana Jika Jepang Menang Perang Dunia II?',
     'Bagaimana Jika Internet Ditemukan 100 Tahun Lebih Awal?',
   ],
+  thumbnailConcept: {
+    left: (topic) => `the real historical events related to ${topic}, dark gloomy grim atmosphere, ruins and smoke, muted colors. Pure illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
+    right: (topic) => `epic alternate reality of ${topic}, golden glorious prosperous city, bright vivid colors, triumphant atmosphere. Pure illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
+  },
+  thumbnailStyle: 'split',
+  thumbnailBgColors: [],
   prompts: {
     narratorPersona: 'Kamu adalah showrunner video "what-if" sejarah alternatif (storytelling naratif yang seru, bukan dokumenter formal). Semua output dalam Bahasa Indonesia.',
     outlineStructure: '5 sections: 1 intro (sejarah asli & titik krusial) + 3 chapter (percabangan → konsekuensi langsung → efek domino jangka panjang) + 1 ending (refleksi & pertanyaan terbuka).',
@@ -129,6 +146,17 @@ const BRAINWHY: ChannelConfig = {
     'The Real Reason You Remember Insults More Than Compliments',
     'Why Your Brain Lies to You About Yesterday',
   ],
+  // thumbnailStyle 'flat': background scene 100% kode (lib/thumbnail.ts flatSceneSvg), TANPA AI —
+  // dua pendekatan AI-image (negative_prompt, lalu prompt positif "no text") sudah dicoba dan
+  // tetap gagal konsisten (halusinasi teks palsu berulang di uji lokal). thumbnailConcept di bawah
+  // ini SUDAH TIDAK DIPAKAI oleh style 'flat', diisi placeholder agar tetap type-safe / kalau nanti
+  // ingin balik ke AI setelah ada moderasi visual yang reliable.
+  thumbnailConcept: {
+    left: () => '',
+    right: () => '',
+  },
+  thumbnailStyle: 'flat',
+  thumbnailBgColors: ['#2d3a8c', '#1f6f5c', '#a8452e', '#5b3d8c', '#1f5c8c'],
   prompts: {
     narratorPersona: 'You are a sharp, curious science communicator explaining human psychology and behavior in short, punchy explainer videos — engaging like a smart friend, not a textbook. All output in English.',
     outlineStructure: '5 sections: 1 intro (a relatable hook phenomenon) + 3 chapter (what\'s actually happening in the brain → why evolution/psychology wired us this way → real-life everyday examples) + 1 ending (practical takeaway + a thought-provoking question).',
