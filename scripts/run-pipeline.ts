@@ -6,6 +6,8 @@ import { generateDirector } from '../lib/ai/director'
 import { generateOutline } from '../lib/ai/outline'
 import { generateScenes } from '../lib/ai/scenes'
 import { generateSeoMetadata } from '../lib/ai/seo'
+import { generateClosingInsight } from '../lib/ai/closing'
+import { parseCategory, OPENING_STYLES, buildCameraSequence, pickExcluding } from '../lib/ai/variation'
 
 async function runPipeline() {
   const id = process.argv[2]
@@ -24,6 +26,22 @@ async function runPipeline() {
     const projects = await sql`SELECT id, topic FROM projects WHERE id = ${id} LIMIT 1`
     if (!projects[0]) throw new Error('Project not found')
     const topic = projects[0].topic
+
+    // Kategori (dari [THEME:...]) — disimpan untuk palette per-kategori & rotasi.
+    const category = parseCategory(topic)
+
+    // #2 Opening style: hindari gaya 3 video terakhir, paksa lewat prompt.
+    const recentOpenings = await sql`
+      SELECT opening_style_used FROM projects
+      WHERE opening_style_used IS NOT NULL AND id != ${id}
+      ORDER BY created_at DESC LIMIT 3
+    `
+    const openingStyle = pickExcluding(
+      OPENING_STYLES,
+      recentOpenings.map(r => OPENING_STYLES.find(o => o.id === r.opening_style_used)!).filter(Boolean),
+    )
+
+    await sql`UPDATE projects SET category = ${category}, opening_style_used = ${openingStyle.id} WHERE id = ${id}`
 
     // 1. Research
     console.log('[Pipeline] Running Research...')
@@ -67,7 +85,7 @@ async function runPipeline() {
     // 3. Outline
     console.log('[Pipeline] Running Outline...')
     await sql`DELETE FROM outlines WHERE project_id = ${id}`
-    const outline = await generateOutline(topic, research.summary)
+    const outline = await generateOutline(topic, research.summary, openingStyle.instruction)
     await sql`
       INSERT INTO outlines (project_id, structure, status)
       VALUES (${id}, ${JSON.stringify(outline)}::jsonb, 'completed')
@@ -109,6 +127,31 @@ async function runPipeline() {
       }
     }
     console.log(`[Pipeline] Scenes completed. Total: ${allScenes.length} scenes.`)
+
+    // #1 Closing insight — opini/refleksi analitis, disimpan + jadi scene penutup (dibacakan).
+    console.log('[Pipeline] Generating closing insight...')
+    const narrationSoFar = allScenes.map(s => s.narration).filter(Boolean).join('\n\n')
+    const closingInsight = await generateClosingInsight(topic, narrationSoFar)
+    if (closingInsight) {
+      const closingRow = await sql`
+        INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, pexels_query, camera, effect, emotion, transition, duration, image_status, voice_status)
+        VALUES (
+          ${id}, ${globalOrderIndex++}, ${closingInsight}, ${closingInsight},
+          ${'the narrator reflecting thoughtfully, looking directly at viewer, contemplative closing scene'}, '',
+          'zoom_in', 'none', 'thinking', 'fade', 14, 'idle', 'idle'
+        )
+        RETURNING *
+      `
+      allScenes.push(closingRow[0])
+    }
+    await sql`UPDATE projects SET closing_insight = ${closingInsight || null} WHERE id = ${id}`
+
+    // #4 Variasi efek visual: urutan acak, tanpa efek sama 2 scene berturut-turut.
+    const cameraSeq = buildCameraSequence(allScenes.length)
+    for (let i = 0; i < allScenes.length; i++) {
+      await sql`UPDATE scenes SET camera = ${cameraSeq[i]} WHERE id = ${allScenes[i].id}`
+    }
+    await sql`UPDATE projects SET visual_effect_sequence = ${JSON.stringify(cameraSeq)}::jsonb WHERE id = ${id}`
 
     // 5. SEO
     console.log('[Pipeline] Running SEO...')

@@ -16,19 +16,30 @@ const CARTOON_STYLE =
   'rich saturated colors, flat cel shading, richly detailed scenery, ' +
   'lively composition, children storybook art'
 
-function buildImagePrompt(scene, director) {
+// #5 Palette per kategori — konsisten dengan lib/ai/variation.ts (CATEGORY_PALETTE)
+const CATEGORY_PALETTE = {
+  'What-If Sejarah Nusantara': 'warm sepia and gold tones, tropical earthy palette, batik-inspired accents',
+  'What-If Sejarah Dunia': 'classic warm amber and parchment tones, vintage muted palette',
+  'What-If Tokoh Terkenal': 'dramatic high-contrast portrait lighting, bold red and cream accents',
+  'What-If Sains & Teknologi': 'cool blue and teal neon tones, clean futuristic palette',
+  'What-If Perang & Konflik': 'desaturated steel grey and ember orange, smoky dramatic palette',
+  'What-If Bencana Alam': 'dark stormy purple and ash grey, ominous cinematic palette',
+}
+
+function buildImagePrompt(scene, director, category) {
   const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
   // prompt_anchor dari director = MASCOT_ANCHOR + kostum era/topik (di-set lib/ai/director.ts)
   const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
-  return `${CARTOON_STYLE}. Main subject: ${character}, ${action}. no text, no watermark, no logo, no photorealism, not monochrome, no swastika, no nazi symbols, no hate symbols`
+  const palette = (category && CATEGORY_PALETTE[category]) ? `, ${CATEGORY_PALETTE[category]}` : ''
+  return `${CARTOON_STYLE}${palette}. Main subject: ${character}, ${action}. no text, no watermark, no logo, no photorealism, not monochrome, no swastika, no nazi symbols, no hate symbols`
 }
 
-async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId) {
+async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId, category) {
   // Selalu generate AI image — dipakai sebagai foto still (asset ke-2) bahkan jika ada Pexels video
   console.log(`Scene ${scene.order_index + 1}: Generating AI image...`)
 
   const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
-  const prompt = buildImagePrompt(scene, director)
+  const prompt = buildImagePrompt(scene, director, category)
   const maxRetries = 3
   let attempt = 0
 
@@ -139,13 +150,14 @@ async function main() {
   await fs.mkdir('public/images', { recursive: true })
 
   const director = storyboard.director
+  const category = storyboard.category || null
 
   // Batch 4 paralel — SDXL rate limit biasanya ketat
   const batchSize = 4
   for (let i = 0; i < storyboard.scenes.length; i += batchSize) {
     const batch = storyboard.scenes.slice(i, i + batchSize)
     console.log(`Image batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(storyboard.scenes.length / batchSize)}...`)
-    await Promise.all(batch.map(scene => generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId)))
+    await Promise.all(batch.map(scene => generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId, category)))
     if (i + batchSize < storyboard.scenes.length) await delay(500)
   }
 

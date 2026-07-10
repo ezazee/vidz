@@ -60,17 +60,33 @@ export async function PATCH(request: Request, context: RouteContext) {
     try {
       // 1. Ambil detail proyek
       const projectDetails = await sql`
-        SELECT topic, auto_publish FROM projects WHERE id = ${projectId} LIMIT 1
+        SELECT topic, category, auto_publish FROM projects WHERE id = ${projectId} LIMIT 1
       `
       topic = projectDetails[0]?.topic || 'Dokumenter'
       autoPublish = !!projectDetails[0]?.auto_publish
+      const category = projectDetails[0]?.category || null
 
       // 2. Background split: dunia asli (kiri) vs skenario alternatif (kanan)
       const aiBaseUrl = process.env.AI_BASE_URL
       const aiApiKey = process.env.AI_API_KEY
       const modelName = process.env.IMAGE_MODEL || 'cf/@cf/black-forest-labs/flux-1-schnell'
       const { THUMBNAIL_BG_STYLE, composeThumbnail } = await import('@/lib/thumbnail')
+      const {
+        THUMBNAIL_LAYOUTS, STICKMAN_POSITIONS, TEXT_TREATMENTS, pickExcluding, paletteFor,
+      } = await import('@/lib/ai/variation')
       const cleanTopic = topic.replace(/\s*\[THEME:.*?\]\s*/gi, '')
+      const palette = paletteFor(category)
+      const paletteHint = palette ? `, ${palette}` : ''
+
+      // #7 Rotasi komposisi: hindari kombinasi layout+stickman yang sama dgn 3 thumbnail terakhir.
+      const recentThumbs = await sql`
+        SELECT thumbnail_layout, stickman_position, text_treatment FROM projects
+        WHERE thumbnail_layout IS NOT NULL AND id != ${projectId}
+        ORDER BY updated_at DESC LIMIT 3
+      `
+      const layout = pickExcluding(THUMBNAIL_LAYOUTS, recentThumbs.map(r => r.thumbnail_layout))
+      const stickman = pickExcluding(STICKMAN_POSITIONS, recentThumbs.map(r => r.stickman_position))
+      const textTreatment = pickExcluding(TEXT_TREATMENTS, recentThumbs.map(r => r.text_treatment))
 
       const genBg = async (scene: string): Promise<Buffer | null> => {
         if (!aiBaseUrl || !aiApiKey) return null
@@ -80,7 +96,7 @@ export async function PATCH(request: Request, context: RouteContext) {
             headers: { Authorization: `Bearer ${aiApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: modelName,
-              prompt: `${THUMBNAIL_BG_STYLE}. Scene: ${scene}. no text, no watermark, no photorealism, no realistic humans`,
+              prompt: `${THUMBNAIL_BG_STYLE}${paletteHint}. Scene: ${scene}. no text, no watermark, no photorealism, no realistic humans`,
               n: 1,
               size: '1792x1024',
               response_format: 'url',
@@ -130,16 +146,24 @@ export async function PATCH(request: Request, context: RouteContext) {
           bgLeft: (bgLeft ?? bgRight)!,
           bgRight: bgRight ?? undefined,
           title: cleanTopic,
+          layout,
+          stickman,
+          textTreatment,
         })
 
         const { uploadToR2 } = await import('@/lib/r2')
         const filename = `projects/${projectId}/thumbnails/auto-${Date.now()}.jpg`
         const thumbnailUrl = await uploadToR2(filename, compositeBuffer, 'image/jpeg')
-        console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl}`)
+        console.log(`✓ Thumbnail berhasil dibuat: ${thumbnailUrl} [${layout}/${stickman}/${textTreatment}]`)
 
         await sql`
           INSERT INTO thumbnails (project_id, prompt, image_url, overlay_text, status)
           VALUES (${projectId}, 'render_auto', ${thumbnailUrl}, ${cleanTopic}, 'completed')
+        `
+        await sql`
+          UPDATE projects
+          SET thumbnail_layout = ${layout}, stickman_position = ${stickman}, text_treatment = ${textTreatment}
+          WHERE id = ${projectId}
         `
       } else {
         console.warn('Tidak bisa membuat thumbnail: tidak ada background tersedia.')

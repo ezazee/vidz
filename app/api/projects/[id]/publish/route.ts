@@ -13,7 +13,13 @@ export async function POST(
   const sql = getSql()
   
   const body = await request.json().catch(() => ({}))
-  const { scheduledAt } = body // e.g. "2026-06-29T12:00:00.000Z"
+  // #8 Jitter jam posting: geser +7..+38 menit acak supaya tidak selalu tayang
+  // di menit bulat yang sama tiap hari (pola bot). Hanya maju, tak pernah mundur ke masa lalu.
+  let scheduledAt: string | undefined = body.scheduledAt // e.g. "2026-06-29T12:00:00.000Z"
+  if (scheduledAt) {
+    const jitterMs = (7 + Math.floor(Math.random() * 32)) * 60 * 1000
+    scheduledAt = new Date(new Date(scheduledAt).getTime() + jitterMs).toISOString()
+  }
 
   try {
     // 1. Ambil Zernio API Key dan YouTube Account ID dari database

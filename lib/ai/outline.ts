@@ -11,7 +11,10 @@ export interface OutlineOutput {
   sections: OutlineSection[]
 }
 
-export async function generateOutline(topic: string, summary: string): Promise<OutlineOutput> {
+export async function generateOutline(topic: string, summary: string, openingInstruction = ''): Promise<OutlineOutput> {
+  const openingLine = openingInstruction
+    ? `\nGAYA PEMBUKA (WAJIB diterapkan di intro): ${openingInstruction}\n`
+    : ''
   const content = await chat([
     {
       role: 'system',
@@ -20,7 +23,7 @@ export async function generateOutline(topic: string, summary: string): Promise<O
     {
       role: 'user',
       content: `Buat outline video YouTube what-if viral tentang: "${topic}"
-
+${openingLine}
 Ringkasan riset:
 ${summary}
 

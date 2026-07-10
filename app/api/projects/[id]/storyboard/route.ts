@@ -88,7 +88,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const projects = await sql`
-    SELECT id, topic, COALESCE(title, topic) AS title
+    SELECT id, topic, category, COALESCE(title, topic) AS title
     FROM projects
     WHERE id = ${id}
     LIMIT 1
@@ -126,6 +126,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const storyboard = {
     project_id: projects[0].id,
     title: projects[0].title,
+    category: projects[0].category ?? explicitTheme ?? null,
     director: {
       visual_bible: director?.visual_bible ?? {},
       character_bible: director?.character_bible ?? { characters: [] },

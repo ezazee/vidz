@@ -126,7 +126,10 @@ export async function GET() {
 
     // 4. Post terbaru: hanya data upload asli dari aplikasi ini — tanpa data pajangan/acak
     const recentPosts = localUploads.map((lu: any) => ({
-      id: lu.youtube_id || lu.project_id,
+      // project_id selalu unik (dipakai sebagai React key) — youtube_id kadang berisi
+      // string status seperti "pending" untuk video yang belum tayang, bukan id asli.
+      id: lu.project_id,
+      youtubeId: lu.youtube_id,
       title: (lu.title || '').replace(/\s*\[THEME:.*?\]\s*/gi, ''),
       tags: ['CabangSejarah', 'WhatIf'],
       date: new Date(lu.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),

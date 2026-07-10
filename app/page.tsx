@@ -103,7 +103,7 @@ export default function AnalyticsLandingPage() {
 
   // Top content sorted by views for the horizontal bar chart
   const topContent = analytics?.recentPosts
-    ? [...analytics.recentPosts].sort((a, b) => b.views - a.views).slice(0, 8)
+    ? [...analytics.recentPosts].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 8)
     : []
 
   return (
@@ -690,8 +690,9 @@ export default function AnalyticsLandingPage() {
                 {/* Horizontal Bar Chart */}
                 <div className="space-y-4">
                   {topContent.map((post, idx) => {
-                    const maxViews = Math.max(...topContent.map((p) => p.views), 1)
-                    const percentWidth = (post.views / maxViews) * 100
+                    const views = post.views ?? 0
+                    const maxViews = Math.max(...topContent.map((p) => p.views ?? 0), 1)
+                    const percentWidth = (views / maxViews) * 100
 
                     return (
                       <div key={post.id} className="space-y-1">
@@ -699,7 +700,7 @@ export default function AnalyticsLandingPage() {
                           <span className="text-slate-700 truncate max-w-[80%]">
                             {idx + 1}. {post.title}
                           </span>
-                          <span className="text-slate-900 font-black">{post.views.toLocaleString('id-ID')} views</span>
+                          <span className="text-slate-900 font-black">{views.toLocaleString('id-ID')} views</span>
                         </div>
                         <div className="w-full bg-slate-100 h-4 rounded-md overflow-hidden flex">
                           <div
@@ -770,7 +771,7 @@ export default function AnalyticsLandingPage() {
                           <td className="px-6 py-4 text-right font-bold text-slate-600">
                             <div className="flex items-center justify-end gap-1.5">
                               <Heart className="size-3 text-pink-500 fill-pink-500/10" />
-                              {post.likes.toLocaleString('id-ID')}
+                              {(post.likes ?? 0).toLocaleString('id-ID')}
                             </div>
                           </td>
 
@@ -778,7 +779,7 @@ export default function AnalyticsLandingPage() {
                           <td className="px-6 py-4 text-right font-black text-slate-900">
                             <div className="flex items-center justify-end gap-1.5">
                               <Eye className="size-3 text-cyan-600" />
-                              {post.views.toLocaleString('id-ID')}
+                              {(post.views ?? 0).toLocaleString('id-ID')}
                             </div>
                           </td>
 
