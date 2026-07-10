@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -7,7 +8,7 @@ interface RouteContext {
 
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(request))
 
   try {
     const statuses = await sql`
