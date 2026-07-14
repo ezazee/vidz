@@ -15,15 +15,9 @@ export async function POST(
   const sql = getSql(channelId)
   const channel = getChannel(channelId)
 
-  const body = await request.json().catch(() => ({}))
-  // #8 Jitter jam posting: geser +7..+38 menit acak supaya tidak selalu tayang
-  // di menit bulat yang sama tiap hari (pola bot). Hanya maju, tak pernah mundur ke masa lalu.
-  let scheduledAt: string | undefined = body.scheduledAt // e.g. "2026-06-29T12:00:00.000Z"
-  if (scheduledAt) {
-    const jitterMs = (7 + Math.floor(Math.random() * 32)) * 60 * 1000
-    scheduledAt = new Date(new Date(scheduledAt).getTime() + jitterMs).toISOString()
-  }
-
+  // Selalu publishNow — Zernio scheduleDate terbukti tidak reliable (post nyangkut di
+  // Draft, schedulernya sendiri tidak jalan). Jadwal produksi harian yang sudah variatif
+  // (beda jam tiap hari per channel) sudah cukup menghindari pola upload robotik.
   try {
     // 1. Ambil Zernio API Key dan YouTube Account ID dari database
     const integrations = await sql`
@@ -165,8 +159,7 @@ export async function POST(
           platformSpecificData: { firstComment },
         }],
         mediaItems,
-        publishNow: !scheduledAt,
-        ...(scheduledAt ? { scheduleDate: scheduledAt } : {}),
+        publishNow: true,
       }),
     })
 
@@ -182,7 +175,7 @@ export async function POST(
     const youtubeUrl = zernioData.url || zernioData.youtubeUrl || ''
     await sql`
       INSERT INTO uploads (project_id, youtube_id, youtube_url, status, scheduled_at)
-      VALUES (${id}, ${postId}, ${youtubeUrl}, 'processing', ${scheduledAt ? new Date(scheduledAt) : null})
+      VALUES (${id}, ${postId}, ${youtubeUrl}, 'processing', NULL)
       ON CONFLICT DO NOTHING
     `
 
