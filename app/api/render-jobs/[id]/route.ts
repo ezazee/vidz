@@ -49,6 +49,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Render job not found' }, { status: 404 })
   }
 
+  if (body.status === 'completed' && rows[0].mode === 'short') {
+    // Render short (1 chapter, StoryZVideoShort) — bukan video utama, jangan jalankan
+    // logic thumbnail/auto-publish video panjang. Simpan URL & auto-publish sebagai post
+    // terpisah (mediaItems video biasa, tanpa thumbnail wajib).
+    const projectId = rows[0].project_id
+    await sql`UPDATE projects SET short_video_url = ${body.video_url ?? null} WHERE id = ${projectId}`
+    try {
+      const origin = process.env.API_BASE_URL || 'https://vidz-factory.vercel.app'
+      await fetch(`${origin}/api/projects/${projectId}/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-secret': process.env.API_SECRET || '',
+          ...(channelId ? { 'x-channel-id': channelId } : {}),
+        },
+        body: JSON.stringify({ short: true }),
+      })
+      console.log(`[AutoPublish] Short triggered for project ${projectId}`)
+    } catch (pubErr) {
+      console.error('[AutoPublish] Short failed:', pubErr)
+      await sendTelegram(`⚠️ <b>Auto-publish short gagal</b>\n\nProyek: ${projectId}\nCek log Vercel untuk detail.`)
+    }
+    return NextResponse.json({ render_job: rows[0] })
+  }
+
   if (body.status === 'completed') {
     const projectId = rows[0].project_id
     await sql`

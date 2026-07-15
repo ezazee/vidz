@@ -10,9 +10,12 @@ async function main() {
   }
 
   const runId = process.env.GITHUB_RUN_ID
-  const url = runId 
-    ? `${baseUrl}/api/projects/${projectId}/storyboard?run_id=${runId}`
-    : `${baseUrl}/api/projects/${projectId}/storyboard`
+  const sceneIds = process.env.SCENE_IDS
+  const params = new URLSearchParams()
+  if (runId) params.set('run_id', runId)
+  if (sceneIds) params.set('scene_ids', sceneIds)
+  const qs = params.toString()
+  const url = `${baseUrl}/api/projects/${projectId}/storyboard${qs ? `?${qs}` : ''}`
 
   const response = await fetch(url, {
     headers: {

@@ -40,6 +40,8 @@ async function generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projec
       const finalPath = `public/voices/scene-${scene.order_index}.mp3`
 
       // 1. Coba Gemini TTS dulu (WAV) — convert ke MP3 biar konsisten dengan seluruh pipeline.
+      // (Sempat dicoba pitch-shift +2.5% buat mitigasi fingerprint AI, tapi kedengaran aneh/gak
+      // natural ke telinga — di-revert, prioritas kualitas suara di atas mitigasi itu.)
       const geminiWav = await genGeminiTTS(scene.narration, geminiVoice, geminiLanguage)
       if (geminiWav) {
         const tmpWav = `public/voices/tmp-${scene.order_index}.wav`
@@ -151,12 +153,20 @@ async function main() {
 
   await fs.mkdir('public/voices', { recursive: true })
 
-  // Proses suara dalam kelompok (batch) isi 5 secara paralel
-  const batchSize = 5
+  // Proses suara dalam kelompok (batch) isi 3 secara paralel, dengan jeda antar-batch.
+  // Gemini TTS free tier cuma 10 request/~2 menit — batch besar tanpa jeda (dulu 5, tanpa
+  // delay sama sekali) langsung habisin quota di 2 batch pertama, sisanya semua fallback
+  // diam-diam ke Edge TTS (kedengaran beda kualitas, ketauan pas dengar sample beneran).
+  // 3 req / 40s ≈ 1 req/13.3s, di bawah batas aman quota (~12.7s/req).
+  const batchSize = 3
+  const batchDelayMs = 40000
+  const totalBatches = Math.ceil(storyboard.scenes.length / batchSize)
   for (let i = 0; i < storyboard.scenes.length; i += batchSize) {
     const batch = storyboard.scenes.slice(i, i + batchSize)
-    console.log(`Processing voice batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(storyboard.scenes.length / batchSize)}...`)
+    const batchNum = Math.floor(i / batchSize) + 1
+    console.log(`Processing voice batch ${batchNum}/${totalBatches}...`)
     await Promise.all(batch.map(scene => generateVoiceForScene(scene, voice, apiBaseUrl, apiSecret, projectId, geminiVoice, geminiLanguage)))
+    if (batchNum < totalBatches) await delay(batchDelayMs)
   }
 
   await fs.writeFile('storyboard.json', JSON.stringify({ storyboard }, null, 2))

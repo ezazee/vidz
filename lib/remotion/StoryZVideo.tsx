@@ -69,10 +69,19 @@ function SceneImage({ scene }: SceneProps) {
 
 function SceneSubtitle({ scene }: SceneProps) {
   const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
+  const { fps, width, height } = useVideoConfig()
+  const isVertical = height > width
 
   const text = (scene.narration || scene.subtitle || '').trim()
   if (!text) return null
+
+  // Ukuran/posisi proporsional ke resolusi komposisi, bukan hardcode 1920x1080 —
+  // biar 1 komponen dipakai untuk video panjang (16:9) maupun short (9:16) tanpa duplikasi.
+  // Short: font lebih besar (nonton HP dari dekat) + margin bawah lebih lega (hindari
+  // ketutup UI Reels/Shorts platform, biasanya ~15-20% tinggi layar).
+  const fontSize = isVertical ? width * 0.075 : width * 0.028
+  const sideMargin = width * 0.0625
+  const bottomMargin = isVertical ? height * 0.18 : height * 0.093
 
   const words = text.split(' ')
 
@@ -96,16 +105,16 @@ function SceneSubtitle({ scene }: SceneProps) {
     <div
       style={{
         alignSelf: 'center',
-        bottom: 100,
+        bottom: bottomMargin,
         color: '#ffffff',
         fontFamily: "'Trebuchet MS', 'Verdana', 'Arial Rounded MT Bold', sans-serif",
-        fontSize: 54,
+        fontSize,
         fontWeight: 800,
-        left: 120,
+        left: sideMargin,
         lineHeight: 1.3,
-        maxWidth: 1680,
+        maxWidth: width - sideMargin * 2,
         position: 'absolute',
-        right: 120,
+        right: sideMargin,
         textAlign: 'center',
         textShadow: '3px 3px 0px rgba(0, 0, 0, 0.85), 0px 4px 16px rgba(0, 0, 0, 0.5)',
         letterSpacing: '0.2px',
@@ -186,6 +195,29 @@ function StoryScene({ scene }: SceneProps) {
   )
 }
 
+// Watermark kecil pojok kanan bawah, sepanjang durasi video — proporsional ke resolusi
+// biar konsisten di StoryZVideo (16:9) maupun StoryZVideoShort (9:16).
+function Watermark({ url }: { url: string }) {
+  const { width, height } = useVideoConfig()
+  const size = width * 0.07
+
+  return (
+    <Img
+      src={url.startsWith('http') ? url : staticFile(url)}
+      style={{
+        position: 'absolute',
+        bottom: height * 0.03,
+        right: width * 0.025,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        opacity: 0.85,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+      }}
+    />
+  )
+}
+
 export interface StoryZVideoProps {
   storyboard?: StoryboardJSON
 }
@@ -219,6 +251,8 @@ export function StoryZVideo({ storyboard = storyboardFixture }: StoryZVideoProps
         from += durationInFrames
         return sequence
       })}
+
+      {storyboard.watermark_url && <Watermark url={storyboard.watermark_url} />}
     </AbsoluteFill>
   )
 }

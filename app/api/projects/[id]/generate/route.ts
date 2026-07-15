@@ -5,7 +5,7 @@ import { dispatchRenderWorkflow } from '@/lib/github/dispatch'
 import { resolveChannelId } from '@/lib/channels'
 
 const generateSchema = z.object({
-  mode: z.enum(['full', 'partial']).default('full'),
+  mode: z.enum(['full', 'partial', 'short']).default('full'),
   scene_ids: z.array(z.string().uuid()).optional(),
 })
 
@@ -19,9 +19,20 @@ export async function POST(request: Request, context: RouteContext) {
   const channelId = resolveChannelId(request)
   const sql = getSql(channelId)
 
+  let sceneIds = body.scene_ids
+  if (body.mode === 'short' && !sceneIds) {
+    // Short dipicu tanpa scene_ids eksplisit → pakai chapter yang sudah dipilih AI
+    // saat AI pipeline jalan (scripts/run-pipeline.ts → projects.short_scene_ids).
+    const proj = await sql`SELECT short_scene_ids FROM projects WHERE id = ${id}`
+    sceneIds = proj[0]?.short_scene_ids ?? undefined
+    if (!sceneIds || sceneIds.length === 0) {
+      return NextResponse.json({ error: 'Belum ada short_scene_ids untuk project ini — jalankan AI pipeline dulu.' }, { status: 400 })
+    }
+  }
+
   const jobs = await sql`
     INSERT INTO render_jobs (project_id, mode, scene_ids, status)
-    VALUES (${id}, ${body.mode}, ${body.scene_ids ? JSON.stringify(body.scene_ids) : null}::jsonb, 'pending')
+    VALUES (${id}, ${body.mode}, ${sceneIds ? JSON.stringify(sceneIds) : null}::jsonb, 'pending')
     RETURNING *
   `
 
@@ -29,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
     projectId: id,
     jobId: jobs[0].id,
     mode: body.mode,
-    sceneIds: body.scene_ids,
+    sceneIds,
     channelId,
   })
 

@@ -7,6 +7,7 @@ import { env } from '@/lib/env'
 // tetap pakai DATABASE_URL lama (schema public / Cabang Sejarah) — 100% backward compatible.
 const CHANNEL_ENV_MAP: Record<string, keyof typeof env> = {
   brainwhy: 'DATABASE_URL_BRAINWHY',
+  'cerita-tetangga': 'DATABASE_URL_CERITA_TETANGGA',
 }
 
 export function getSql(channelId?: string) {

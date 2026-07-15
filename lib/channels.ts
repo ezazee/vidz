@@ -1,7 +1,7 @@
 // Konfigurasi per-channel — satu engine (kode) dipakai lintas channel, "kepribadian"
 // (bahasa, niche, kategori, voice, palette) dipilih dari sini berdasarkan channel aktif.
 
-export type ChannelId = 'cabang-sejarah' | 'brainwhy'
+export type ChannelId = 'cabang-sejarah' | 'brainwhy' | 'cerita-tetangga'
 
 export interface ChannelOpeningStyle {
   id: string
@@ -33,6 +33,12 @@ export interface ChannelConfig {
   thumbnailStyle: 'split' | 'flat'
   // Rotasi warna solid untuk thumbnailStyle 'flat'. Diabaikan kalau 'split'.
   thumbnailBgColors: string[]
+  // Platform tujuan publish — menentukan branch mana yang dipakai di publish/route.ts.
+  // Default (field tidak diisi) = 'youtube', 100% backward compatible dengan channel lama.
+  publishPlatform?: 'youtube' | 'facebook'
+  // Watermark logo kecil di pojok video sepanjang durasi — path relatif ke public/ (staticFile).
+  // Default (tidak diisi) = tanpa watermark, channel lama tidak terpengaruh.
+  watermarkAsset?: string
   prompts: {
     // Instruksi "kepribadian" narator, disisipkan ke semua system prompt AI
     narratorPersona: string
@@ -164,9 +170,70 @@ const BRAINWHY: ChannelConfig = {
   },
 }
 
+const CERITA_TETANGGA: ChannelConfig = {
+  id: 'cerita-tetangga',
+  name: 'Cerita Tetangga',
+  tagline: 'Kisah nyata dari sekitar kita.',
+  language: 'id',
+  ttsVoice: 'id-ID-ArdiNeural',
+  categories: [
+    'Drama Keluarga',
+    'Konflik Tetangga',
+    'Kisah Mistis',
+    'Kriminal & Pelajaran Hidup',
+    'Perselingkuhan & Percintaan',
+    'Kejadian Viral Warga',
+  ],
+  categoryPalette: {
+    'Drama Keluarga': 'warm amber and soft brown tones, cozy domestic palette',
+    'Konflik Tetangga': 'dusty terracotta and muted green, tense neighborhood palette',
+    'Kisah Mistis': 'deep indigo and pale moonlight blue, eerie nocturnal palette',
+    'Kriminal & Pelajaran Hidup': 'desaturated grey and warm ember accent, sobering palette',
+    'Perselingkuhan & Percintaan': 'dusty rose and warm gold, melancholic romantic palette',
+    'Kejadian Viral Warga': 'bright golden hour orange and cream, lively kampung palette',
+  },
+  titlePrefix: null,
+  mascotName: 'Warga',
+  mascotAnchor: 'ordinary Indonesian kampung residents in everyday clothing, warm expressive faces — no single fixed narrator character, each scene features whichever character the story is about',
+  cartoonStyle: 'warm hand-drawn cartoon illustration, soft rounded ink outlines, golden-hour and lamplight color grading, cozy kampung storybook art, expressive faces, gentle cel shading',
+  openingStyles: [
+    { id: 'pertanyaan_retoris', instruction: 'Buka dengan pertanyaan retoris yang bikin penonton penasaran soal nasib tokoh.' },
+    { id: 'statement_kontroversial', instruction: 'Buka dengan pernyataan yang bikin geram/penasaran soal kejadian di lingkungan.' },
+    { id: 'fakta_pembuka', instruction: 'Buka dengan satu fakta/kejadian singkat yang mengejutkan tanpa spoiler akhir cerita.' },
+    { id: 'hipotesis_langsung', instruction: 'Buka langsung dengan gambaran situasi tegang di tengah cerita, baru mundur ke awal.' },
+    { id: 'adegan_sinematik', instruction: 'Buka dengan deskripsi adegan sehari-hari yang tiba-tiba berubah jadi tegang.' },
+    { id: 'kontras_waktu', instruction: 'Buka dengan mengontraskan kehidupan tokoh sebelum dan sesudah kejadian.' },
+    { id: 'tokoh_pov', instruction: 'Buka dari sudut pandang tokoh utama saat momen kejadian penting berlangsung.' },
+    { id: 'angka_mengejutkan', instruction: 'Buka dengan detail kecil yang mengejutkan (waktu, tempat, kebiasaan) yang jadi kunci cerita.' },
+    { id: 'teka_teki', instruction: 'Buka dengan teka-teki "kenapa dia bisa begitu?" yang menggantung sampai pertengahan cerita.' },
+    { id: 'analogi_relatable', instruction: 'Buka dengan analogi/pengalaman sehari-hari yang relatable buat penonton dewasa.' },
+  ],
+  fallbackTopics: [
+    'Wanita Ini Curiga Suaminya Selingkuh, Ternyata Kebenarannya Lebih Menyakitkan',
+    'Tetangga Baru Ini Selalu Aneh Tiap Malam Jumat, Warga Akhirnya Cari Tahu',
+    'Anak Ini Diusir dari Rumah, 10 Tahun Kemudian Dia Kembali Membawa Kejutan',
+    'Ibu Ini Rela Kerja Serabutan demi Anaknya Sekolah, Endingnya Bikin Haru',
+    'Kejadian Aneh di Gang Sempit Ini Bikin Satu RT Gempar Semalaman',
+  ],
+  thumbnailConcept: {
+    left: (topic) => `an ordinary Indonesian kampung resident looking worried and troubled, standing in front of a modest house at dusk, related to: ${topic}, tense muted atmosphere, warm dim lighting. Pure character illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
+    right: (topic) => `the resolution moment — relief, tears, or a warm reunion, same kampung setting now bathed in warm golden light, related to: ${topic}, emotional heartfelt atmosphere. Pure character illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
+  },
+  thumbnailStyle: 'split',
+  thumbnailBgColors: [],
+  publishPlatform: 'facebook',
+  watermarkAsset: 'branding/cerita-tetangga-mark.png',
+  prompts: {
+    narratorPersona: 'Kamu adalah pencerita kisah hidup/drama warga gaya obrolan tetangga yang hangat dan santai — bukan berita formal. SELALU jelas ini kisah FIKSI yang terinspirasi kejadian nyata (nama, tempat, dan detail identitas disamarkan/dikomposit dari beberapa kejadian). Semua output dalam Bahasa Indonesia.',
+    outlineStructure: '5 sections: 1 intro (perkenalan situasi & hook awal masalah) + 3 chapter (memburuknya situasi → titik krusial/konflik memuncak → jalan keluar atau kebenaran terungkap) + 1 ending (pelajaran hidup/moral, bukan cuma penutup).',
+    sceneImageRules: 'Format: "[aksi tokoh sesuai narasi], [orang lain/keluarga/tetangga di scene], [setting rumah/gang/lingkungan & mood]". Karakter JANGAN dideskripsikan fisiknya secara detail dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Buat scene HIDUP dan personal — ekspresi wajah, interaksi, suasana rumah/kampung yang relatable.',
+  },
+}
+
 const CHANNELS: Record<ChannelId, ChannelConfig> = {
   'cabang-sejarah': CABANG_SEJARAH,
   'brainwhy': BRAINWHY,
+  'cerita-tetangga': CERITA_TETANGGA,
 }
 
 export function getChannel(channelId?: string | null): ChannelConfig {

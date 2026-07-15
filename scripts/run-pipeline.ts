@@ -7,6 +7,7 @@ import { generateOutline } from '../lib/ai/outline'
 import { generateScenes } from '../lib/ai/scenes'
 import { generateSeoMetadata } from '../lib/ai/seo'
 import { generateClosingInsight } from '../lib/ai/closing'
+import { pickShortSection } from '../lib/ai/pickShortSection'
 import { parseCategory, buildCameraSequence, pickExcluding } from '../lib/ai/variation'
 import { getChannel, type ChannelId } from '../lib/channels'
 
@@ -105,6 +106,8 @@ async function runPipeline() {
     
     const allScenes: any[] = []
     let globalOrderIndex = 0
+    // Chapter (bukan intro/ending) = kandidat short — potongan berdiri sendiri paling masuk akal.
+    const chapterCandidates: { index: number; title: string; sceneIds: string[]; narration: string }[] = []
 
     for (const section of outline.sections) {
       console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
@@ -118,6 +121,8 @@ async function runPipeline() {
         channelId,
       })
 
+      const sectionSceneIds: string[] = []
+      const sectionNarration: string[] = []
       for (const scene of scenes) {
         scene.order_index = globalOrderIndex++
         const row = await sql`
@@ -131,9 +136,30 @@ async function runPipeline() {
           RETURNING *
         `
         allScenes.push(row[0])
+        sectionSceneIds.push(row[0].id)
+        sectionNarration.push(row[0].narration || '')
+      }
+
+      if (section.type === 'chapter') {
+        chapterCandidates.push({
+          index: chapterCandidates.length,
+          title: section.title,
+          sceneIds: sectionSceneIds,
+          narration: sectionNarration.join(' '),
+        })
       }
     }
     console.log(`[Pipeline] Scenes completed. Total: ${allScenes.length} scenes.`)
+
+    // Short/reels: AI pilih 1 chapter paling berdiri sendiri, disimpan buat trigger render
+    // terpisah nanti (POST /api/projects/:id/generate {mode:'short'}) — lihat lib/ai/pickShortSection.ts.
+    if (chapterCandidates.length > 0) {
+      console.log('[Pipeline] Picking best chapter for short/reels...')
+      const pickedIndex = await pickShortSection(topic, chapterCandidates, channelId)
+      const picked = chapterCandidates.find((c) => c.index === pickedIndex) ?? chapterCandidates[0]
+      await sql`UPDATE projects SET short_scene_ids = ${JSON.stringify(picked.sceneIds)}::jsonb WHERE id = ${id}`
+      console.log(`[Pipeline] Short section picked: chapter ${picked.index} - "${picked.title}" (${picked.sceneIds.length} scenes).`)
+    }
 
     // #1 Closing insight — opini/refleksi analitis, disimpan + jadi scene penutup (dibacakan).
     console.log('[Pipeline] Generating closing insight...')

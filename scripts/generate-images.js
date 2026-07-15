@@ -8,6 +8,11 @@ const { mascotOverlay } = require('./mascot')
 // Maskot digambar AI langsung DI DALAM scene (FLUX handal soal ini, beda dengan SDXL dulu):
 // anchor fisik tetap + kostum kontekstual per topik dari director.character_bible.
 // Plus: narator stickman polos (SVG) di-composite ke pojok tiap scene — scripts/mascot.js
+//
+// Channel-aware: nilai di bawah ini fallback default (Cabang Sejarah, backward compatible).
+// Channel lain (BrainWhy, Cerita Tetangga, dst) override via CHANNEL_STYLE — HARUS disinkron
+// manual dengan lib/channels.ts (file ini plain JS/CommonJS, tidak bisa import langsung dari
+// lib/channels.ts yang ESM+TypeScript).
 const MASCOT_ANCHOR =
   'a simple white stickman character with plain round white head and two black dot eyes'
 
@@ -26,6 +31,52 @@ const CATEGORY_PALETTE = {
   'What-If Bencana Alam': 'dark stormy purple and ash grey, ominous cinematic palette',
 }
 
+const CHANNEL_STYLE = {
+  brainwhy: {
+    mascotAnchor:
+      'a simple stickman character with a round white head, two black dot eyes, a small smile, ' +
+      'and an orange/coral brain-shaped icon glowing on top of its head like a lightbulb',
+    cartoonStyle:
+      'clean modern flat vector illustration, minimal geometric style, thin bold outlines, ' +
+      'deep indigo and soft lavender background tones with coral accent highlights, ' +
+      'smooth flat shading, uncluttered composition, modern educational explainer art',
+    categoryPalette: {
+      'Cognitive Biases': 'cool indigo and soft lavender tones, clean analytical palette',
+      'Habits & Behavior': 'warm coral and deep navy accents, energetic focused palette',
+      'Emotions & Mood': 'muted violet and dusty rose tones, introspective calm palette',
+      'Relationships & Social Psychology': 'warm amber and indigo contrast, human connection palette',
+      'Sleep & Brain Health': 'deep midnight blue and soft periwinkle, calm nocturnal palette',
+      'Dark Psychology & Manipulation': 'high-contrast charcoal and coral red, tense dramatic palette',
+    },
+  },
+  'cerita-tetangga': {
+    mascotAnchor:
+      'ordinary Indonesian kampung residents in everyday clothing, warm expressive faces — ' +
+      'no single fixed narrator character, each scene features whichever character the story is about',
+    cartoonStyle:
+      'warm hand-drawn cartoon illustration, soft rounded ink outlines, ' +
+      'golden-hour and lamplight color grading, cozy kampung storybook art, ' +
+      'expressive faces, gentle cel shading',
+    categoryPalette: {
+      'Drama Keluarga': 'warm amber and soft brown tones, cozy domestic palette',
+      'Konflik Tetangga': 'dusty terracotta and muted green, tense neighborhood palette',
+      'Kisah Mistis': 'deep indigo and pale moonlight blue, eerie nocturnal palette',
+      'Kriminal & Pelajaran Hidup': 'desaturated grey and warm ember accent, sobering palette',
+      'Perselingkuhan & Percintaan': 'dusty rose and warm gold, melancholic romantic palette',
+      'Kejadian Viral Warga': 'bright golden hour orange and cream, lively kampung palette',
+    },
+  },
+}
+
+function styleFor(channelId) {
+  const override = CHANNEL_STYLE[channelId]
+  return {
+    mascotAnchor: override?.mascotAnchor || MASCOT_ANCHOR,
+    cartoonStyle: override?.cartoonStyle || CARTOON_STYLE,
+    categoryPalette: override?.categoryPalette || CATEGORY_PALETTE,
+  }
+}
+
 // Ditemukan (uji lokal BrainWhy): FLUX kadang menyelipkan swastika/simbol kebencian
 // sebagai "generic wall poster/insignia" filler di background, bahkan di scene yang
 // topiknya tidak berkaitan sejarah/perang sama sekali. Negative prompt lama tidak cukup —
@@ -37,14 +88,15 @@ const SAFETY_NEGATIVE =
   'no wall posters with symbols or insignia, no framed wall art with symbols, no banners with emblems'
 
 function buildImagePrompt(scene, director, category) {
+  const style = styleFor(process.env.CHANNEL_ID)
   const action = scene.image_prompt || `witnessing: ${scene.narration?.slice(0, 80)}`
-  // prompt_anchor dari director = MASCOT_ANCHOR + kostum era/topik (di-set lib/ai/director.ts)
-  const character = director?.character_bible?.characters?.[0]?.prompt_anchor || MASCOT_ANCHOR
-  const palette = (category && CATEGORY_PALETTE[category]) ? `, ${CATEGORY_PALETTE[category]}` : ''
+  // prompt_anchor dari director = mascotAnchor + kostum era/topik (di-set lib/ai/director.ts)
+  const character = director?.character_bible?.characters?.[0]?.prompt_anchor || style.mascotAnchor
+  const palette = (category && style.categoryPalette[category]) ? `, ${style.categoryPalette[category]}` : ''
   // "EXACTLY as described" + "do not redesign" ditambahkan setelah uji lokal menunjukkan FLUX
   // kadang mengganti desain karakter jadi gaya webcomic detail penuh (rambut, wajah realistis)
   // alih-alih anchor stickman sederhana yang diminta.
-  return `${CARTOON_STYLE}${palette}. Main subject: EXACTLY as described, do not redesign or add extra facial/hair details — ${character}. Action: ${action}. Keep background props plain and generic (plants, furniture, blank windows) — avoid wall posters, flags, or decorative insignia. ${SAFETY_NEGATIVE}`
+  return `${style.cartoonStyle}${palette}. Main subject: EXACTLY as described, do not redesign or add extra facial/hair details — ${character}. Action: ${action}. Keep background props plain and generic (plants, furniture, blank windows) — avoid wall posters, flags, or decorative insignia. ${SAFETY_NEGATIVE}`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId, category) {

@@ -39,6 +39,7 @@ jobs:
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
           CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          SCENE_IDS: ${{ github.event.client_payload.scene_ids && join(github.event.client_payload.scene_ids, ',') || '' }}
 
       - name: Generate images
         run: node scripts/generate-images.js
@@ -124,10 +125,11 @@ jobs:
       - name: Render video chunk
         run: |
           mkdir -p output
-          npx remotion render src/index.ts StoryZVideo output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2 --timeout=120000
+          npx remotion render src/index.ts "$COMPOSITION_ID" output/part-${{ matrix.chunk.part }}.mp4 --frames=${{ matrix.chunk.frames }} --props=storyboard.json --concurrency=2 --timeout=120000
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           REMOTION_LOCAL_ASSETS: 'true'
+          COMPOSITION_ID: ${{ github.event.client_payload.mode == 'short' && 'StoryZVideoShort' || 'StoryZVideo' }}
 
       - name: Upload chunk artifact
         uses: actions/upload-artifact@v4

@@ -1,13 +1,49 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
-import { resolveChannelId } from '@/lib/channels'
+import { resolveChannelId, getChannel } from '@/lib/channels'
 import type { CameraMovement, SceneEffect, TransitionType } from '@/lib/pipeline/types'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-function getBackgroundMusic(genre: string, emotion: string, explicitTheme: string | null): { url: string; volume: number } {
+function getBackgroundMusic(genre: string, emotion: string, explicitTheme: string | null, useRealTracks = false): { url: string; volume: number; attribution?: string } {
+  // Cerita Tetangga: pool per mood, gabung track musik asli royalty-free (Archive.org, CC
+  // "no copyright music", izin eksplisit pemakaian komersial dengan syarat kredit) + drone
+  // sintetis yang sudah ada — dipilih ACAK dari pool biar gak monoton 1 lagu terus tiap video.
+  // Channel lain TIDAK disentuh (tetap logic lama di bawah, drone sintetis saja).
+  if (useRealTracks) {
+    const emotionLower = emotion.toLowerCase()
+    const attribution = 'Music by AShamaluevMusic (soundcloud.com/ashamaluevmusic)'
+
+    const pools: Record<'sad' | 'tense' | 'warm', { url: string; attribution?: string }[]> = {
+      sad: [
+        { url: 'audio/sad-piano-real.mp3', attribution },
+        { url: 'audio/rain-and-tears.wav' },
+      ],
+      tense: [
+        { url: 'audio/tense-dramatic-real.mp3', attribution },
+        { url: 'audio/unsolved-mystery.wav' },
+        { url: 'audio/light-in-the-darkness.wav' },
+      ],
+      warm: [
+        { url: 'audio/warm-hopeful-real.mp3', attribution },
+        { url: 'audio/warm-light.wav' },
+      ],
+    }
+
+    let mood: 'sad' | 'tense' | 'warm' = 'warm'
+    if (emotionLower.includes('sad') || emotionLower.includes('tragedy') || emotionLower.includes('melancholy') || emotionLower.includes('emotional')) {
+      mood = 'sad'
+    } else if (emotionLower.includes('tense') || emotionLower.includes('suspense') || emotionLower.includes('dark') || emotionLower.includes('mysterious')) {
+      mood = 'tense'
+    }
+
+    const pool = pools[mood]
+    const picked = pool[Math.floor(Math.random() * pool.length)]
+    return { url: picked.url, volume: 0.12, attribution: picked.attribution }
+  }
+
   // 1. Explicit Theme Override
   if (explicitTheme) {
     const theme = explicitTheme.toLowerCase()
@@ -70,7 +106,9 @@ function getBackgroundMusic(genre: string, emotion: string, explicitTheme: strin
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params
-  const sql = getSql(resolveChannelId(_request))
+  const channelId = resolveChannelId(_request)
+  const sql = getSql(channelId)
+  const channel = getChannel(channelId)
 
   // Ambil dan simpan GITHUB_RUN_ID jika dikirimkan oleh runner
   const { searchParams } = new URL(_request.url)
@@ -107,12 +145,23 @@ export async function GET(_request: Request, context: RouteContext) {
     LIMIT 1
   `
 
-  const scenes = await sql`
-    SELECT *
-    FROM scenes
-    WHERE project_id = ${id}
-    ORDER BY order_index ASC
-  `
+  // scene_ids query param (dikirim fetch-storyboard.js untuk render short) — filter ke
+  // subset scene, dipakai StoryZVideoShort. Tanpa param = perilaku lama, semua scene.
+  const sceneIdsParam = searchParams.get('scene_ids')
+  const sceneIdsFilter = sceneIdsParam ? sceneIdsParam.split(',').filter(Boolean) : null
+
+  const scenes = sceneIdsFilter
+    ? await sql`
+        SELECT * FROM scenes
+        WHERE project_id = ${id} AND id = ANY(${sceneIdsFilter})
+        ORDER BY order_index ASC
+      `
+    : await sql`
+        SELECT *
+        FROM scenes
+        WHERE project_id = ${id}
+        ORDER BY order_index ASC
+      `
 
   const director = directors[0]
   const genre = director?.genre ?? 'documentary'
@@ -122,7 +171,10 @@ export async function GET(_request: Request, context: RouteContext) {
   const themeMatch = rawTopic.match(/\[THEME:\s*(.*?)\]/i)
   const explicitTheme = themeMatch ? themeMatch[1] : null
 
-  const music = getBackgroundMusic(genre, emotion, explicitTheme)
+  const music = getBackgroundMusic(genre, emotion, explicitTheme, channel.id === 'cerita-tetangga')
+  // Simpan atribusi (kalau ada) biar publish route tau apakah caption perlu kredit musik —
+  // track sintetis (drone) tidak butuh kredit, track asli (Archive.org) wajib.
+  await sql`UPDATE projects SET music_attribution = ${music.attribution ?? null} WHERE id = ${id}`
 
   const storyboard = {
     project_id: projects[0].id,
@@ -164,7 +216,9 @@ export async function GET(_request: Request, context: RouteContext) {
     audio: {
       background_music_url: music.url,
       background_music_volume: music.volume,
+      background_music_attribution: music.attribution ?? null,
     },
+    watermark_url: channel.watermarkAsset ?? null,
   }
 
   return NextResponse.json({ storyboard })

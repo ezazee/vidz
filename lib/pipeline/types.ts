@@ -1,5 +1,5 @@
 export type PipelineStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed'
-export type RenderMode = 'full' | 'partial'
+export type RenderMode = 'full' | 'partial' | 'short'
 export type VideoStatus = 'draft' | 'rendered' | 'uploaded'
 
 export type CameraMovement =
@@ -107,5 +107,7 @@ export interface StoryboardJSON {
   audio: {
     background_music_url?: string
     background_music_volume: number
+    background_music_attribution?: string | null
   }
+  watermark_url?: string | null
 }

@@ -14,31 +14,42 @@ export async function POST(
   const channelId = resolveChannelId(request)
   const sql = getSql(channelId)
   const channel = getChannel(channelId)
+  const isShort = (await request.json().catch(() => ({} as any)))?.short === true
 
   // Selalu publishNow — Zernio scheduleDate terbukti tidak reliable (post nyangkut di
   // Draft, schedulernya sendiri tidak jalan). Jadwal produksi harian yang sudah variatif
   // (beda jam tiap hari per channel) sudah cukup menghindari pola upload robotik.
   try {
-    // 1. Ambil Zernio API Key dan YouTube Account ID dari database
+    // 1. Ambil Zernio API Key dan account ID platform tujuan dari database.
+    // publishPlatform per channel (lib/channels.ts) — default 'youtube', channel lain
+    // (mis. Cerita Tetangga) bisa 'facebook'. Cabang path YouTube di bawah TIDAK diubah sama
+    // sekali biar channel yang sudah live tidak kena dampak.
+    const platform = channel.publishPlatform ?? 'youtube'
     const integrations = await sql`
-      SELECT key, value FROM integrations 
-      WHERE key IN ('zernio_api_key', 'youtube_account_id')
+      SELECT key, value FROM integrations
+      WHERE key IN ('zernio_api_key', 'youtube_account_id', 'facebook_account_id')
     `
     const config: Record<string, string> = {}
     for (const row of integrations) {
       config[row.key] = row.value
     }
 
-    if (!config.zernio_api_key || !config.youtube_account_id) {
+    if (platform === 'facebook') {
+      if (!config.zernio_api_key || !config.facebook_account_id) {
+        return NextResponse.json({ error: 'Koneksi Facebook belum diaktifkan. Silakan hubungkan Facebook Page di tab Integrasi.' }, { status: 400 })
+      }
+    } else if (!config.zernio_api_key || !config.youtube_account_id) {
       return NextResponse.json({ error: 'Koneksi YouTube belum diaktifkan. Silakan hubungkan YouTube di tab Integrasi.' }, { status: 400 })
     }
 
     // 2. Ambil detail proyek, tautan video MP4, dan metadata SEO
     const projects = await sql`
-      SELECT 
-        p.id, 
-        p.topic, 
+      SELECT
+        p.id,
+        p.topic,
+        p.music_attribution,
         rj.video_url,
+        p.short_video_url,
         th.image_url as thumbnail_url,
         seo.title as seo_title,
         seo.description as seo_description,
@@ -68,8 +79,9 @@ export async function POST(
     }
 
     const project = projects[0]
-    if (!project.video_url) {
-      return NextResponse.json({ error: 'Video belum selesai dirender. Tunggu hingga status render selesai.' }, { status: 400 })
+    const publishVideoUrl = isShort ? project.short_video_url : project.video_url
+    if (!publishVideoUrl) {
+      return NextResponse.json({ error: isShort ? 'Short belum selesai dirender.' : 'Video belum selesai dirender. Tunggu hingga status render selesai.' }, { status: 400 })
     }
 
     // 3. Ambil seluruh adegan storyboard untuk menyusun deskripsi video cadangan (fallback)
@@ -117,19 +129,18 @@ export async function POST(
       finalDescription += "Dihasilkan secara otomatis menggunakan kecerdasan buatan (AI) di StoryZ Studio."
     }
 
-    console.log(`Publishing video for project ${id} to YouTube account ${config.youtube_account_id}...`)
+    console.log(`Publishing video for project ${id} to ${platform} account ${platform === 'facebook' ? config.facebook_account_id : config.youtube_account_id}...`)
 
     // Zernio: title field diabaikan, YouTube title diambil dari baris pertama content
     // Per docs.zernio.com/platforms/youtube: thumbnail masuk sebagai field `thumbnail`
     // di DALAM item video pada mediaItems (bukan options/youTubeOptions/mediaItem terpisah).
-    const mediaItems: { url: string; type: string; thumbnail?: string }[] = []
-    if (project.video_url) {
-      mediaItems.push({
-        url: project.video_url,
-        type: 'video',
-        ...(project.thumbnail_url ? { thumbnail: project.thumbnail_url } : {}),
-      })
-    }
+    const mediaItems: { url: string; type: string; thumbnail?: string }[] = [{
+      url: publishVideoUrl,
+      type: 'video',
+      // Short = klip pendek dari 1 chapter, gak perlu thumbnail custom (gak ada satu pun
+      // dibuat buat short — hemat 1 tahap AI generation, feed Facebook auto-ambil frame).
+      ...(!isShort && project.thumbnail_url ? { thumbnail: project.thumbnail_url } : {}),
+    }]
 
     // YouTube title = baris pertama content — pisah dengan newline
     const contentWithTitle = `${finalTitle}\n\n${finalDescription}`
@@ -142,6 +153,14 @@ export async function POST(
       ? `Have you ever caught yourself doing this? Drop your own experience in the comments below! 🧠`
       : `Menurutmu, seberapa besar kemungkinan skenario "${topicForComment}" ini beneran kejadian? Tulis pendapatmu di kolom komentar! 🧠`
 
+    // Facebook: disclosure AI + disclaimer fiksi wajib ditambahkan ke deskripsi (kebijakan
+    // Meta 2026 soal label AI-generated content & misinformation — lihat brainstorm Cerita
+    // Tetangga). Tidak berlaku untuk YouTube, jadi ditambahkan hanya di cabang platform ini.
+    const musicCredit = project.music_attribution ? `\n\n🎵 ${project.music_attribution}` : ''
+    const platformContent = platform === 'facebook'
+      ? `${contentWithTitle}\n\n⚠️ Kisah fiksi terinspirasi kejadian nyata — nama & tempat disamarkan. Dibuat dengan bantuan AI.${musicCredit}`
+      : contentWithTitle
+
     // 4. Kirim permintaan posting/upload ke Zernio API
     const zernioRes = await fetch('https://zernio.com/api/v1/posts', {
       method: 'POST',
@@ -151,13 +170,18 @@ export async function POST(
       },
       body: JSON.stringify({
         title: finalTitle,
-        content: contentWithTitle,
-        platforms: [{
-          platform: 'youtube',
-          accountId: config.youtube_account_id,
-          options: { privacyStatus: 'public' },
-          platformSpecificData: { firstComment },
-        }],
+        content: platformContent,
+        platforms: platform === 'facebook'
+          ? [{
+              platform: 'facebook',
+              accountId: config.facebook_account_id,
+            }]
+          : [{
+              platform: 'youtube',
+              accountId: config.youtube_account_id,
+              options: { privacyStatus: 'public' },
+              platformSpecificData: { firstComment },
+            }],
         mediaItems,
         publishNow: true,
       }),
@@ -179,23 +203,27 @@ export async function POST(
       ON CONFLICT DO NOTHING
     `
 
-    // Perbarui status proyek menjadi 'uploaded' di tabel projects
-    await sql`
-      UPDATE projects SET status = 'uploaded', updated_at = now() WHERE id = ${id}
-    `
+    // Short = post tambahan dari project yang sama, JANGAN timpa status video utama.
+    if (!isShort) {
+      await sql`
+        UPDATE projects SET status = 'uploaded', updated_at = now() WHERE id = ${id}
+      `
+    }
 
     // Notif sukses dikirim oleh n8n (single source of truth) — tidak dari sini biar tidak dobel
 
     return NextResponse.json({
       success: true,
       postId,
-      message: 'Video berhasil didaftarkan untuk diunggah ke channel YouTube Anda!',
+      message: platform === 'facebook'
+        ? 'Video berhasil didaftarkan untuk diunggah ke Facebook Page Anda!'
+        : 'Video berhasil didaftarkan untuk diunggah ke channel YouTube Anda!',
       youtubeUrl,
     })
   } catch (error) {
-    console.error('Error publishing to YouTube:', error)
+    console.error(`Error publishing to ${channel.publishPlatform ?? 'youtube'}:`, error)
     const errMsg = error instanceof Error ? error.message : String(error)
-    return NextResponse.json({ error: `Gagal memublikasikan video ke YouTube: ${errMsg}` }, { status: 500 })
+    return NextResponse.json({ error: `Gagal memublikasikan video: ${errMsg}` }, { status: 500 })
   }
 }
 
