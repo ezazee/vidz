@@ -60,6 +60,8 @@ jobs:
         run: node scripts/generate-voices.js
         env:
           TTS_VOICE: ${{ secrets.TTS_VOICE }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           PROJECT_ID: ${{ github.event.client_payload.project_id }}
