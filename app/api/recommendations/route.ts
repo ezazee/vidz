@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId } from '@/lib/channels'
 import { z } from 'zod'
 
 // Rencana konten mingguan dari evaluasi AI (n8n hari Minggu) — dipakai otomatis oleh
@@ -24,8 +25,8 @@ const MAX_AGE_DAYS = 8
 const normalize = (s: string) =>
   s.toLowerCase().replace(/\s*\[theme:.*?\]\s*/gi, '').replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3)
 
-export async function GET() {
-  const sql = getSql()
+export async function GET(request: Request) {
+  const sql = getSql(resolveChannelId(request))
   try {
     const rows = await sql`SELECT value FROM integrations WHERE key = ${KEY} LIMIT 1`
     if (!rows[0]) return NextResponse.json({ recommendations: null })
@@ -42,7 +43,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const sql = getSql()
+  const sql = getSql(resolveChannelId(request))
   try {
     const body = saveSchema.parse(await request.json())
 

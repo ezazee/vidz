@@ -331,7 +331,9 @@ async function buildMascotLayer(pos: StickmanPos, mood: MascotMood): Promise<sha
 
 export async function composeThumbnail(input: ThumbnailInput): Promise<Buffer> {
   const title = cleanThumbnailTitle(input.title)
-  const lines = wrapLines(title, 18, 2)
+  // maxChars 26 (bukan 18) — cegah judul sedang (mis. "CHECKING YOUR PHONE") kepecah jadi
+  // 3 baris lalu kepotong paksa; font auto-shrink lewat measureText sudah handle lebar baris.
+  const lines = wrapLines(title, 26, 2)
   const layout = input.layout ?? 'split_vertical'
   const stickman = input.stickman ?? 'bottom_right'
   const textTreatment = input.textTreatment ?? 'yellow_top'

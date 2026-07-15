@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId, getChannel } from '@/lib/channels'
 
-export async function GET() {
-  const sql = getSql()
+export async function GET(request: Request) {
+  const channelId = resolveChannelId(request)
+  const sql = getSql(channelId)
+  const channel = getChannel(channelId)
 
   try {
     // 1. Data dasar dari database
@@ -131,7 +134,7 @@ export async function GET() {
       id: lu.project_id,
       youtubeId: lu.youtube_id,
       title: (lu.title || '').replace(/\s*\[THEME:.*?\]\s*/gi, ''),
-      tags: ['CabangSejarah', 'WhatIf'],
+      tags: [channel.name.replace(/\s+/g, '')],
       date: new Date(lu.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       likes: null,
       views: null,

@@ -142,7 +142,7 @@ async function main() {
   const voice = CHANNEL_VOICE[process.env.CHANNEL_ID] || process.env.TTS_VOICE || 'id-ID-ArdiNeural'
   // Gemini TTS voice sama (Zephyr) untuk kedua channel — tervalidasi bagus di ID & EN.
   // Bahasa mengikuti channel (dipakai Gemini buat pengucapan yang benar).
-  const geminiVoice = 'Zephyr'
+  const geminiVoice = 'Charon'
   const CHANNEL_GEMINI_LANG = { brainwhy: 'English' }
   const geminiLanguage = CHANNEL_GEMINI_LANG[process.env.CHANNEL_ID] || 'Indonesian'
   const apiSecret = process.env.API_SECRET

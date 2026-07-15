@@ -146,17 +146,17 @@ const BRAINWHY: ChannelConfig = {
     'The Real Reason You Remember Insults More Than Compliments',
     'Why Your Brain Lies to You About Yesterday',
   ],
-  // thumbnailStyle 'flat': background scene 100% kode (lib/thumbnail.ts flatSceneSvg), TANPA AI —
-  // dua pendekatan AI-image (negative_prompt, lalu prompt positif "no text") sudah dicoba dan
-  // tetap gagal konsisten (halusinasi teks palsu berulang di uji lokal). thumbnailConcept di bawah
-  // ini SUDAH TIDAK DIPAKAI oleh style 'flat', diisi placeholder agar tetap type-safe / kalau nanti
-  // ingin balik ke AI setelah ada moderasi visual yang reliable.
+  // thumbnailStyle 'split' — disamakan dengan Cabang Sejarah (dua dunia bersanding + garis merah),
+  // cuma framing kontennya beda: bukan "sejarah asli vs alternate reality", tapi "bingung vs paham"
+  // (sesuai konten psikologi/perilaku). "Pure illustration only — no memes/infographics/diagrams/
+  // captions/speech bubbles" adalah instruksi yang terverifikasi paling ampuh cegah AI menghalusinasi
+  // teks palsu di background (uji lokal 4/4 bersih), dipakai di sini juga.
   thumbnailConcept: {
-    left: () => '',
-    right: () => '',
+    left: (topic) => `a person looking confused and overwhelmed, sitting in a minimalist room with a completely EMPTY plain solid-color wall (blank, no posters, no frames, no decorations) related to: ${topic}, dim cluttered atmosphere, muted cool colors. Pure character illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
+    right: (topic) => `the same person now looking calm, relieved, and clear-minded, sitting in a minimalist room with a completely EMPTY plain solid-color wall (blank, no posters, no frames, no decorations) related to: ${topic}, bright warm atmosphere, vivid colors. Pure character illustration only — no memes, no infographics, no diagrams, no captions, no speech bubbles, absolutely no text or writing of any kind anywhere in the image.`,
   },
-  thumbnailStyle: 'flat',
-  thumbnailBgColors: ['#2d3a8c', '#1f6f5c', '#a8452e', '#5b3d8c', '#1f5c8c'],
+  thumbnailStyle: 'split',
+  thumbnailBgColors: [],
   prompts: {
     narratorPersona: 'You are a sharp, curious science communicator explaining human psychology and behavior in short, punchy explainer videos — engaging like a smart friend, not a textbook. All output in English.',
     outlineStructure: '5 sections: 1 intro (a relatable hook phenomenon) + 3 chapter (what\'s actually happening in the brain → why evolution/psychology wired us this way → real-life everyday examples) + 1 ending (practical takeaway + a thought-provoking question).',
