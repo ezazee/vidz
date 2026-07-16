@@ -58,17 +58,27 @@ export async function GET(request: Request) {
       ORDER BY u.created_at DESC
     `
 
-    // 3. Live stats dari Zernio — selalu cari akun YouTube TERKINI dari API,
-    //    bukan mengandalkan youtube_account_id lama di DB (bisa basi kalau ganti akun Zernio)
+    // 3. Live stats dari Zernio — selalu cari akun TERKINI dari API, bukan mengandalkan
+    //    *_account_id lama di DB (bisa basi kalau ganti akun Zernio). Platform tujuan
+    //    mengikuti channel.publishPlatform (lib/channels.ts) — YouTube untuk Cabang
+    //    Sejarah/BrainWhy, Facebook untuk Cerita Tetangga. Field youtube* dipertahankan
+    //    persis (dipakai app/page.tsx & app/projects/[id]/page.tsx) — facebook* baru,
+    //    additive, tidak mengubah kontrak lama.
+    const platform = channel.publishPlatform ?? 'youtube'
     let youtubeStats = null
     let youtubeConnected = false
     let youtubeChannelName: string | null = null
     let youtubeChannelThumbnail = ''
+    let facebookStats = null
+    let facebookConnected = false
+    let facebookPageName: string | null = null
+    let facebookPageThumbnail = ''
 
     try {
+      const accountIdKey = platform === 'facebook' ? 'facebook_account_id' : 'youtube_account_id'
       const integrations = await sql`
         SELECT key, value FROM integrations
-        WHERE key IN ('zernio_api_key', 'youtube_account_id')
+        WHERE key IN ('zernio_api_key', ${accountIdKey})
       `
       const config: Record<string, string> = {}
       for (const row of integrations) {
@@ -84,33 +94,26 @@ export async function GET(request: Request) {
           const data = await zernioRes.json()
           const accounts = data.accounts || data.data || (Array.isArray(data) ? data : [])
 
-          // Prioritas: id tersimpan → kalau tidak ketemu (akun ganti), cari platform youtube
-          let match = accounts.find((acc: any) => String(acc.id || acc._id) === String(config.youtube_account_id))
+          // Prioritas: id tersimpan → kalau tidak ketemu (akun ganti), cari platform yang sesuai
+          let match = accounts.find((acc: any) => String(acc.id || acc._id) === String(config[accountIdKey]))
           if (!match) {
-            match = accounts.find((acc: any) => String(acc.platform || acc.type).toLowerCase() === 'youtube')
+            match = accounts.find((acc: any) => String(acc.platform || acc.type).toLowerCase() === platform)
             // Akun berubah — perbarui cache di DB supaya publish & UI ikut akun baru
             if (match) {
               const newId = String(match.id || match._id)
-              const newName = match.name || match.displayName || match.username || 'YouTube Channel'
+              const newName = match.name || match.displayName || match.username || (platform === 'facebook' ? 'Facebook Page' : 'YouTube Channel')
               const newThumb = match.avatar || match.picture || match.thumbnail || ''
-              console.log(`Analytics: youtube_account_id basi, re-sync ke akun baru ${newName} (${newId})`)
-              await sql`INSERT INTO integrations (key, value) VALUES ('youtube_account_id', ${newId}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
-              await sql`INSERT INTO integrations (key, value) VALUES ('youtube_channel_name', ${newName}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
-              if (newThumb) {
-                await sql`INSERT INTO integrations (key, value) VALUES ('youtube_channel_thumbnail', ${newThumb}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
-              }
+              console.log(`Analytics: ${accountIdKey} basi, re-sync ke akun baru ${newName} (${newId})`)
+              await sql`INSERT INTO integrations (key, value) VALUES (${accountIdKey}, ${newId}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`
             }
           }
 
           if (match) {
-            youtubeConnected = true
-            youtubeChannelName = match.name || match.displayName || match.username || 'YouTube Channel'
-            youtubeChannelThumbnail = match.avatar || match.picture || match.thumbnail || ''
-
+            const name = match.name || match.displayName || match.username || (platform === 'facebook' ? 'Facebook Page' : 'YouTube Channel')
+            const thumb = match.avatar || match.picture || match.thumbnail || ''
             const profileData = match.metadata?.profileData || {}
             const extraData = profileData.extraData || {}
-
-            youtubeStats = {
+            const stats = {
               subscribers: match.followersCount ?? profileData.followersCount ?? 0,
               views: extraData.totalViews ?? extraData.viewsCount ?? 0,
               videoCount: extraData.videoCount ?? extraData.postsCount ?? 0,
@@ -119,12 +122,24 @@ export async function GET(request: Request) {
               watchTimeSeconds: extraData.watchTimeSeconds ?? 0,
               engagementRate: 0,
             }
+
+            if (platform === 'facebook') {
+              facebookConnected = true
+              facebookPageName = name
+              facebookPageThumbnail = thumb
+              facebookStats = stats
+            } else {
+              youtubeConnected = true
+              youtubeChannelName = name
+              youtubeChannelThumbnail = thumb
+              youtubeStats = stats
+            }
           }
         }
       }
     } catch (dbOrApiErr) {
       const errMsg = dbOrApiErr instanceof Error ? dbOrApiErr.message : String(dbOrApiErr)
-      console.error('Failed to retrieve YouTube analytics from Zernio:', errMsg)
+      console.error('Failed to retrieve platform analytics from Zernio:', errMsg)
     }
 
     // 4. Post terbaru: hanya data upload asli dari aplikasi ini — tanpa data pajangan/acak
@@ -144,6 +159,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       analytics: {
+        channel: channel.id,
+        channelName: channel.name,
+        platform,
         totalProjects,
         totalCompleted,
         totalRenderTime,
@@ -154,6 +172,10 @@ export async function GET(request: Request) {
         youtubeChannelName,
         youtubeChannelThumbnail,
         youtubeStats,
+        facebookConnected,
+        facebookPageName,
+        facebookPageThumbnail,
+        facebookStats,
         recentPosts,
       },
     })

@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Loader2,
   Youtube,
+  Facebook,
   Heart,
   Eye,
   Globe,
@@ -16,7 +17,29 @@ import {
   ChevronRight
 } from 'lucide-react'
 
+interface PlatformStats {
+  subscribers: number
+  views: number
+  watchTimeSeconds: number
+  likes: number
+  comments: number
+  videoCount: number
+  engagementRate?: number
+}
+
+type ChannelId = 'cabang-sejarah' | 'brainwhy' | 'cerita-tetangga'
+type TabId = 'all' | ChannelId
+
+const CHANNEL_TABS: { id: ChannelId; label: string; platform: 'youtube' | 'facebook' }[] = [
+  { id: 'cabang-sejarah', label: 'Cabang Sejarah', platform: 'youtube' },
+  { id: 'brainwhy', label: 'BrainWhy', platform: 'youtube' },
+  { id: 'cerita-tetangga', label: 'Cerita Tetangga', platform: 'facebook' },
+]
+
 interface AnalyticsData {
+  channel?: string
+  channelName?: string
+  platform?: 'youtube' | 'facebook'
   totalProjects: number
   totalCompleted: number
   totalRenderTime: number
@@ -26,15 +49,10 @@ interface AnalyticsData {
   youtubeConnected: boolean
   youtubeChannelName: string
   youtubeChannelThumbnail: string
-  youtubeStats: {
-    subscribers: number
-    views: number
-    watchTimeSeconds: number
-    likes: number
-    comments: number
-    videoCount: number
-    engagementRate?: number
-  } | null
+  youtubeStats: PlatformStats | null
+  facebookConnected?: boolean
+  facebookPageName?: string | null
+  facebookStats?: PlatformStats | null
   recentPosts: Array<{
     id: string
     title: string
@@ -49,8 +67,9 @@ interface AnalyticsData {
 
 export default function AnalyticsLandingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [channelData, setChannelData] = useState<Partial<Record<ChannelId, AnalyticsData>>>({})
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<TabId>('all')
   const [activeTimeframe, setActiveTimeframe] = useState<'7h' | '30h' | '90h'>('30h')
 
   // Hover states for line chart tooltips
@@ -59,11 +78,16 @@ export default function AnalyticsLandingPage() {
   const fetchAnalytics = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/analytics')
-      if (res.ok) {
-        const data = await res.json()
-        setAnalytics(data.analytics)
-      }
+      const results = await Promise.all(
+        CHANNEL_TABS.map(async (c) => {
+          const res = await fetch('/api/analytics', { headers: { 'x-channel-id': c.id } })
+          const data = res.ok ? await res.json() : null
+          return [c.id, data?.analytics as AnalyticsData | undefined] as const
+        })
+      )
+      const merged: Partial<Record<ChannelId, AnalyticsData>> = {}
+      for (const [id, a] of results) if (a) merged[id] = a
+      setChannelData(merged)
     } catch (e) {
       console.error('Gagal memuat data analitik', e)
     } finally {
@@ -74,6 +98,46 @@ export default function AnalyticsLandingPage() {
   useEffect(() => {
     fetchAnalytics()
   }, [])
+
+  // Tab "Semua" = gabungan angka dari 3 channel (dijumlah), platform "mixed" (2 YouTube + 1 Facebook).
+  // Tab per-channel = data channel itu apa adanya (sudah platform-aware dari /api/analytics).
+  const analytics: (AnalyticsData & { platformStats: PlatformStats | null; platformLabel: string; isFacebook: boolean }) | null = (() => {
+    if (activeTab !== 'all') {
+      const a = channelData[activeTab]
+      if (!a) return null
+      const isFacebook = a.platform === 'facebook'
+      return { ...a, platformStats: isFacebook ? (a.facebookStats ?? null) : a.youtubeStats, platformLabel: isFacebook ? (a.facebookPageName || 'Facebook Page') : (a.youtubeChannelName || 'YouTube Channel'), isFacebook }
+    }
+    const all = Object.values(channelData).filter(Boolean) as AnalyticsData[]
+    if (all.length === 0) return null
+    const sum = (pick: (s: PlatformStats) => number) =>
+      all.reduce((acc, a) => acc + pick((a.platform === 'facebook' ? a.facebookStats : a.youtubeStats) ?? { subscribers: 0, views: 0, watchTimeSeconds: 0, likes: 0, comments: 0, videoCount: 0 }), 0)
+    const merged: PlatformStats = {
+      subscribers: sum((s) => s.subscribers),
+      views: sum((s) => s.views),
+      watchTimeSeconds: sum((s) => s.watchTimeSeconds),
+      likes: sum((s) => s.likes),
+      comments: sum((s) => s.comments),
+      videoCount: sum((s) => s.videoCount),
+      engagementRate: 0,
+    }
+    return {
+      totalProjects: all.reduce((acc, a) => acc + a.totalProjects, 0),
+      totalCompleted: all.reduce((acc, a) => acc + a.totalCompleted, 0),
+      totalRenderTime: all.reduce((acc, a) => acc + a.totalRenderTime, 0),
+      timeSavedSeconds: all.reduce((acc, a) => acc + a.timeSavedSeconds, 0),
+      platformCost: all.reduce((acc, a) => acc + a.platformCost, 0),
+      statusBreakdown: {},
+      youtubeConnected: all.some((a) => a.youtubeConnected),
+      youtubeChannelName: '',
+      youtubeChannelThumbnail: '',
+      youtubeStats: null,
+      recentPosts: all.flatMap((a) => a.recentPosts).sort((x, y) => (y.id > x.id ? 1 : -1)),
+      platformStats: merged,
+      platformLabel: `${all.length} Channel (2 YouTube + 1 Facebook)`,
+      isFacebook: false,
+    }
+  })()
 
   // Format large numbers with K, M suffixes
   function formatNumber(num: number): string {
@@ -162,10 +226,10 @@ export default function AnalyticsLandingPage() {
                 </div>
 
                 <div className="flex items-center gap-4 self-end sm:self-auto">
-                  {/* Active Platform Banner */}
-                  <div className="flex items-center bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-lg gap-2 text-red-700">
-                    <Youtube className="size-4 text-red-600" />
-                    <span className="text-xs font-bold">YouTube Channel</span>
+                  {/* Active Platform Banner — dinamis sesuai tab aktif */}
+                  <div className={`flex items-center px-3.5 py-1.5 rounded-lg gap-2 border ${analytics.isFacebook ? 'bg-blue-50 border-blue-200 text-blue-700' : activeTab === 'all' ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                    {analytics.isFacebook ? <Facebook className="size-4 text-blue-600" /> : <Youtube className="size-4 text-red-600" />}
+                    <span className="text-xs font-bold">{analytics.platformLabel}</span>
                   </div>
 
                   {/* Timeframe Selector */}
@@ -190,6 +254,102 @@ export default function AnalyticsLandingPage() {
                 </div>
               </div>
 
+              {/* Channel/Platform Tabs — Semua + tiap channel (YT-A / YT-B / FP) */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border transition-all ${
+                    activeTab === 'all' ? 'bg-slate-900 border-slate-900 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Semua
+                </button>
+                {CHANNEL_TABS.map((c) => {
+                  const active = activeTab === c.id
+                  const isFb = c.platform === 'facebook'
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setActiveTab(c.id)}
+                      className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+                        active
+                          ? isFb ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-red-600 border-red-600 text-white shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isFb ? <Facebook className="size-3.5" /> : <Youtube className="size-3.5" />}
+                      {c.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {activeTab === 'all' ? (
+                /* Tab "Semua" = 3 kartu channel BERDAMPINGAN, bukan digabung jadi 1 angka —
+                   biar jelas mana Cabang Sejarah, mana BrainWhy, mana Cerita Tetangga. */
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {CHANNEL_TABS.map((c) => {
+                    const a = channelData[c.id]
+                    const isFb = c.platform === 'facebook'
+                    const stats = a ? (isFb ? a.facebookStats : a.youtubeStats) : null
+                    const connected = a ? (isFb ? a.facebookConnected : a.youtubeConnected) : false
+                    const accountName = a ? (isFb ? a.facebookPageName : a.youtubeChannelName) : null
+                    return (
+                      <div key={c.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md ${isFb ? 'bg-blue-600' : 'bg-red-500'}`}>
+                              {isFb ? <Facebook className="size-5" /> : <Youtube className="size-5" />}
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-slate-900">{c.label}</h3>
+                              <p className="text-[10px] text-slate-400 font-semibold">{accountName || '(belum terhubung)'}</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setActiveTab(c.id)} className="text-[10px] text-slate-400 hover:text-slate-700 font-bold uppercase tracking-wider flex items-center gap-0.5">
+                            Detail <ChevronRight className="size-3" />
+                          </button>
+                        </div>
+
+                        {!a ? (
+                          <div className="text-xs text-slate-400 py-8 text-center">Memuat...</div>
+                        ) : !connected ? (
+                          <div className="text-xs text-slate-400 py-8 text-center border border-dashed border-slate-200 rounded-lg">
+                            Belum terhubung ke {isFb ? 'Facebook' : 'YouTube'}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Followers</span>
+                              <span className="text-lg font-black text-slate-900">{formatNumber(stats?.subscribers ?? 0)}</span>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Views</span>
+                              <span className="text-lg font-black text-slate-900">{formatNumber(stats?.views ?? 0)}</span>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Likes</span>
+                              <span className="text-lg font-black text-slate-900">{formatNumber(stats?.likes ?? 0)}</span>
+                            </div>
+                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Comments</span>
+                              <span className="text-lg font-black text-slate-900">{formatNumber(stats?.comments ?? 0)}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <span className="text-slate-500 font-semibold flex items-center gap-1.5">
+                            <Video className="size-3.5" /> {a?.totalProjects ?? 0} project
+                          </span>
+                          <span className="text-emerald-600 font-bold">{a?.totalCompleted ?? 0} selesai render</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+              <>
               {/* 1. TOP METRICS ROW (6 Cards) */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Metric 1: Total Posts */}
@@ -202,7 +362,7 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div>
                     <span className="text-2xl font-black text-slate-900 leading-none">
-                      {analytics.youtubeStats?.videoCount ?? 51}
+                      {analytics.platformStats?.videoCount ?? 51}
                     </span>
                     <span className="text-[9px] text-slate-400 block mt-1">Total Posts</span>
                   </div>
@@ -218,7 +378,7 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div>
                     <span className="text-2xl font-black text-slate-900 leading-none">
-                      {formatNumber(analytics.youtubeStats?.likes ?? 814)}
+                      {formatNumber(analytics.platformStats?.likes ?? 814)}
                     </span>
                     <span className="text-[9px] text-slate-400 block mt-1">Total Likes</span>
                   </div>
@@ -234,7 +394,7 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div>
                     <span className="text-2xl font-black text-slate-900 leading-none">
-                      {formatNumber(analytics.youtubeStats?.views ?? 54600)}
+                      {formatNumber(analytics.platformStats?.views ?? 54600)}
                     </span>
                     <span className="text-[9px] text-slate-400 block mt-1">Total Views</span>
                   </div>
@@ -264,7 +424,7 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div>
                     <span className="text-2xl font-black text-slate-900 leading-none">
-                      {(analytics.youtubeStats?.engagementRate ?? 150.51).toFixed(2)}%
+                      {(analytics.platformStats?.engagementRate ?? 150.51).toFixed(2)}%
                     </span>
                     <span className="text-[9px] text-slate-400 block mt-1">Engagement Rate</span>
                   </div>
@@ -280,7 +440,7 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div>
                     <span className="text-2xl font-black text-slate-900 leading-none">
-                      {formatNumber(analytics.youtubeStats?.subscribers ?? 1150)}
+                      {formatNumber(analytics.platformStats?.subscribers ?? 1150)}
                     </span>
                     <span className="text-[9px] text-slate-400 block mt-1">Followers</span>
                   </div>
@@ -293,15 +453,15 @@ export default function AnalyticsLandingPage() {
                 
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-red-500/10 border border-red-600/10">
-                      <Youtube className="size-5.5" />
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md border ${analytics.isFacebook ? 'bg-blue-600 shadow-blue-500/10 border-blue-700/10' : 'bg-red-500 shadow-red-500/10 border-red-600/10'}`}>
+                      {analytics.isFacebook ? <Facebook className="size-5.5" /> : <Youtube className="size-5.5" />}
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        {analytics.youtubeChannelName || 'YouTube Channel'}
+                        {analytics.platformLabel || 'YouTube Channel'}
                       </h3>
                       <p className="text-[10px] text-slate-400 font-semibold">
-                        {(analytics.youtubeStats?.videoCount ?? 51)} posts • {formatNumber(analytics.youtubeStats?.subscribers ?? 1150)} subscribers
+                        {(analytics.platformStats?.videoCount ?? 51)} posts • {formatNumber(analytics.platformStats?.subscribers ?? 1150)} subscribers
                       </p>
                     </div>
                   </div>
@@ -314,19 +474,19 @@ export default function AnalyticsLandingPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <span className="text-xl font-black text-slate-900 block leading-tight">
-                      {analytics.youtubeStats?.videoCount ?? 51}
+                      {analytics.platformStats?.videoCount ?? 51}
                     </span>
                     <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block mt-0.5">POSTS</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <span className="text-xl font-black text-slate-900 block leading-tight">
-                      {formatNumber(analytics.youtubeStats?.likes ?? 814)}
+                      {formatNumber(analytics.platformStats?.likes ?? 814)}
                     </span>
                     <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block mt-0.5">LIKES</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <span className="text-xl font-black text-slate-900 block leading-tight">
-                      {formatNumber(analytics.youtubeStats?.views ?? 54600)}
+                      {formatNumber(analytics.platformStats?.views ?? 54600)}
                     </span>
                     <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block mt-0.5">VIEWS</span>
                   </div>
@@ -336,13 +496,13 @@ export default function AnalyticsLandingPage() {
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <span className="text-xl font-black text-slate-900 block leading-tight">
-                      {formatNumber(analytics.youtubeStats?.subscribers ?? 1150)}
+                      {formatNumber(analytics.platformStats?.subscribers ?? 1150)}
                     </span>
                     <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block mt-0.5">FOLLOWERS</span>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <span className="text-xl font-black text-slate-900 block leading-tight">
-                      {(analytics.youtubeStats?.engagementRate ?? 150.51).toFixed(1)}%
+                      {(analytics.platformStats?.engagementRate ?? 150.51).toFixed(1)}%
                     </span>
                     <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider block mt-0.5">ENGAGEMENT</span>
                   </div>
@@ -579,7 +739,7 @@ export default function AnalyticsLandingPage() {
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-[9px] p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap mb-1">54.6K</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-500">Youtube Channel</span>
+                      <span className="text-[10px] font-bold text-slate-500">{analytics.platformLabel}</span>
                     </div>
                   </div>
 
@@ -610,7 +770,7 @@ export default function AnalyticsLandingPage() {
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[11px] font-bold">
                         <span className="text-slate-500 flex items-center gap-1"><span className="size-2 rounded-full bg-red-500" /> Youtube</span>
-                        <span className="text-slate-950 font-black">{(analytics.youtubeStats?.engagementRate ?? 150.51).toFixed(2)}%</span>
+                        <span className="text-slate-950 font-black">{(analytics.platformStats?.engagementRate ?? 150.51).toFixed(2)}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
                         <div className="bg-red-500 h-full rounded-full" style={{ width: '85%' }} />
@@ -622,7 +782,7 @@ export default function AnalyticsLandingPage() {
                   <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-100">
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">TOTAL COMMENTS</span>
-                      <span className="text-lg font-black text-slate-900">{analytics.youtubeStats?.comments ?? 4}</span>
+                      <span className="text-lg font-black text-slate-900">{analytics.platformStats?.comments ?? 4}</span>
                     </div>
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">AVG / POST</span>
@@ -663,7 +823,7 @@ export default function AnalyticsLandingPage() {
                     <div className="absolute flex flex-col items-center">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Subscribers</span>
                       <span className="text-xl font-black text-slate-900 leading-none mt-1">
-                        {formatNumber(analytics.youtubeStats?.subscribers ?? 1150)}
+                        {formatNumber(analytics.platformStats?.subscribers ?? 1150)}
                       </span>
                     </div>
                   </div>
@@ -673,9 +833,9 @@ export default function AnalyticsLandingPage() {
                     <div className="flex justify-between items-center text-xs">
                       <div className="flex items-center gap-2">
                         <span className="size-2.5 rounded-full bg-[#dc2626]" />
-                        <span className="font-bold text-slate-700">Youtube Channel</span>
+                        <span className="font-bold text-slate-700">{analytics.platformLabel}</span>
                       </div>
-                      <span className="text-slate-500 font-bold">{analytics.youtubeStats?.subscribers ?? 1150}</span>
+                      <span className="text-slate-500 font-bold">{analytics.platformStats?.subscribers ?? 1150}</span>
                     </div>
                   </div>
                 </div>
@@ -695,7 +855,7 @@ export default function AnalyticsLandingPage() {
                     const percentWidth = (views / maxViews) * 100
 
                     return (
-                      <div key={post.id} className="space-y-1">
+                      <div key={`${post.id}-${idx}`} className="space-y-1">
                         <div className="flex justify-between items-center text-xs font-bold">
                           <span className="text-slate-700 truncate max-w-[80%]">
                             {idx + 1}. {post.title}
@@ -739,9 +899,9 @@ export default function AnalyticsLandingPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {analytics.recentPosts.map((post) => (
+                      {analytics.recentPosts.map((post, idx) => (
                         <tr
-                          key={post.id}
+                          key={`${post.id}-${idx}`}
                           className="hover:bg-slate-50/60 transition-colors group text-xs"
                         >
                           {/* Title & Tags */}
@@ -817,6 +977,8 @@ export default function AnalyticsLandingPage() {
                   </table>
                 </div>
               </div>
+              </>
+              )}
 
             </div>
           ) : (

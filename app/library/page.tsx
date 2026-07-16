@@ -8,6 +8,7 @@ import {
   Video,
   ChevronRight,
   Youtube,
+  Facebook,
   Trash2,
   Loader2,
   RefreshCw,
@@ -24,7 +25,17 @@ interface Project {
   video_url?: string | null
   error?: string | null
   thumbnail_url?: string | null
+  channel: 'cabang-sejarah' | 'brainwhy' | 'cerita-tetangga'
+  channelName: string
+  platform: 'youtube' | 'facebook'
 }
+
+const CHANNEL_FILTERS: { key: 'all' | Project['channel']; label: string }[] = [
+  { key: 'all', label: 'Semua Channel' },
+  { key: 'cabang-sejarah', label: 'Cabang Sejarah (YT)' },
+  { key: 'brainwhy', label: 'BrainWhy (YT)' },
+  { key: 'cerita-tetangga', label: 'Cerita Tetangga (FB)' },
+]
 
 export default function LibraryPage() {
   const router = useRouter()
@@ -35,6 +46,7 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'ready' | 'rendering' | 'failed' | 'draft'>('all')
+  const [channelFilter, setChannelFilter] = useState<'all' | Project['channel']>('all')
 
   const fetchProjects = async () => {
     setLoading(true)
@@ -97,6 +109,8 @@ export default function LibraryPage() {
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.topic.toLowerCase().includes(searchQuery.toLowerCase())
     if (!matchesSearch) return false
+
+    if (channelFilter !== 'all' && project.channel !== channelFilter) return false
 
     if (statusFilter === 'all') return true
     if (statusFilter === 'ready') return project.render_status === 'completed'
@@ -200,6 +214,27 @@ export default function LibraryPage() {
               </div>
             </div>
 
+            {/* Channel filter pills — biar bisa lihat semua project lintas channel/platform */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CHANNEL_FILTERS.map(item => {
+                const active = channelFilter === item.key
+                const count = item.key === 'all' ? projects.length : projects.filter(p => p.channel === item.key).length
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setChannelFilter(item.key)}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                      active
+                        ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-slate-600 text-white' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+
             {/* projects table/grid */}
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -261,10 +296,14 @@ export default function LibraryPage() {
                             <span className="text-[9px] bg-emerald-500 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Ready</span>
                           )}
                           {project.project_status === 'uploaded' && (
-                            <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md flex items-center gap-1">
-                              <Youtube className="size-3 fill-white" /> Published
+                            <span className={`text-[9px] text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md flex items-center gap-1 ${project.platform === 'facebook' ? 'bg-blue-600' : 'bg-red-600'}`}>
+                              {project.platform === 'facebook' ? <Facebook className="size-3 fill-white" /> : <Youtube className="size-3 fill-white" />}
+                              Published
                             </span>
                           )}
+                          <span className="text-[9px] bg-slate-950/70 text-slate-200 px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md backdrop-blur-sm">
+                            {project.channelName}
+                          </span>
                           {(project.render_status === 'pending' || project.render_status === 'processing') && (
                             <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
                           )}

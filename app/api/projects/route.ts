@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSql } from '@/lib/db/client'
-import { resolveChannelId } from '@/lib/channels'
+import { resolveChannelId, getChannel, type ChannelId } from '@/lib/channels'
+
+const ALL_CHANNELS: ChannelId[] = ['cabang-sejarah', 'brainwhy', 'cerita-tetangga']
 
 const createProjectSchema = z.object({
   topic: z.string().min(3),
@@ -32,44 +34,66 @@ export async function POST(request: Request) {
   return NextResponse.json({ project: rows[0] }, { status: 201 })
 }
 
-export async function GET() {
-  const sql = getSql()
+// Query dasar yang sama, dipakai per-channel lalu digabung — 1 schema = 1 query, hasilnya
+// ditandai channel/channelName/platform biar UI bisa filter & kasih badge yang benar.
+async function fetchProjectsForChannel(channelId: ChannelId) {
+  const sql = getSql(channelId === 'cabang-sejarah' ? undefined : channelId)
+  const channel = getChannel(channelId)
+  const rows = await sql`
+    SELECT
+      p.id,
+      p.topic,
+      p.status as project_status,
+      p.created_at,
+      rj.status as render_status,
+      rj.video_url,
+      rj.error,
+      COALESCE(t.image_url, s.image_url) as thumbnail_url
+    FROM projects p
+    LEFT JOIN LATERAL (
+      SELECT status, video_url, error
+      FROM render_jobs
+      WHERE project_id = p.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) rj ON true
+    LEFT JOIN LATERAL (
+      SELECT image_url
+      FROM thumbnails
+      WHERE project_id = p.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) t ON true
+    LEFT JOIN LATERAL (
+      SELECT image_url
+      FROM scenes
+      WHERE project_id = p.id AND image_url IS NOT NULL AND image_url != ''
+      ORDER BY order_index ASC
+      LIMIT 1
+    ) s ON true
+    ORDER BY p.created_at DESC
+  `
+  return rows.map((r: any) => ({
+    ...r,
+    channel: channelId,
+    channelName: channel.name,
+    platform: channel.publishPlatform ?? 'youtube',
+  }))
+}
+
+// Tanpa x-channel-id/?channel= = gabung SEMUA channel (dipakai Library "lihat semua project").
+// Dengan header/query channel spesifik = perilaku lama, cuma channel itu (backward compatible).
+export async function GET(request: Request) {
+  const requestedChannel = resolveChannelId(request)
 
   try {
-    const projects = await sql`
-      SELECT 
-        p.id, 
-        p.topic, 
-        p.status as project_status, 
-        p.created_at,
-        rj.status as render_status,
-        rj.video_url,
-        rj.error,
-        COALESCE(t.image_url, s.image_url) as thumbnail_url
-      FROM projects p
-      LEFT JOIN LATERAL (
-        SELECT status, video_url, error 
-        FROM render_jobs 
-        WHERE project_id = p.id 
-        ORDER BY created_at DESC 
-        LIMIT 1
-      ) rj ON true
-      LEFT JOIN LATERAL (
-        SELECT image_url 
-        FROM thumbnails 
-        WHERE project_id = p.id 
-        ORDER BY created_at DESC 
-        LIMIT 1
-      ) t ON true
-      LEFT JOIN LATERAL (
-        SELECT image_url 
-        FROM scenes 
-        WHERE project_id = p.id AND image_url IS NOT NULL AND image_url != '' 
-        ORDER BY order_index ASC 
-        LIMIT 1
-      ) s ON true
-      ORDER BY p.created_at DESC
-    `
+    if (requestedChannel) {
+      const projects = await fetchProjectsForChannel(requestedChannel)
+      return NextResponse.json({ projects })
+    }
+
+    const results = await Promise.all(ALL_CHANNELS.map((c) => fetchProjectsForChannel(c)))
+    const projects = results.flat().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     return NextResponse.json({ projects })
   } catch (error) {
