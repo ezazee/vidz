@@ -38,6 +38,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_URL_BRAINWHY: ${{ secrets.DATABASE_URL_BRAINWHY }}
+          DATABASE_URL_CERITA_TETANGGA: ${{ secrets.DATABASE_URL_CERITA_TETANGGA }}
           CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
           AI_MODEL: ${{ secrets.AI_MODEL }}
