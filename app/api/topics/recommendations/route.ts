@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { chat } from '@/lib/ai/client'
 import { getSql } from '@/lib/db/client'
+import { resolveChannelId, getChannel } from '@/lib/channels'
 
 export async function GET(request: Request) {
+  const channelId = resolveChannelId(request)
+  const channel = getChannel(channelId)
+
   try {
     const { searchParams } = new URL(request.url)
-    const theme = searchParams.get('theme') || 'umum'
+    const theme = searchParams.get('theme') || channel.categories[0] || 'umum'
 
-    const sql = getSql()
-    // Semua topik yang pernah dipakai — anti duplikat konten
+    const sql = getSql(channelId)
+    // Semua topik yang pernah dipakai di channel ini — anti duplikat konten
     const recentProjects = await sql`SELECT topic FROM projects ORDER BY created_at DESC LIMIT 300`
     const usedTopics = recentProjects
       .map(p => p.topic.replace(/\s*\[THEME:.*?\]\s*/g, '').trim())
@@ -19,7 +23,7 @@ export async function GET(request: Request) {
       ? ` Jangan gunakan topik ini: ${usedTopics.slice(0, 15).join('; ')}.`
       : ''
 
-    // Rekomendasi evaluasi mingguan (dari AI hari Minggu) — prioritas topik & gaya judul
+    // Rekomendasi evaluasi mingguan (dari AI hari Minggu, per-channel) — prioritas topik & gaya judul
     let weeklyHint = ''
     try {
       const recRows = await sql`SELECT value FROM integrations WHERE key = 'weekly_recommendations' LIMIT 1`
@@ -35,18 +39,27 @@ export async function GET(request: Request) {
       }
     } catch { /* rekomendasi opsional — lanjut tanpa */ }
 
+    const titleRule = channel.titlePrefix
+      ? `Setiap topik WAJIB diawali "${channel.titlePrefix}", spesifik, dramatis, dan bikin penasaran.`
+      : 'Setiap topik harus spesifik, dramatis, dan bikin penasaran — judul bebas, tidak perlu prefix tetap.'
+    const isEn = channel.language === 'en'
+
     const messages = [
       {
         role: 'system' as const,
-        content: `Kamu strategi konten channel YouTube "Cabang Sejarah" (video what-if sejarah alternatif). Balas HANYA JSON: {"topics":["...","...","...","...","..."]}`
+        content: isEn
+          ? `${channel.prompts.narratorPersona} Reply with ONLY JSON: {"topics":["...","...","...","...","..."]}`
+          : `${channel.prompts.narratorPersona} Balas HANYA JSON: {"topics":["...","...","...","...","..."]}`,
       },
       {
         role: 'user' as const,
-        content: `Buat 5 topik video "Bagaimana Jika..." bahasa Indonesia yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText}${weeklyHint} Setiap topik WAJIB diawali "Bagaimana Jika", spesifik, dramatis, dan bikin penasaran.`
-      }
+        content: isEn
+          ? `Write 5 highly clickbait, viral video topics for channel "${channel.name}" on theme: ${theme}.${exclusionText}${weeklyHint} ${titleRule}`
+          : `Buat 5 topik video channel "${channel.name}" yang sangat clickbait dan viral untuk tema: ${theme}.${exclusionText}${weeklyHint} ${titleRule}`,
+      },
     ]
 
-    console.log('Generating viral topic recommendations via AI (Fast Model)...')
+    console.log(`Generating viral topic recommendations for ${channel.id} via AI (Fast Model)...`)
     const rawResult = await chat(messages, true)
     const result = JSON.parse(rawResult)
 
@@ -76,17 +89,10 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error('Failed to generate topic recommendations:', error)
-    // Fallback topics in case the AI provider fails or times out
-    const fallbackTopics = [
-      "Bagaimana Jika Indonesia Tidak Pernah Dijajah Belanda?",
-      "Bagaimana Jika Majapahit Tidak Pernah Runtuh?",
-      "Bagaimana Jika Gunung Krakatau Tidak Meletus Tahun 1883?",
-      "Bagaimana Jika Jepang Menang Perang Dunia II?",
-      "Bagaimana Jika Internet Ditemukan 100 Tahun Lebih Awal?"
-    ]
+    // AI provider gagal/timeout — fallback ke pool statis milik channel ini (bukan hardcode CS)
     return NextResponse.json({
       success: true,
-      topics: fallbackTopics,
+      topics: channel.fallbackTopics,
       isFallback: true
     })
   }
