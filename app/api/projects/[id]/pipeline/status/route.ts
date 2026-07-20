@@ -28,7 +28,9 @@ export async function GET(request: Request, context: RouteContext) {
           FROM scenes WHERE project_id = p.id
         ) as scenes_status,
         (SELECT status FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as render_status,
+        (SELECT mode FROM render_jobs WHERE project_id = p.id AND status = 'completed' ORDER BY created_at DESC LIMIT 1) as render_mode,
         (SELECT video_url FROM render_jobs WHERE project_id = p.id AND status = 'completed' ORDER BY created_at DESC LIMIT 1) as video_url,
+        (SELECT 1 FROM thumbnails WHERE project_id = p.id AND status = 'completed' LIMIT 1) as has_thumbnail,
         (SELECT error FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as render_error,
         (SELECT github_run_id FROM render_jobs WHERE project_id = p.id ORDER BY created_at DESC LIMIT 1) as github_run_id,
         (SELECT COUNT(*) FROM scenes WHERE project_id = p.id) as total_scenes,
@@ -80,7 +82,11 @@ export async function GET(request: Request, context: RouteContext) {
         imagesDone,
         voicesDone,
       },
-      videoUrl: row.video_url || null,
+      // Video full (non-short) butuh thumbnail sebelum di-publish (thumbnail digenerate SETELAH
+      // render_jobs di-mark completed, di request yang sama tapi belakangan — kalau videoUrl
+      // dilaporin siap duluan, poller seperti n8n bisa publish sebelum thumbnail selesai dibuat,
+      // hasilnya video tayang tanpa thumbnail custom). Short mode gak butuh thumbnail sama sekali.
+      videoUrl: (row.render_mode === 'short' || row.has_thumbnail) ? (row.video_url || null) : null,
       error: row.render_error || null
     })
   } catch (error) {
