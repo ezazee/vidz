@@ -46,31 +46,40 @@ WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending
 
 Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`
 
-  const content = await chat([
+  const messages = [
     {
-      role: 'system',
+      role: 'system' as const,
       content: `${channel.prompts.narratorPersona} Output ONLY raw JSON, no other text, no markdown, no explanation.`,
     },
-    { role: 'user', content: userPrompt },
-  ], true)
-  try {
-    let cleaned = content.trim()
-    // 1. Hapus pembungkus markdown
-    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim()
-    
-    // 2. Ambil hanya bagian JSON yang valid (antara kurung kurawal pertama dan terakhir)
-    const startCurly = cleaned.indexOf('{')
-    const endCurly = cleaned.lastIndexOf('}')
-    if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
-      cleaned = cleaned.substring(startCurly, endCurly + 1)
-    }
-    
-    // 3. Bersihkan trailing commas
-    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1')
+    { role: 'user' as const, content: userPrompt },
+  ]
 
-    return JSON.parse(cleaned) as OutlineOutput
-  } catch (err) {
-    console.error('Gagal mem-parse outline JSON. Konten asli:', content)
-    throw new Error(`Format JSON Outline dari AI tidak valid: ${(err as Error).message}`)
+  // Sama gejalanya kayak lib/ai/scenes.ts & lib/ai/director.ts — AI kadang balikin JSON valid
+  // diikuti teks nyasar. Retry 3x sebelum nyerah.
+  const maxAttempts = 3
+  let lastErr: Error | null = null
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const content = await chat(messages, true)
+    try {
+      let cleaned = content.trim()
+      // 1. Hapus pembungkus markdown
+      cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim()
+
+      // 2. Ambil hanya bagian JSON yang valid (antara kurung kurawal pertama dan terakhir)
+      const startCurly = cleaned.indexOf('{')
+      const endCurly = cleaned.lastIndexOf('}')
+      if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+        cleaned = cleaned.substring(startCurly, endCurly + 1)
+      }
+
+      // 3. Bersihkan trailing commas
+      cleaned = cleaned.replace(/,\s*([\]}])/g, '$1')
+
+      return JSON.parse(cleaned) as OutlineOutput
+    } catch (err) {
+      lastErr = err as Error
+      console.error(`Gagal mem-parse outline JSON (attempt ${attempt}/${maxAttempts}). Konten asli:`, content)
+    }
   }
+  throw new Error(`Format JSON Outline dari AI tidak valid setelah ${maxAttempts}x percobaan: ${lastErr?.message}`)
 }

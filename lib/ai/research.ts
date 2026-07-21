@@ -45,30 +45,38 @@ async function scrapeWebForTopic(topic: string): Promise<string> {
 export async function generateResearch(topic: string): Promise<ResearchOutput> {
   
   const searchContext = await scrapeWebForTopic(topic);
-  const content = await chat([
+  const messages = [
     {
-      role: 'system',
+      role: 'system' as const,
       content: `Kamu adalah researcher dokumenter profesional. Output HANYA JSON mentah, tanpa teks lain.`,
     },
     {
-      role: 'user',
+      role: 'user' as const,
       content: `Riset mendalam tentang: "${topic}"${searchContext}
 
 Output JSON persis seperti ini, mulai dengan { :
 {"summary":"2-3 paragraf ringkasan","facts":["fakta spesifik 1","fakta spesifik 2","...8-12 fakta"],"timeline":[{"year":"tahun","event":"kejadian penting"}],"references":["sumber atau tokoh kunci"]}`,
     },
-  ], true)
+  ]
 
-  try {
-    let cleaned = content.trim()
-    const startCurly = cleaned.indexOf('{')
-    const endCurly = cleaned.lastIndexOf('}')
-    if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
-      cleaned = cleaned.substring(startCurly, endCurly + 1)
+  // Sama gejalanya kayak lib/ai/scenes.ts, director.ts, outline.ts — AI kadang balikin JSON valid
+  // diikuti teks nyasar. Retry 3x sebelum nyerah.
+  const maxAttempts = 3
+  let lastErr: Error | null = null
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const content = await chat(messages, true)
+    try {
+      let cleaned = content.trim()
+      const startCurly = cleaned.indexOf('{')
+      const endCurly = cleaned.lastIndexOf('}')
+      if (startCurly !== -1 && endCurly !== -1 && endCurly > startCurly) {
+        cleaned = cleaned.substring(startCurly, endCurly + 1)
+      }
+      return JSON.parse(cleaned) as ResearchOutput
+    } catch (err) {
+      lastErr = err as Error
+      console.error(`Gagal mem-parse research JSON (attempt ${attempt}/${maxAttempts}). Konten asli:`, content)
     }
-    return JSON.parse(cleaned) as ResearchOutput
-  } catch (err) {
-    console.error('Gagal mem-parse research JSON. Konten asli:', content)
-    throw new Error(`Format JSON Research dari AI tidak valid: ${(err as Error).message}`)
   }
+  throw new Error(`Format JSON Research dari AI tidak valid setelah ${maxAttempts}x percobaan: ${lastErr?.message}`)
 }
