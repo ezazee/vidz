@@ -10,28 +10,75 @@ const createProjectSchema = z.object({
   user_id: z.string().uuid().optional(),
 })
 
+/** Buang tag [THEME:...] lalu normalisasi untuk cek duplikat (case-insensitive). */
+function normalizeTopic(topic: string): string {
+  return topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim().toLowerCase()
+}
+
+/**
+ * Variasikan judul topik agar unik: "Topik" → "Topik (1)" → "Topik (2)" …
+ * Dipakai saat topik sudah pernah dibuat, supaya workflow n8n (BrainWhy & Cerita
+ * Tetangga) tidak kena HTTP 409 dan pipeline tetap jalan.
+ */
+function varyTopic(baseTopic: string, attempt: number): string {
+  // Ambil base tanpa suffix (N) yang mungkin sudah ada, supaya tidak jadi "Topik (1) (2)"
+  const base = baseTopic.replace(/\s*\(\d+\)\s*$/, '').trim()
+  // Pertahankan tag [THEME:...] di akhir jika ada di original
+  const themeMatch = baseTopic.match(/(\s*\[THEME:.*?\]\s*)$/i)
+  const theme = themeMatch ? themeMatch[1] : ''
+  const core = base.replace(/(\s*\[THEME:.*?\]\s*)$/i, '').trim()
+  return `${core} (${attempt})${theme}`
+}
+
 export async function POST(request: Request) {
   const body = createProjectSchema.parse(await request.json())
   const sql = getSql(resolveChannelId(request))
 
-  // Guard anti-duplikat: tolak topik yang sama persis (tanpa tag THEME, case-insensitive)
-  const normalized = body.topic.replace(/\s*\[THEME:.*?\]\s*/gi, '').trim().toLowerCase()
-  const dup = await sql`
-    SELECT id FROM projects
-    WHERE lower(trim(regexp_replace(topic, '\\s*\\[THEME:.*?\\]\\s*', '', 'gi'))) = ${normalized}
-    LIMIT 1
-  `
-  if (dup[0]) {
-    return NextResponse.json({ error: 'Topik duplikat — sudah pernah dibuat', existingId: dup[0].id }, { status: 409 })
+  // Guard anti-duplikat: variasikan judul otomatis jika topik sudah ada
+  // (bukan langsung 409 — agar workflow BrainWhy & Cerita Tetangga tidak macet)
+  let topicToInsert = body.topic
+  const MAX_ATTEMPTS = 10
+
+  for (let attempt = 0; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      topicToInsert = varyTopic(body.topic, attempt)
+    }
+
+    const normalized = normalizeTopic(topicToInsert)
+    const dup = await sql`
+      SELECT id FROM projects
+      WHERE lower(trim(regexp_replace(topic, '\\s*\\[THEME:.*?\\]\\s*', '', 'gi'))) = ${normalized}
+      LIMIT 1
+    `
+
+    if (!dup[0]) {
+      // Topik unik — lanjut insert
+      break
+    }
+
+    if (attempt === MAX_ATTEMPTS) {
+      return NextResponse.json(
+        { error: 'Gagal membuat topik unik setelah beberapa percobaan' },
+        { status: 409 },
+      )
+    }
   }
 
   const rows = await sql`
     INSERT INTO projects (user_id, topic)
-    VALUES (${body.user_id ?? '00000000-0000-0000-0000-000000000000'}, ${body.topic})
+    VALUES (${body.user_id ?? '00000000-0000-0000-0000-000000000000'}, ${topicToInsert})
     RETURNING id, topic, status, created_at
   `
 
-  return NextResponse.json({ project: rows[0] }, { status: 201 })
+  return NextResponse.json(
+    {
+      project: rows[0],
+      // Flag supaya caller (n8n / studio) tahu judul diubah karena duplikat
+      topicVaried: topicToInsert !== body.topic,
+      originalTopic: body.topic,
+    },
+    { status: 201 },
+  )
 }
 
 // Query dasar yang sama, dipakai per-channel lalu digabung — 1 schema = 1 query, hasilnya
