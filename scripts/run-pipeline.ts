@@ -4,7 +4,8 @@ import { getSql } from '../lib/db/client'
 import { generateResearch } from '../lib/ai/research'
 import { generateDirector } from '../lib/ai/director'
 import { generateOutline } from '../lib/ai/outline'
-import { generateScenes } from '../lib/ai/scenes'
+import { generateScenes, type SceneDraft } from '../lib/ai/scenes'
+import { crossCheckScenes } from '../lib/ai/qa'
 import { generateSeoMetadata } from '../lib/ai/seo'
 import { generateClosingInsight } from '../lib/ai/closing'
 import { pickShortSection } from '../lib/ai/pickShortSection'
@@ -104,10 +105,13 @@ async function runPipeline() {
     await sql`DELETE FROM scenes WHERE project_id = ${id}`
     await sql`DELETE FROM seo_metadata WHERE project_id = ${id}`
     
-    const allScenes: any[] = []
+    // Scene dikumpulkan di memori dulu — agent QA di bawah perlu melihat SELURUH scene
+    // sekaligus untuk menilai konsistensi antar-scene, jadi INSERT ditunda sampai
+    // cross-check selesai.
+    const draftScenes: SceneDraft[] = []
     let globalOrderIndex = 0
     // Chapter (bukan intro/ending) = kandidat short — potongan berdiri sendiri paling masuk akal.
-    const chapterCandidates: { index: number; title: string; sceneIds: string[]; narration: string }[] = []
+    const chapterRanges: { index: number; title: string; orderIndexes: number[] }[] = []
 
     for (const section of outline.sections) {
       console.log(`[Pipeline] Generating scenes for section: ${section.type} - ${section.title}...`)
@@ -121,35 +125,63 @@ async function runPipeline() {
         channelId,
       })
 
-      const sectionSceneIds: string[] = []
-      const sectionNarration: string[] = []
+      const sectionOrderIndexes: number[] = []
       for (const scene of scenes) {
         scene.order_index = globalOrderIndex++
-        const row = await sql`
-          INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, pexels_query, camera, effect, emotion, transition, duration, image_status, voice_status)
-          VALUES (
-            ${id}, ${scene.order_index}, ${scene.narration}, ${scene.subtitle},
-            ${scene.image_prompt}, ${scene.pexels_query ?? ''},
-            ${scene.camera}, ${scene.effect}, ${scene.emotion},
-            ${scene.transition}, ${scene.duration}, 'idle', 'idle'
-          )
-          RETURNING *
-        `
-        allScenes.push(row[0])
-        sectionSceneIds.push(row[0].id)
-        sectionNarration.push(row[0].narration || '')
+        draftScenes.push(scene)
+        sectionOrderIndexes.push(scene.order_index)
       }
 
       if (section.type === 'chapter') {
-        chapterCandidates.push({
-          index: chapterCandidates.length,
+        chapterRanges.push({
+          index: chapterRanges.length,
           title: section.title,
-          sceneIds: sectionSceneIds,
-          narration: sectionNarration.join(' '),
+          orderIndexes: sectionOrderIndexes,
         })
       }
     }
-    console.log(`[Pipeline] Scenes completed. Total: ${allScenes.length} scenes.`)
+    console.log(`[Pipeline] Scenes drafted. Total: ${draftScenes.length} scenes.`)
+
+    // 4b. QA cross-check — WAJIB sebelum scene dipakai bikin gambar & suara di render.yml.
+    // Tiga agent (storyboard → voice script → image prompt) merevisi scene yang bermasalah.
+    // Berbatas putaran & tidak pernah menggagalkan pipeline (lihat lib/ai/qa.ts).
+    console.log('[Pipeline] Running QA cross-check (storyboard, voice, image prompt)...')
+    const qaReports = await crossCheckScenes(draftScenes, { topic, channelId })
+    for (const r of qaReports) {
+      const status = r.failed ? ' (QA dilewati — error)' : ''
+      console.log(
+        `[Pipeline] QA ${r.agent}: ${r.rounds} putaran, ${r.issuesFound} catatan, ${r.revisionsApplied} revisi${status}`,
+      )
+    }
+    console.log('[Pipeline] QA cross-check completed.')
+
+    // Baru simpan ke DB setelah scene lolos QA.
+    const allScenes: any[] = []
+    const idByOrderIndex = new Map<number, string>()
+    for (const scene of draftScenes) {
+      const row = await sql`
+        INSERT INTO scenes (project_id, order_index, narration, subtitle, image_prompt, pexels_query, camera, effect, emotion, transition, duration, image_status, voice_status)
+        VALUES (
+          ${id}, ${scene.order_index}, ${scene.narration}, ${scene.subtitle},
+          ${scene.image_prompt}, ${scene.pexels_query ?? ''},
+          ${scene.camera}, ${scene.effect}, ${scene.emotion},
+          ${scene.transition}, ${scene.duration}, 'idle', 'idle'
+        )
+        RETURNING *
+      `
+      allScenes.push(row[0])
+      idByOrderIndex.set(scene.order_index, row[0].id)
+    }
+
+    const chapterCandidates = chapterRanges.map((c) => ({
+      index: c.index,
+      title: c.title,
+      sceneIds: c.orderIndexes.map((oi) => idByOrderIndex.get(oi)).filter((v): v is string => Boolean(v)),
+      narration: c.orderIndexes
+        .map((oi) => draftScenes.find((s) => s.order_index === oi)?.narration || '')
+        .join(' '),
+    }))
+    console.log(`[Pipeline] Scenes saved. Total: ${allScenes.length} scenes.`)
 
     // Short/reels: AI pilih 1 chapter paling berdiri sendiri, disimpan buat trigger render
     // terpisah nanti (POST /api/projects/:id/generate {mode:'short'}) — lihat lib/ai/pickShortSection.ts.

@@ -30,7 +30,7 @@ ${narrationText.slice(0, 1500)}
 
 Tulis 2-4 kalimat PENUTUP berupa insight/opini/refleksi analitis dari skenario what-if ini — BUKAN rangkuman ulang cerita. Kasih sudut pandang: kenapa skenario ini masuk akal/tidak, pelajaran yang bisa diambil, atau satu hal yang sering dilewatkan orang. Gaya bertutur, sapa "kamu", diakhiri dengan ajakan berpikir. Bahasa Indonesia. Langsung tulis penutupnya.`,
       },
-    ])
+    ], false)
     return content.trim().replace(/^["']|["']$/g, '')
   } catch (e) {
     console.error('Gagal generate closing insight:', e)
