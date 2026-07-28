@@ -178,7 +178,7 @@ export default function LibraryPage() {
                   placeholder="Cari topik video..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 w-full text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
               </div>
 
@@ -203,11 +203,11 @@ export default function LibraryPage() {
                       onClick={() => setStatusFilter(item.key as any)}
                       className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                         active
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                          ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
+                      {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-brand-700 text-white' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
                     </button>
                   )
                 })}
@@ -238,7 +238,7 @@ export default function LibraryPage() {
             {/* projects table/grid */}
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <Loader2 className="size-8 animate-spin text-indigo-600" />
+                <Loader2 className="size-8 animate-spin text-brand-600" />
                 <span className="text-sm font-semibold">Memuat riwayat proyek...</span>
               </div>
             ) : filteredProjects.length === 0 ? (
@@ -259,7 +259,7 @@ export default function LibraryPage() {
                   <div
                     key={project.id}
                     onClick={() => inspectProject(project)}
-                    className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-indigo-200 p-4 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
+                    className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-brand-200 p-4 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
                   >
                     <div className="space-y-3.5">
                       {/* Beautiful 16:9 Thumbnail Cover */}
@@ -272,8 +272,8 @@ export default function LibraryPage() {
                           />
                         ) : project.render_status === 'pending' || project.render_status === 'processing' ? (
                           // Rendering dynamic placeholder
-                          <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-slate-950 flex flex-col items-center justify-center text-slate-400 gap-2.5 animate-pulse">
-                            <Loader2 className="size-6 animate-spin text-indigo-500" />
+                          <div className="w-full h-full bg-gradient-to-br from-brand-950 to-slate-950 flex flex-col items-center justify-center text-slate-400 gap-2.5 animate-pulse">
+                            <Loader2 className="size-6 animate-spin text-brand-500" />
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rendering Video & Cover...</span>
                           </div>
                         ) : project.render_status === 'failed' ? (
@@ -305,7 +305,7 @@ export default function LibraryPage() {
                             {project.channelName}
                           </span>
                           {(project.render_status === 'pending' || project.render_status === 'processing') && (
-                            <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
+                            <span className="text-[9px] bg-brand-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
                           )}
                           {project.render_status === 'failed' && (
                             <span className="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Failed</span>
@@ -333,7 +333,7 @@ export default function LibraryPage() {
                         <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">
                           {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
-                        <h3 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+                        <h3 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-brand-600 transition-colors line-clamp-2">
                           {project.topic}
                         </h3>
                       </div>
@@ -342,7 +342,7 @@ export default function LibraryPage() {
                     {/* Footer link details */}
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                       <span className="text-slate-400 font-mono text-[9px] font-bold">ID: {project.id.slice(0, 8)}...</span>
-                      <span className="text-indigo-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-extrabold uppercase tracking-wide text-[10px]">
+                      <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-extrabold uppercase tracking-wide text-[10px]">
                         Buka Halaman Detail <ChevronRight className="size-3.5" />
                       </span>
                     </div>

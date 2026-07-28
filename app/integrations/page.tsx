@@ -241,7 +241,7 @@ export default function IntegrationsPage() {
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <Loader2 className="size-8 animate-spin text-indigo-600" />
+                <Loader2 className="size-8 animate-spin text-brand-600" />
                 <span className="text-sm font-semibold">Memuat konfigurasi integrasi...</span>
               </div>
             ) : integrations ? (
@@ -250,7 +250,7 @@ export default function IntegrationsPage() {
                 <div className="md:col-span-6 space-y-6">
                   <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
                     <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                      <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                      <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
                         <Key className="size-5" />
                       </div>
                       <div>
@@ -268,7 +268,7 @@ export default function IntegrationsPage() {
                           placeholder="Masukkan Zernio API Key Anda (sk_...)"
                           value={zernioInputKey}
                           onChange={e => setZernioInputKey(e.target.value)}
-                          className="w-full text-xs px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                          className="w-full text-xs px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
                         />
                       </div>
 

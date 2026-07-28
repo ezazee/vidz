@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400">
-              <Loader2 className="size-8 animate-spin text-indigo-600" />
+              <Loader2 className="size-8 animate-spin text-brand-600" />
               <span className="text-sm font-semibold">Memuat analytics semua channel...</span>
             </div>
           ) : (

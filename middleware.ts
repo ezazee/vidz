@@ -39,6 +39,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Semua route kecuali asset statis Next.js & file public
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|images/|voices/|audio/).*)'],
+  // Semua route kecuali asset statis Next.js & file public. Exclude berbasis
+  // ekstensi (png/svg/ico/webmanifest dst) supaya logo/favicon di public/ root
+  // — termasuk yang dipakai DI HALAMAN LOGIN sendiri — tidak ikut ke-redirect.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|images/|voices/|audio/|favicon_io/|.*\\.(?:png|jpg|jpeg|svg|ico|webmanifest)$).*)',
+  ],
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -9,6 +9,11 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  manifest: '/favicon_io/site.webmanifest',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#12102A',
 }
 
 export default function RootLayout({

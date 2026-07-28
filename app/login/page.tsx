@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Lock, Film } from 'lucide-react'
+import Image from 'next/image'
+import { Loader2, Lock } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -40,9 +41,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 space-y-6">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="size-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <Film className="size-6 text-white" />
-            </div>
+            <Image src="/logo_icon.png" alt="StoryZ" width={56} height={56} className="size-14" priority />
             <div>
               <h1 className="text-lg font-bold text-slate-800">StoryZ Studio</h1>
               <p className="text-sm text-slate-400">Masukkan password untuk melanjutkan</p>
@@ -58,7 +57,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 autoFocus
-                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
             </div>
 
@@ -69,7 +68,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !password}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
             >
               {loading ? <Loader2 className="size-4 animate-spin" /> : 'Masuk'}
             </button>

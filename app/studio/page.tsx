@@ -23,7 +23,7 @@ import {
 
 const THEMES = [
   { id: 'What-If Sejarah Nusantara', label: 'What-If Sejarah Nusantara', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-200' },
   { id: 'What-If Tokoh Terkenal', label: 'What-If Tokoh Terkenal', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { id: 'What-If Sains & Teknologi', label: 'What-If Sains & Teknologi', icon: Rocket, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   { id: 'What-If Perang & Konflik', label: 'What-If Perang & Konflik', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
@@ -126,7 +126,7 @@ function StageRow({ stage }: { stage: Stage }) {
     <div className="py-3 space-y-1">
       <div className="flex items-center gap-3">
         <div className="w-5 shrink-0 flex justify-center">
-          {stage.status === 'running' && <Loader2 className="size-4 animate-spin text-indigo-600" />}
+          {stage.status === 'running' && <Loader2 className="size-4 animate-spin text-brand-600" />}
           {stage.status === 'done' && <CheckCircle2 className="size-4 text-emerald-600" />}
           {stage.status === 'error' && <XCircle className="size-4 text-rose-500" />}
           {stage.status === 'idle' && <div className="size-4 rounded-full border-2 border-slate-200" />}
@@ -139,7 +139,7 @@ function StageRow({ stage }: { stage: Stage }) {
         )}
       </div>
       {stage.log && stage.status === 'running' && (
-        <p className="text-xs text-indigo-600 pl-8 animate-pulse font-mono">{stage.log}</p>
+        <p className="text-xs text-brand-600 pl-8 animate-pulse font-mono">{stage.log}</p>
       )}
       {stage.status === 'error' && (
         <p className="text-xs text-rose-500 pl-8 font-mono bg-rose-50 p-2 rounded-md mt-1 border border-rose-100">{stage.error}</p>
@@ -413,12 +413,12 @@ export default function StudioPage() {
                   onKeyDown={e => e.key === 'Enter' && generate()}
                   disabled={running}
                   placeholder="misal: Sejarah Kerajaan Majapahit, Detik-detik Proklamasi 1945"
-                  className="flex-1 rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                  className="flex-1 rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all disabled:bg-slate-50 disabled:text-slate-400"
                 />
                 <button
                   onClick={generate}
                   disabled={topic.trim().length < 3 || running}
-                  className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-40 shadow-lg shadow-indigo-600/15 disabled:shadow-none transition-all flex items-center gap-2 shrink-0"
+                  className="rounded-lg bg-brand-600 px-6 py-3 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40 shadow-lg shadow-brand-600/15 disabled:shadow-none transition-all flex items-center gap-2 shrink-0"
                 >
                   {running ? <Loader2 className="size-4 animate-spin" /> : <WandSparkles className="size-4" />}
                   Generate
@@ -429,7 +429,7 @@ export default function StudioPage() {
               <div className="space-y-4 pt-6 border-t border-slate-100">
                 <div className="flex flex-col gap-2">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <WandSparkles className="size-3.5 text-indigo-500" /> 
+                    <WandSparkles className="size-3.5 text-brand-500" /> 
                     Butuh Ide Topik?
                   </h3>
                   <p className="text-xs text-slate-500">Klik tombol di bawah untuk meminta AI memberikan ide topik yang sangat clickbait dan edukatif berdasarkan tema <span className="font-bold text-slate-700">"{THEMES.find(t => t.id === selectedTheme)?.label}"</span>.</p>
@@ -446,7 +446,7 @@ export default function StudioPage() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">
+                      <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider bg-brand-50 px-2 py-1 rounded-md">
                         Rekomendasi Tema {THEMES.find(t => t.id === selectedTheme)?.label}
                       </span>
                       <button
@@ -461,7 +461,7 @@ export default function StudioPage() {
                     
                     {loadingRecs ? (
                       <div className="flex items-center gap-2 text-xs text-slate-500 py-4 justify-center bg-slate-50 rounded-xl border border-slate-100 border-dashed animate-pulse font-medium">
-                        <Loader2 className="size-4 animate-spin text-indigo-600" />
+                        <Loader2 className="size-4 animate-spin text-brand-600" />
                         Menganalisis algoritma & meracik topik clickbait...
                       </div>
                     ) : (
@@ -471,9 +471,9 @@ export default function StudioPage() {
                             key={idx}
                             onClick={() => setTopic(rec)}
                             disabled={running}
-                            className="text-xs bg-white hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 text-slate-600 px-4 py-3 rounded-xl border border-slate-200 transition-all font-medium text-left shadow-sm group"
+                            className="text-xs bg-white hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-600 px-4 py-3 rounded-xl border border-slate-200 transition-all font-medium text-left shadow-sm group"
                           >
-                            <span className="text-slate-400 group-hover:text-indigo-400 mr-2 font-bold">{idx + 1}.</span>
+                            <span className="text-slate-400 group-hover:text-brand-400 mr-2 font-bold">{idx + 1}.</span>
                             {rec}
                           </button>
                         ))}
@@ -496,7 +496,7 @@ export default function StudioPage() {
                   {projectId && (
                     <button
                       onClick={() => router.push(`/projects/${projectId}`)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      className="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1"
                     >
                       Buka Detail Adegan &rarr;
                     </button>
@@ -515,7 +515,7 @@ export default function StudioPage() {
                 <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-slate-50/20">
                   {(sb.scenes ?? []).map((scene) => (
                     <div key={scene.id} className="p-4 flex gap-4 text-xs">
-                      <span className="font-bold text-indigo-600 shrink-0">#{scene.order_index + 1}</span>
+                      <span className="font-bold text-brand-600 shrink-0">#{scene.order_index + 1}</span>
                       <div className="space-y-1">
                         <p className="text-slate-700 font-medium leading-relaxed">{scene.narration}</p>
                         <p className="text-[10px] text-slate-400 font-mono italic">Prompt: {scene.image_prompt}</p>
@@ -535,7 +535,7 @@ export default function StudioPage() {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
+                    <div className="p-1.5 bg-brand-50 text-brand-600 rounded-md">
                       <Video className="size-4" />
                     </div>
                     <h3 className="font-semibold text-slate-800">Hasil Video Siap Ditonton</h3>
@@ -564,7 +564,7 @@ export default function StudioPage() {
                 </div>
                   <button
                     onClick={resetStudio}
-                    className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-5 py-3 text-sm font-bold transition-all border border-indigo-200 shadow-sm"
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 px-5 py-3 text-sm font-bold transition-all border border-brand-200 shadow-sm"
                   >
                     <Plus className="size-4" /> Bikin Video Topik Baru
                   </button>
@@ -577,7 +577,7 @@ export default function StudioPage() {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
                 <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Pipeline Progress</span>
-                  {running && <span className="text-xs text-indigo-600 font-medium animate-pulse flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Sedang memproses...</span>}
+                  {running && <span className="text-xs text-brand-600 font-medium animate-pulse flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Sedang memproses...</span>}
                 </div>
                 
                 <div className="px-6 py-3 divide-y divide-slate-100">
@@ -588,7 +588,7 @@ export default function StudioPage() {
                     <div className="py-3 space-y-2">
                       <div className="flex items-center gap-3">
                         <div className="w-5 shrink-0 flex justify-center">
-                          {(renderStatus === 'pending' || renderStatus === 'processing') && <Loader2 className="size-4 animate-spin text-indigo-600" />}
+                          {(renderStatus === 'pending' || renderStatus === 'processing') && <Loader2 className="size-4 animate-spin text-brand-600" />}
                           {renderStatus === 'completed' && <CheckCircle2 className="size-4 text-emerald-600" />}
                           {renderStatus === 'failed' && <XCircle className="size-4 text-rose-500" />}
                         </div>
@@ -601,14 +601,14 @@ export default function StudioPage() {
                             : `https://github.com/${GITHUB_REPO}/actions`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-all"
+                          className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 font-medium transition-all"
                         >
                           <ExternalLink className="size-3" />
                           Live Log
                         </a>
                       </div>
                       {renderLog && (
-                        <p className={`text-xs pl-8 font-mono ${renderStatus === 'failed' ? 'text-rose-500' : renderStatus === 'completed' ? 'text-emerald-600 font-semibold' : 'text-indigo-600 animate-pulse'}`}>
+                        <p className={`text-xs pl-8 font-mono ${renderStatus === 'failed' ? 'text-rose-500' : renderStatus === 'completed' ? 'text-emerald-600 font-semibold' : 'text-brand-600 animate-pulse'}`}>
                           {renderLog}
                         </p>
                       )}
@@ -621,7 +621,7 @@ export default function StudioPage() {
                               <span>{renderDetail.imagesDone}/{renderDetail.totalScenes}</span>
                             </div>
                             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.imagesDone / renderDetail.totalScenes) * 100}%` }} />
+                              <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.imagesDone / renderDetail.totalScenes) * 100}%` }} />
                             </div>
                           </div>
                           <div className="space-y-0.5">

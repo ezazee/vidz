@@ -16,7 +16,7 @@ interface Schedule {
 
 const THEMES = [
   { id: 'What-If Sejarah Nusantara', label: 'What-If Sejarah Nusantara', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-200' },
   { id: 'What-If Tokoh Terkenal', label: 'What-If Tokoh Terkenal', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { id: 'What-If Sains & Teknologi', label: 'What-If Sains & Teknologi', icon: Rocket, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   { id: 'What-If Perang & Konflik', label: 'What-If Perang & Konflik', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
@@ -193,7 +193,7 @@ export default function SchedulePage() {
               <Menu className="size-5" />
             </button>
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <CalendarDays className="size-5 text-indigo-600" />
+              <CalendarDays className="size-5 text-brand-600" />
               Weekly Programming
             </h2>
           </div>
@@ -208,7 +208,7 @@ export default function SchedulePage() {
             </button>
             <button 
               onClick={() => setShowGuide(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200 text-xs font-semibold"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors border border-brand-200 text-xs font-semibold"
             >
               <Info className="size-4" />
               <span className="hidden sm:inline">Panduan Cron</span>
@@ -220,7 +220,7 @@ export default function SchedulePage() {
           <div className="max-w-4xl mx-auto">
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="size-8 animate-spin text-indigo-500" />
+                <Loader2 className="size-8 animate-spin text-brand-500" />
               </div>
             ) : (
               <div className="space-y-4">
@@ -236,15 +236,15 @@ export default function SchedulePage() {
                       className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer ${
                         schedule 
                           ? schedule.is_active 
-                            ? 'bg-white border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md' 
+                            ? 'bg-white border-slate-200 hover:border-brand-300 shadow-sm hover:shadow-md' 
                             : 'bg-slate-50 border-slate-200 opacity-60'
-                          : 'bg-transparent border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50'
+                          : 'bg-transparent border-dashed border-slate-300 hover:border-brand-400 hover:bg-brand-50/50'
                       }`}
                     >
                       <div className="flex items-center p-5 gap-6">
                         {/* Day Indicator */}
                         <div className="flex flex-col items-center justify-center w-16 shrink-0 border-r border-slate-100 pr-4">
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${schedule ? 'text-indigo-600' : 'text-slate-400'}`}>Hari</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${schedule ? 'text-brand-600' : 'text-slate-400'}`}>Hari</span>
                           <span className={`text-2xl font-black ${schedule ? 'text-slate-800' : 'text-slate-400'}`}>{day.short}</span>
                         </div>
 
@@ -295,7 +295,7 @@ export default function SchedulePage() {
                               </div>
                             </>
                           ) : (
-                            <div className="flex items-center gap-3 text-slate-400 group-hover:text-indigo-600 transition-colors">
+                            <div className="flex items-center gap-3 text-slate-400 group-hover:text-brand-600 transition-colors">
                               <Plus className="size-5" />
                               <span className="text-sm font-semibold">Tentukan Tema & Waktu...</span>
                             </div>
@@ -340,7 +340,7 @@ export default function SchedulePage() {
                           onClick={() => setTheme(t.id)}
                           className={`flex flex-col items-center justify-center p-3 gap-2 rounded-xl border transition-all text-center cursor-pointer ${
                             isSelected 
-                              ? `${t.bg} ${t.border} ring-2 ring-indigo-500/20 shadow-sm` 
+                              ? `${t.bg} ${t.border} ring-2 ring-brand-500/20 shadow-sm` 
                               : 'border-slate-200 bg-white hover:bg-slate-50'
                           }`}
                         >
@@ -362,7 +362,7 @@ export default function SchedulePage() {
                       value={timeOfDay}
                       onChange={e => setTimeOfDay(e.target.value)}
                       required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all"
                     />
                   </div>
 
@@ -374,7 +374,7 @@ export default function SchedulePage() {
                           type="checkbox"
                           checked={autoPublish}
                           onChange={e => setAutoPublish(e.target.checked)}
-                          className="size-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          className="size-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                         />
                       </div>
                       <div className="ml-3 text-sm">
@@ -389,7 +389,7 @@ export default function SchedulePage() {
                   <button
                     type="submit"
                     disabled={isSubmitting || !theme}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3.5 text-sm font-bold transition-all shadow-md disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-5 py-3.5 text-sm font-bold transition-all shadow-md disabled:opacity-50"
                   >
                     {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
                     Simpan Jadwal {activeDay.label}
@@ -407,7 +407,7 @@ export default function SchedulePage() {
             <div className="bg-white border border-slate-200 rounded-2xl shadow-xl w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-200 p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid place-items-center size-10 rounded-xl bg-indigo-50 text-indigo-600">
+                  <div className="grid place-items-center size-10 rounded-xl bg-brand-50 text-brand-600">
                     <CalendarClock className="size-5" />
                   </div>
                   <div>
@@ -422,7 +422,7 @@ export default function SchedulePage() {
               
               <div className="space-y-4">
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Sistem otomatisasi memerlukan "pemantik" setiap 15 menit. Anda dapat menggunakan layanan gratis seperti <a href="https://console.cron-job.org" target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline font-bold">cron-job.org</a> dan mendaftarkan URL berikut:
+                  Sistem otomatisasi memerlukan "pemantik" setiap 15 menit. Anda dapat menggunakan layanan gratis seperti <a href="https://console.cron-job.org" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline font-bold">cron-job.org</a> dan mendaftarkan URL berikut:
                 </p>
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between gap-3">
                   <code className="text-xs font-mono font-bold text-slate-700 truncate">
@@ -433,7 +433,7 @@ export default function SchedulePage() {
                       navigator.clipboard.writeText(`${window.location.origin}/api/cron/tick`);
                       alert('Endpoint URL disalin!');
                     }}
-                    className="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
+                    className="px-4 py-2 text-xs font-bold bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors shrink-0"
                   >
                     Copy
                   </button>

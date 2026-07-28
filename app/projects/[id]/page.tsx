@@ -80,10 +80,10 @@ function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: Render
   const hasPexels = scene.pexels_video_urls && scene.pexels_video_urls.length > 0
 
   return (
-    <div className="bg-white border border-slate-200/60 rounded-xl p-4 space-y-4 hover:border-indigo-100 hover:shadow-sm transition-all duration-200">
+    <div className="bg-white border border-slate-200/60 rounded-xl p-4 space-y-4 hover:border-brand-100 hover:shadow-sm transition-all duration-200">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
         <div className="flex items-center gap-2">
-          <span className="text-indigo-600 font-bold">Adegan {scene.order_index + 1}</span>
+          <span className="text-brand-600 font-bold">Adegan {scene.order_index + 1}</span>
           {scene.image_url && (
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${hasPexels ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-violet-50 text-violet-600 border border-violet-200'}`}>
               {hasPexels ? `🎬 Video Pexels (${scene.pexels_video_urls!.length})` : '🎨 AI Image'}
@@ -106,7 +106,7 @@ function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: Render
             </div>
           ) : isRendering ? (
             <div className="aspect-video bg-slate-50 border border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-400 gap-1.5 animate-pulse">
-              <Loader2 className="size-4 animate-spin text-indigo-500" />
+              <Loader2 className="size-4 animate-spin text-brand-500" />
               <span className="text-[10px] font-semibold tracking-wide">Membuat Visual...</span>
             </div>
           ) : (
@@ -124,16 +124,16 @@ function SceneCard({ scene, renderStatus }: { scene: Scene; renderStatus: Render
 
           {/* Voiceover player */}
           {scene.voice_url ? (
-            <div className="flex items-center bg-indigo-50/40 border border-indigo-100/50 rounded-lg p-1.5">
+            <div className="flex items-center bg-brand-50/40 border border-brand-100/50 rounded-lg p-1.5">
               <audio
                 src={getVoiceUrl(scene.voice_url)}
                 controls
-                className="w-full h-7 text-xs accent-indigo-600"
+                className="w-full h-7 text-xs accent-brand-600"
               />
             </div>
           ) : isRendering ? (
             <div className="bg-slate-50 border border-dashed border-slate-200 rounded-lg p-2.5 flex items-center gap-2 animate-pulse">
-              <Loader2 className="size-3 animate-spin text-indigo-500" />
+              <Loader2 className="size-3 animate-spin text-brand-500" />
               <span className="text-[10px] font-semibold text-slate-400">Membuat Voiceover...</span>
             </div>
           ) : (
@@ -383,7 +383,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm max-w-5xl mx-auto">
-              <Loader2 className="size-8 animate-spin text-indigo-600" />
+              <Loader2 className="size-8 animate-spin text-brand-600" />
               <span className="text-sm font-semibold">Memuat detail proyek...</span>
             </div>
           ) : error || !project ? (
@@ -395,7 +395,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <Link
                 href="/?tab=library"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
               >
                 Kembali ke Library
               </Link>
@@ -409,7 +409,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center justify-between">
                   <Link
                     href="/?tab=library"
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1.5 transition-all bg-indigo-50 px-3 py-1.5 rounded-lg"
+                    className="text-xs text-brand-600 hover:text-brand-800 font-bold flex items-center gap-1.5 transition-all bg-brand-50 px-3 py-1.5 rounded-lg"
                   >
                     &larr; Kembali ke Library
                   </Link>
@@ -443,7 +443,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     onClick={() => setActiveTab('video')}
                     className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
-                      activeTab === 'video' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                      activeTab === 'video' ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
                     }`}
                   >
                     <span className="flex items-center gap-1.5"><Video className="size-3.5" /> Video & Cover</span>
@@ -451,7 +451,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     onClick={() => setActiveTab('storyboard')}
                     className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
-                      activeTab === 'storyboard' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                      activeTab === 'storyboard' ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
                     }`}
                   >
                     <span className="flex items-center gap-1.5"><Library className="size-3.5" /> Storyboard & Aset</span>
@@ -459,7 +459,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     onClick={() => setActiveTab('seo')}
                     className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b-2 transition-all ${
-                      activeTab === 'seo' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
+                      activeTab === 'seo' ? 'border-brand-600 text-brand-700 bg-brand-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'
                     }`}
                   >
                     <span className="flex items-center gap-1.5"><Activity className="size-3.5" /> SEO & Publish</span>
@@ -491,7 +491,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </a>
                             <button
                               onClick={() => setActiveTab('seo')}
-                              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2.5 text-xs font-semibold hover:bg-indigo-100 transition-all"
+                              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-brand-50 text-brand-700 border border-brand-200 px-4 py-2.5 text-xs font-semibold hover:bg-brand-100 transition-all"
                             >
                               Ke Halaman Publish &rarr;
                             </button>
@@ -502,7 +502,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                           {project.render_status === 'pending' || project.render_status === 'processing' ? (
                             <div className="w-full text-left space-y-6">
                               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                                <Loader2 className="size-6 animate-spin text-indigo-600" />
+                                <Loader2 className="size-6 animate-spin text-brand-600" />
                                 <div>
                                   <p className="font-bold text-slate-800 text-base">Sedang Memproses Video</p>
                                   <p className="text-xs text-slate-400 mt-0.5">Sistem memproses aset dan merender di cloud.</p>
@@ -514,11 +514,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <div className="space-y-2">
                                   <div className="flex justify-between text-xs font-bold">
                                     <span className="text-slate-700">Tahap 1: Visual AI</span>
-                                    <span className="text-indigo-600">{completedImages} / {totalScenes}</span>
+                                    <span className="text-brand-600">{completedImages} / {totalScenes}</span>
                                   </div>
                                   <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60">
                                     <div 
-                                      className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
+                                      className="bg-brand-600 h-full transition-all duration-500 rounded-full" 
                                       style={{ width: `${totalScenes > 0 ? (completedImages / totalScenes) * 100 : 0}%` }}
                                     />
                                   </div>
@@ -528,11 +528,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <div className="space-y-2">
                                   <div className="flex justify-between text-xs font-bold">
                                     <span className="text-slate-700">Tahap 2: Voiceover TTS</span>
-                                    <span className="text-indigo-600">{completedVoices} / {totalScenes}</span>
+                                    <span className="text-brand-600">{completedVoices} / {totalScenes}</span>
                                   </div>
                                   <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200/60">
                                     <div 
-                                      className="bg-indigo-600 h-full transition-all duration-500 rounded-full" 
+                                      className="bg-brand-600 h-full transition-all duration-500 rounded-full" 
                                       style={{ width: `${totalScenes > 0 ? (completedVoices / totalScenes) * 100 : 0}%` }}
                                     />
                                   </div>
@@ -541,13 +541,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 {/* Langkah 3 */}
                                 <div className="space-y-2.5 pt-3 border-t border-slate-100">
                                   <div className="flex items-center gap-2 text-xs font-bold">
-                                    <div className={`size-2.5 rounded-full shadow-sm ${completedImages === totalScenes && completedVoices === totalScenes ? 'bg-indigo-600 animate-pulse' : 'bg-slate-300'}`} />
-                                    <span className={completedImages === totalScenes && completedVoices === totalScenes ? 'text-indigo-700' : 'text-slate-400'}>
+                                    <div className={`size-2.5 rounded-full shadow-sm ${completedImages === totalScenes && completedVoices === totalScenes ? 'bg-brand-600 animate-pulse' : 'bg-slate-300'}`} />
+                                    <span className={completedImages === totalScenes && completedVoices === totalScenes ? 'text-brand-700' : 'text-slate-400'}>
                                       Tahap 3: Cloud Rendering (Matrix)
                                     </span>
                                   </div>
                                   {completedImages === totalScenes && completedVoices === totalScenes ? (
-                                    <p className="text-xs text-indigo-600 pl-4.5 font-mono bg-indigo-50 border border-indigo-100/50 p-3 rounded-lg">
+                                    <p className="text-xs text-brand-600 pl-4.5 font-mono bg-brand-50 border border-brand-100/50 p-3 rounded-lg">
                                       8 runner memproses potongan klip di cloud...
                                     </p>
                                   ) : (
@@ -563,7 +563,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   href={`https://github.com/${GITHUB_REPO}/actions`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold transition-all bg-indigo-50 px-3 py-1.5 rounded-md"
+                                  className="flex items-center gap-1.5 text-[11px] text-brand-600 hover:text-brand-800 font-bold transition-all bg-brand-50 px-3 py-1.5 rounded-md"
                                 >
                                   <ExternalLink className="size-3.5" />
                                   Live Action Logs
@@ -623,7 +623,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {sb && (
                       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                         <span className="font-extrabold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2 mb-4">
-                          <Film className="size-4 text-indigo-600" />
+                          <Film className="size-4 text-brand-600" />
                           Visual & Narration Bible
                         </span>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -646,7 +646,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       <h4 className="font-extrabold text-slate-800 text-sm border-b border-slate-100 pb-3 flex items-center justify-between">
                         <span>Daftar Skrip & Adegan</span>
                         {sb && (
-                          <span className="text-[11px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold border border-indigo-100 shadow-sm">
+                          <span className="text-[11px] bg-brand-50 text-brand-600 px-3 py-1 rounded-full font-bold border border-brand-100 shadow-sm">
                             {totalScenes} Scenes
                           </span>
                         )}
@@ -710,7 +710,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     type="checkbox" 
                                     checked={scheduleEnabled}
                                     onChange={(e) => setScheduleEnabled(e.target.checked)}
-                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                                   />
                                   <span className="text-xs font-semibold text-slate-700">Jadwalkan Publikasi</span>
                                 </label>
@@ -722,7 +722,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                       value={scheduledAt}
                                       onChange={(e) => setScheduledAt(e.target.value)}
                                       min={new Date().toISOString().slice(0, 16)}
-                                      className="w-full text-xs rounded-lg border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                                      className="w-full text-xs rounded-lg border-slate-200 focus:border-brand-500 focus:ring-brand-500 px-3 py-2"
                                     />
                                     <p className="text-[10px] text-slate-400 mt-1.5">Pilih waktu kapan video akan dipublish (Minimal 15 menit dari sekarang).</p>
                                   </div>
@@ -739,8 +739,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                               </button>
                               
                               {project.scheduled_at && (
-                                <div className="mt-3 text-center bg-indigo-50 border border-indigo-100 rounded-lg p-2">
-                                  <p className="text-[10px] font-semibold text-indigo-700">
+                                <div className="mt-3 text-center bg-brand-50 border border-brand-100 rounded-lg p-2">
+                                  <p className="text-[10px] font-semibold text-brand-700">
                                     Status: Terjadwal pada {new Date(project.scheduled_at).toLocaleString('id-ID')}
                                   </p>
                                 </div>
@@ -768,7 +768,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                       {project && (
                         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                            <Activity className="size-5 text-indigo-600" />
+                            <Activity className="size-5 text-brand-600" />
                             <h4 className="font-extrabold text-slate-800 text-sm">Metadata SEO Teroptimasi AI</h4>
                           </div>
 
@@ -786,7 +786,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                       navigator.clipboard.writeText(project.seo_title || '')
                                       alert('Judul tersalin!')
                                     }}
-                                    className="px-4 py-2 text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 rounded-lg border border-indigo-100 transition-all shrink-0 self-start shadow-sm"
+                                    className="px-4 py-2 text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 hover:border-brand-200 rounded-lg border border-brand-100 transition-all shrink-0 self-start shadow-sm"
                                   >
                                     Salin
                                   </button>
@@ -805,7 +805,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                       navigator.clipboard.writeText(project.seo_description || '')
                                       alert('Deskripsi tersalin!')
                                     }}
-                                    className="px-4 py-2 text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 rounded-lg border border-indigo-100 transition-all shrink-0 self-start shadow-sm"
+                                    className="px-4 py-2 text-xs font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 hover:border-brand-200 rounded-lg border border-brand-100 transition-all shrink-0 self-start shadow-sm"
                                   >
                                     Salin
                                   </button>
@@ -818,7 +818,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                   {project.seo_hashtags && project.seo_hashtags.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
                                       {project.seo_hashtags.map((tag, idx) => (
-                                        <span key={idx} className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-md border border-indigo-100 shadow-sm">
+                                        <span key={idx} className="text-xs font-bold text-brand-700 bg-brand-50 px-3 py-1 rounded-md border border-brand-100 shadow-sm">
                                           {tag}
                                         </span>
                                       ))}
@@ -1153,10 +1153,10 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mt-6 shadow-2xl text-slate-200 relative overflow-hidden">
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-brand-600/10 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-6 relative z-10">
-        <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-lg border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+        <div className="p-2 bg-brand-500/10 text-brand-500 rounded-lg border border-brand-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
           <WandSparkles className="size-5" />
         </div>
         <div>
@@ -1203,12 +1203,12 @@ function ThumbnailGenerator({ projectId, defaultText, initialImageUrl }: Thumbna
               value={thumbnailPrompt}
               onChange={e => setThumbnailPrompt(e.target.value)}
               placeholder="e.g. Ilmuwan Syok Ternyata Black Hole..."
-              className="flex-1 bg-slate-800 border border-slate-700 px-4 py-3 rounded-xl outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 font-medium text-white placeholder:text-slate-600 transition-all text-sm shadow-inner"
+              className="flex-1 bg-slate-800 border border-slate-700 px-4 py-3 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 font-medium text-white placeholder:text-slate-600 transition-all text-sm shadow-inner"
             />
             <button
               onClick={handleGenerateAIBackground}
               disabled={generating || !thumbnailPrompt.trim()}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)] disabled:shadow-none"
+              className="bg-brand-600 hover:bg-brand-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 text-white px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.2)] disabled:shadow-none"
             >
               {generating ? (
                 <>

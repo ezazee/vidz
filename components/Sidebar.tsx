@@ -1,8 +1,8 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
-  Film,
   WandSparkles,
   Library,
   LayoutDashboard,
@@ -69,9 +69,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         {/* Header Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-950/40">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
-              <Film className="size-5" />
-            </div>
+            <Image src="/logo_icon.png" alt="StoryZ" width={36} height={36} className="size-9 rounded-lg" priority />
             <div>
               <h1 className="text-base font-bold leading-none tracking-wide text-white">StoryZ</h1>
               <p className="text-xs text-slate-400 mt-1">AI Video Studio</p>
@@ -99,7 +97,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 onClick={onClose}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                   item.active
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                 }`}
               >
@@ -114,7 +112,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/20">
         <div className="rounded-lg bg-slate-800/40 p-3.5 border border-slate-800/80">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 block">Render Engine</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-brand-400 block">Render Engine</span>
           <span className="text-xs font-semibold text-slate-200 mt-1 block">GitHub Parallel Matrix</span>
           <div className="mt-2.5 flex items-center gap-2">
             <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
