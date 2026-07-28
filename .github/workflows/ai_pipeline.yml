@@ -19,21 +19,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Warm up AI endpoint
-        env:
-          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_MODEL: ${{ secrets.AI_MODEL }}
-        run: |
-          echo "Warming up AI endpoint (Fly.io cold start workaround)..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
-            -X POST "$AI_BASE_URL/chat/completions" \
-            -H "Authorization: Bearer $AI_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d "{\"model\":\"$AI_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":3}" \
-          ) || true
-          echo "Warm-up status: HTTP $STATUS"
-
       - name: Run AI Pipeline
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

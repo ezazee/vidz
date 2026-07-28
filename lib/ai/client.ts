@@ -53,8 +53,14 @@ export async function chat(messages: Message[], json = true, customModel?: strin
       // Tanpa retry di sini, satu spike traffic langsung mematikan seluruh pipeline.
       if (res.status === 429 || res.status === 413) {
         if (attempt < maxRetries) {
-          console.warn(`AI rate limited (${res.status}), retry ${attempt}/${maxRetries} in 15s...`)
-          await new Promise(r => setTimeout(r, 15000))
+          // Gateway selalu menempelkan "(reset after Ns)" di pesan error — waktu tunggu
+          // aktualnya bervariasi 14-30 detik tergantung beban saat itu, jadi pakai angka
+          // asli (+buffer 2s) daripada delay tetap yang kadang kepotong sebelum reset.
+          const bodyText = await res.text().catch(() => '')
+          const match = bodyText.match(/reset after (\d+)s/)
+          const waitMs = match ? (Number(match[1]) + 2) * 1000 : 20000
+          console.warn(`AI rate limited (${res.status}), retry ${attempt}/${maxRetries} in ${waitMs / 1000}s...`)
+          await new Promise(r => setTimeout(r, waitMs))
           continue
         }
         throw new Error(`AI request failed after ${maxRetries} attempts: ${res.status} ${res.statusText}`)
