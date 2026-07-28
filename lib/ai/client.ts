@@ -5,7 +5,24 @@ interface Message {
   content: string
 }
 
+// Satu run pipeline manggil chat() ~15-16 kali beruntun (research, director, outline,
+// per-section scenes, QA 3 agent x 2 putaran, closing, seo). Kalau ditembak secepat
+// mungkin tanpa jeda, itu lebih cepat dari kecepatan pemulihan kuota TPM gateway —
+// retry reaktif (lihat blok 429/413 di bawah) jadi percuma karena kuota terus-menerus
+// penuh, bukan cuma kena spike sesaat (ciri: "reset after Ns" sama persis tiap retry).
+// Jaga jarak proaktif di sini SEBELUM kena limit, bukan cuma nunggu SETELAH kena.
+const MIN_CALL_INTERVAL_MS = 4000
+let lastCallAt = 0
+
+async function paceCall() {
+  const now = Date.now()
+  const wait = lastCallAt + MIN_CALL_INTERVAL_MS - now
+  lastCallAt = Math.max(now, lastCallAt + MIN_CALL_INTERVAL_MS)
+  if (wait > 0) await new Promise(r => setTimeout(r, wait))
+}
+
 export async function chat(messages: Message[], json = true, customModel?: string): Promise<string> {
+  await paceCall()
   const baseUrl = env.AI_BASE_URL ?? env.NINE_ROUTER_BASE_URL
   const apiKey = env.AI_API_KEY ?? env.NINE_ROUTER_API_KEY
   const model = customModel ?? env.AI_MODEL
@@ -36,7 +53,14 @@ export async function chat(messages: Message[], json = true, customModel?: strin
           model,
           messages,
           stream: false,
-          max_tokens: 16384,
+          // PENTING: gateway/Groq menghitung max_tokens SEBAGAI RESERVASI terhadap
+          // limit TPM (tokens-per-minute) — bukan cuma token yang beneran kepakai.
+          // Org ini punya limit 8000 TPM (dikonfirmasi dari pesan error 413:
+          // "Limit 8000, Requested 16511"). Prompt overhead gateway ini sendiri
+          // sudah ~2000-3500 token, jadi max_tokens 16384 (nilai lama) SELALU
+          // ditolak instan apa pun isi promptnya — bukan soal beban/spike lain.
+          // 4096 dipilih supaya prompt terbesar (~3500) + ini tetap di bawah 8000.
+          max_tokens: 4096,
           ...(json && { response_format: { type: 'json_object' } }),
         }),
         signal: controller.signal,
