@@ -13,7 +13,13 @@ export async function chat(messages: Message[], json = true, customModel?: strin
   if (!baseUrl || !apiKey || !model) throw new Error('AI_BASE_URL, AI_API_KEY, and AI_MODEL are required')
 
   const maxRetries = 3
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  // Rate-limit (429/413 TPM) dapat jatah percobaan lebih banyak — sekarang delay-nya
+  // akurat (baca "reset after Ns" asli, bukan tebakan), jadi menambah percobaan tidak
+  // buang waktu percuma. Step berat (Scenes: 1 panggilan per section) paling sering
+  // kena karena beruntun dalam waktu singkat.
+  const maxRateLimitRetries = 6
+  const maxAttempts = Math.max(maxRetries, maxRateLimitRetries)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const controller = new AbortController()
     // 180s per attempt: step berat (scenes 6-10 adegan sekaligus) sering lewat 90s,
     // apalagi kalau alias model dirotasi ke model yang lebih lambat.
@@ -52,18 +58,18 @@ export async function chat(messages: Message[], json = true, customModel?: strin
       // terlampaui, bukan cuma "body kegedean" — pesannya sendiri bilang "reset after Ns".
       // Tanpa retry di sini, satu spike traffic langsung mematikan seluruh pipeline.
       if (res.status === 429 || res.status === 413) {
-        if (attempt < maxRetries) {
+        if (attempt < maxRateLimitRetries) {
           // Gateway selalu menempelkan "(reset after Ns)" di pesan error — waktu tunggu
           // aktualnya bervariasi 14-30 detik tergantung beban saat itu, jadi pakai angka
           // asli (+buffer 2s) daripada delay tetap yang kadang kepotong sebelum reset.
           const bodyText = await res.text().catch(() => '')
           const match = bodyText.match(/reset after (\d+)s/)
           const waitMs = match ? (Number(match[1]) + 2) * 1000 : 20000
-          console.warn(`AI rate limited (${res.status}), retry ${attempt}/${maxRetries} in ${waitMs / 1000}s...`)
+          console.warn(`AI rate limited (${res.status}), retry ${attempt}/${maxRateLimitRetries} in ${waitMs / 1000}s...`)
           await new Promise(r => setTimeout(r, waitMs))
           continue
         }
-        throw new Error(`AI request failed after ${maxRetries} attempts: ${res.status} ${res.statusText}`)
+        throw new Error(`AI request failed after ${maxRateLimitRetries} attempts: ${res.status} ${res.statusText}`)
       }
 
       if (!res.ok) throw new Error(`AI request failed: ${res.status} ${res.statusText}`)
@@ -96,6 +102,8 @@ export async function chat(messages: Message[], json = true, customModel?: strin
           await new Promise(r => setTimeout(r, 5000))
           continue
         }
+        // Timeout bukan rate-limit (maxRateLimitRetries lebih tinggi dari maxRetries),
+        // jadi hentikan di sini walau attempt < maxAttempts.
         throw new Error(`AI fetch aborted after ${maxRetries} attempts (timeout or connection failed). URL: ${baseUrl}/chat/completions`)
       }
       throw error
