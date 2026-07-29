@@ -1,27 +1,12 @@
 import Link from 'next/link'
-import { Geist, JetBrains_Mono } from 'next/font/google'
 import BranchStage from '@/components/landing/BranchStage'
 import ChannelList from '@/components/landing/ChannelList'
 import { PIPELINE, BIBLES, QA_AGENTS } from '@/components/landing/content'
 import './landing.css'
 
-const display = Geist({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-body',
-  display: 'swap',
-})
-
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-  display: 'swap',
-})
-
 export default function LandingPage() {
   return (
-    <main className={`lp ${display.variable} ${display.className} ${mono.variable}`}>
+    <main className="lp">
       {/* N9 · edge-aligned minimal */}
       <nav className="lp__nav">
         <span className="lp__wordmark">

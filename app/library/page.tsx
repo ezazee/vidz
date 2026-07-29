@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import '@/app/app.css'
 import {
   Menu,
   Search,
@@ -131,34 +132,34 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
+    <div className="ap">
       {/* Sidebar Desktop & Mobile */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="ap__body">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shrink-0">
+        <header className="ap__topbar">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg md:hidden transition-all"
+              className="p-1.5 text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-lg md:hidden transition-all"
             >
               <Menu className="size-5" />
             </button>
-            <h2 className="text-base font-semibold text-slate-800">Historical Video Library</h2>
+            <h2 className="text-base font-semibold text-[var(--color-ink)]">Historical Video Library</h2>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={fetchProjects}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200"
+              className="p-2 text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-full transition-all duration-200"
               title="Refresh data"
             >
               <RefreshCw className="size-4" />
             </button>
-            <div className="h-4 w-px bg-slate-200" />
-            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-1.5">
+            <div className="h-4 w-px bg-[var(--color-rule-2)]" />
+            <span className="text-xs font-semibold text-[var(--color-ink-3)] bg-[var(--color-paper-3)] px-3 py-1.5 rounded-full border border-[var(--color-rule)] flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               Cloud Connected
             </span>
@@ -169,22 +170,22 @@ export default function LibraryPage() {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="space-y-6 max-w-6xl mx-auto">
             {/* Search and status filters bar */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+            <div className="bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-sm p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               {/* Search input */}
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 size-4 text-[var(--color-ink-3)]" />
                 <input
                   type="text"
                   placeholder="Cari topik video..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 w-full text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-lg border border-[var(--color-rule)] outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
               </div>
 
               {/* Status Filter Buttons */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-400 mr-1.5 flex items-center gap-1">
+                <span className="text-xs font-bold text-[var(--color-ink-3)] mr-1.5 flex items-center gap-1">
                   <SlidersHorizontal className="size-3.5" />
                   Filter:
                 </span>
@@ -203,11 +204,11 @@ export default function LibraryPage() {
                       onClick={() => setStatusFilter(item.key as any)}
                       className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                         active
-                          ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-sm'
+                          : 'bg-[var(--color-paper-3)] border-[var(--color-rule)] text-[var(--color-ink-2)] hover:bg-[var(--color-paper-3)]'
                       }`}
                     >
-                      {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-brand-700 text-white' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
+                      {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-brand-700 text-white' : 'bg-[var(--color-rule-2)] text-[var(--color-ink-3)]'}`}>{count}</span>
                     </button>
                   )
                 })}
@@ -225,11 +226,11 @@ export default function LibraryPage() {
                     onClick={() => setChannelFilter(item.key)}
                     className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                       active
-                        ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                        ? 'bg-[var(--color-paper-3)] border-[var(--color-rule)] text-white shadow-sm'
+                        : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink-2)] hover:bg-[var(--color-paper-3)]'
                     }`}
                   >
-                    {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-slate-600 text-white' : 'bg-slate-200 text-slate-500'}`}>{count}</span>
+                    {item.label} <span className={`ml-1 px-1 rounded-md text-[10px] ${active ? 'bg-[var(--color-rule-2)] text-white' : 'bg-[var(--color-rule-2)] text-[var(--color-ink-3)]'}`}>{count}</span>
                   </button>
                 )
               })}
@@ -237,16 +238,16 @@ export default function LibraryPage() {
 
             {/* projects table/grid */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <Loader2 className="size-8 animate-spin text-brand-600" />
+              <div className="flex flex-col items-center justify-center py-32 gap-3 text-[var(--color-ink-3)] bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl shadow-sm">
+                <Loader2 className="size-8 animate-spin text-[var(--color-accent)]" />
                 <span className="text-sm font-semibold">Memuat riwayat proyek...</span>
               </div>
             ) : filteredProjects.length === 0 ? (
-              <div className="border border-dashed border-slate-200 rounded-xl bg-white p-20 text-center flex flex-col items-center justify-center gap-3">
-                <Video className="size-10 text-slate-300" />
+              <div className="border border-dashed border-[var(--color-rule)] rounded-xl bg-[var(--color-paper-2)] p-20 text-center flex flex-col items-center justify-center gap-3">
+                <Video className="size-10 text-[var(--color-ink-3)]" />
                 <div>
-                  <p className="font-bold text-slate-700">Tidak Ada Proyek Ditemukan</p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="font-bold text-[var(--color-ink-2)]">Tidak Ada Proyek Ditemukan</p>
+                  <p className="text-xs text-[var(--color-ink-3)] mt-1">
                     {searchQuery || statusFilter !== 'all' 
                       ? 'Coba gunakan kata kunci pencarian atau filter status yang lain.' 
                       : 'Mulai buat video baru pada menu AI Video Studio.'}
@@ -259,11 +260,11 @@ export default function LibraryPage() {
                   <div
                     key={project.id}
                     onClick={() => inspectProject(project)}
-                    className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-brand-200 p-4 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
+                    className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl shadow-sm hover:shadow-md hover:border-brand-200 p-4 cursor-pointer transition-all duration-200 group flex flex-col justify-between space-y-4"
                   >
                     <div className="space-y-3.5">
                       {/* Beautiful 16:9 Thumbnail Cover */}
-                      <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-950 relative shadow-sm shrink-0">
+                      <div className="aspect-video w-full rounded-lg overflow-hidden border border-[var(--color-rule)]/80 bg-[var(--color-paper)] relative shadow-sm shrink-0">
                         {project.thumbnail_url ? (
                           <img
                             src={project.thumbnail_url.startsWith('http') ? project.thumbnail_url : '/' + project.thumbnail_url}
@@ -272,21 +273,21 @@ export default function LibraryPage() {
                           />
                         ) : project.render_status === 'pending' || project.render_status === 'processing' ? (
                           // Rendering dynamic placeholder
-                          <div className="w-full h-full bg-gradient-to-br from-brand-950 to-slate-950 flex flex-col items-center justify-center text-slate-400 gap-2.5 animate-pulse">
-                            <Loader2 className="size-6 animate-spin text-brand-500" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rendering Video & Cover...</span>
+                          <div className="w-full h-full bg-gradient-to-br from-brand-950 to-[var(--color-paper)] flex flex-col items-center justify-center text-[var(--color-ink-3)] gap-2.5 animate-pulse">
+                            <Loader2 className="size-6 animate-spin text-[var(--color-accent)]" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-3)]">Rendering Video & Cover...</span>
                           </div>
                         ) : project.render_status === 'failed' ? (
                           // Failed placeholder
-                          <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-slate-500 gap-1">
+                          <div className="w-full h-full bg-[var(--color-paper)] flex flex-col items-center justify-center text-[var(--color-ink-3)] gap-1">
                             <XCircle className="size-6 text-rose-500" />
                             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Render Gagal</span>
                           </div>
                         ) : (
                           // Draft placeholder
-                          <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 gap-1">
-                            <Video className="size-6 text-slate-300" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Draf Storyboard</span>
+                          <div className="w-full h-full bg-[var(--color-paper-3)] flex flex-col items-center justify-center text-[var(--color-ink-3)] gap-1">
+                            <Video className="size-6 text-[var(--color-ink-3)]" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-3)]">Draf Storyboard</span>
                           </div>
                         )}
 
@@ -301,17 +302,17 @@ export default function LibraryPage() {
                               Published
                             </span>
                           )}
-                          <span className="text-[9px] bg-slate-950/70 text-slate-200 px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md backdrop-blur-sm">
+                          <span className="text-[9px] bg-[var(--color-paper)]/70 text-[var(--color-ink)] px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md backdrop-blur-sm">
                             {project.channelName}
                           </span>
                           {(project.render_status === 'pending' || project.render_status === 'processing') && (
-                            <span className="text-[9px] bg-brand-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
+                            <span className="text-[9px] bg-[var(--color-accent)] text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md animate-pulse">Rendering</span>
                           )}
                           {project.render_status === 'failed' && (
                             <span className="text-[9px] bg-rose-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Failed</span>
                           )}
                           {!project.render_status && (
-                            <span className="text-[9px] bg-slate-600 text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Draft</span>
+                            <span className="text-[9px] bg-[var(--color-rule-2)] text-white px-2 py-0.5 rounded-md font-extrabold uppercase tracking-wide shadow-md">Draft</span>
                           )}
                         </div>
 
@@ -321,7 +322,7 @@ export default function LibraryPage() {
                             e.stopPropagation()
                             handleDeleteProject(project.id)
                           }}
-                          className="absolute top-2 right-2 p-1.5 bg-slate-950/70 hover:bg-rose-600 hover:text-white text-slate-300 rounded-lg transition-all z-20 shadow-md backdrop-blur-sm"
+                          className="absolute top-2 right-2 p-1.5 bg-[var(--color-paper)]/70 hover:bg-rose-600 hover:text-white text-[var(--color-ink-3)] rounded-lg transition-all z-20 shadow-md backdrop-blur-sm"
                           title="Hapus Proyek"
                         >
                           <Trash2 className="size-3.5" />
@@ -330,19 +331,19 @@ export default function LibraryPage() {
 
                       {/* Info & Title */}
                       <div className="space-y-1">
-                        <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">
+                        <span className="text-[9px] text-[var(--color-ink-3)] font-bold block uppercase tracking-wider">
                           {new Date(project.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
-                        <h3 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-brand-600 transition-colors line-clamp-2">
+                        <h3 className="font-extrabold text-[var(--color-ink)] text-sm leading-snug group-hover:text-[var(--color-accent)] transition-colors line-clamp-2">
                           {project.topic}
                         </h3>
                       </div>
                     </div>
 
                     {/* Footer link details */}
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <span className="text-slate-400 font-mono text-[9px] font-bold">ID: {project.id.slice(0, 8)}...</span>
-                      <span className="text-brand-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-extrabold uppercase tracking-wide text-[10px]">
+                    <div className="flex items-center justify-between pt-3 border-t border-[var(--color-rule)] text-xs">
+                      <span className="text-[var(--color-ink-3)] font-mono text-[9px] font-bold">ID: {project.id.slice(0, 8)}...</span>
+                      <span className="text-[var(--color-accent)] group-hover:translate-x-0.5 transition-transform flex items-center gap-1 font-extrabold uppercase tracking-wide text-[10px]">
                         Buka Halaman Detail <ChevronRight className="size-3.5" />
                       </span>
                     </div>

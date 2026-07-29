@@ -9,6 +9,9 @@ const updateJobSchema = z.object({
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
   video_url: z.string().url().optional(),
   error: z.string().optional(),
+  // Nomor run GitHub Actions. Kolomnya sudah ada di skema sejak awal tapi tidak
+  // pernah ada yang mengisi, jadi tautan ke log selalu kosong di UI.
+  gh_run_id: z.string().optional(),
 })
 
 interface RouteContext {
@@ -40,7 +43,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     SET status = ${body.status},
         video_url = ${body.video_url ?? null},
         error = ${body.error ?? null},
-        completed_at = CASE WHEN ${body.status} = 'completed' THEN now() ELSE completed_at END
+        gh_run_id = COALESCE(${body.gh_run_id ?? null}, gh_run_id),
+        started_at = CASE
+          WHEN ${body.status} = 'processing' AND started_at IS NULL THEN now()
+          ELSE started_at
+        END,
+        completed_at = CASE
+          WHEN ${body.status} IN ('completed', 'failed') THEN now()
+          ELSE completed_at
+        END
     WHERE id = ${id}
     RETURNING *
   `

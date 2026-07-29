@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import '@/app/app.css'
 import {
   Menu,
   Loader2,
@@ -23,7 +24,7 @@ import {
 
 const THEMES = [
   { id: 'What-If Sejarah Nusantara', label: 'What-If Sejarah Nusantara', icon: Compass, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-200' },
+  { id: 'What-If Sejarah Dunia', label: 'What-If Sejarah Dunia', icon: Globe2, color: 'text-[var(--color-accent)]', bg: 'bg-brand-50', border: 'border-brand-200' },
   { id: 'What-If Tokoh Terkenal', label: 'What-If Tokoh Terkenal', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { id: 'What-If Sains & Teknologi', label: 'What-If Sains & Teknologi', icon: Rocket, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   { id: 'What-If Perang & Konflik', label: 'What-If Perang & Konflik', icon: Swords, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
@@ -126,20 +127,20 @@ function StageRow({ stage }: { stage: Stage }) {
     <div className="py-3 space-y-1">
       <div className="flex items-center gap-3">
         <div className="w-5 shrink-0 flex justify-center">
-          {stage.status === 'running' && <Loader2 className="size-4 animate-spin text-brand-600" />}
+          {stage.status === 'running' && <Loader2 className="size-4 animate-spin text-[var(--color-accent)]" />}
           {stage.status === 'done' && <CheckCircle2 className="size-4 text-emerald-600" />}
           {stage.status === 'error' && <XCircle className="size-4 text-rose-500" />}
-          {stage.status === 'idle' && <div className="size-4 rounded-full border-2 border-slate-200" />}
+          {stage.status === 'idle' && <div className="size-4 rounded-full border-2 border-[var(--color-rule)]" />}
         </div>
-        <span className={`text-sm flex-1 font-medium ${stage.status === 'idle' ? 'text-slate-400 font-normal' : 'text-slate-700'}`}>
+        <span className={`text-sm flex-1 font-medium ${stage.status === 'idle' ? 'text-[var(--color-ink-3)] font-normal' : 'text-[var(--color-ink-2)]'}`}>
           {stage.label}
         </span>
         {stage.duration && stage.status === 'done' && (
-          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{stage.duration}s</span>
+          <span className="text-xs text-[var(--color-ink-3)] bg-[var(--color-paper-3)] px-2 py-0.5 rounded-full">{stage.duration}s</span>
         )}
       </div>
       {stage.log && stage.status === 'running' && (
-        <p className="text-xs text-brand-600 pl-8 animate-pulse font-mono">{stage.log}</p>
+        <p className="text-xs text-[var(--color-accent)] pl-8 animate-pulse font-mono">{stage.log}</p>
       )}
       {stage.status === 'error' && (
         <p className="text-xs text-rose-500 pl-8 font-mono bg-rose-50 p-2 rounded-md mt-1 border border-rose-100">{stage.error}</p>
@@ -342,26 +343,26 @@ export default function StudioPage() {
   } | null
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
+    <div className="ap">
       {/* Sidebar Desktop & Mobile */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="ap__body">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shrink-0">
+        <header className="ap__topbar">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg md:hidden transition-all"
+              className="p-1.5 text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-lg md:hidden transition-all"
             >
               <Menu className="size-5" />
             </button>
-            <h2 className="text-base font-semibold text-slate-800">AI Production Studio</h2>
+            <h2 className="text-base font-semibold text-[var(--color-ink)]">AI Production Studio</h2>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-[var(--color-ink-3)] bg-[var(--color-paper-3)] px-3 py-1.5 rounded-full border border-[var(--color-rule)] flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               Cloud Connected
             </span>
@@ -375,10 +376,10 @@ export default function StudioPage() {
             {/* Kiri: Form & Storyboard */}
             <div className="lg:col-span-7 space-y-6">
               {/* input card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div className="bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-sm p-6 space-y-6">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-700">Pilih Tema & Topik Utama</h3>
-                <p className="text-xs text-slate-400">Pilih genre visual dan BGM sebelum memasukkan topik untuk hasil terbaik.</p>
+                <h3 className="text-sm font-semibold text-[var(--color-ink-2)]">Pilih Tema & Topik Utama</h3>
+                <p className="text-xs text-[var(--color-ink-3)]">Pilih genre visual dan BGM sebelum memasukkan topik untuk hasil terbaik.</p>
               </div>
 
               {/* Theme Selector */}
@@ -394,11 +395,11 @@ export default function StudioPage() {
                       className={`flex flex-col items-center justify-center p-3 gap-2 rounded-xl border transition-all text-center ${
                         isSelected 
                           ? `${theme.bg} ${theme.border} ring-1 ring-${theme.border.split('-')[1]}-500 shadow-sm` 
-                          : 'border-slate-200 bg-white hover:bg-slate-50 opacity-70 hover:opacity-100'
+                          : 'border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <Icon className={`size-5 ${isSelected ? theme.color : 'text-slate-400'}`} />
-                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? theme.color : 'text-slate-500'}`}>
+                      <Icon className={`size-5 ${isSelected ? theme.color : 'text-[var(--color-ink-3)]'}`} />
+                      <span className={`text-[10px] font-bold leading-tight ${isSelected ? theme.color : 'text-[var(--color-ink-3)]'}`}>
                         {theme.label}
                       </span>
                     </button>
@@ -413,12 +414,12 @@ export default function StudioPage() {
                   onKeyDown={e => e.key === 'Enter' && generate()}
                   disabled={running}
                   placeholder="misal: Sejarah Kerajaan Majapahit, Detik-detik Proklamasi 1945"
-                  className="flex-1 rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                  className="flex-1 rounded-lg border border-[var(--color-rule)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all disabled:bg-[var(--color-paper-3)] disabled:text-[var(--color-ink-3)]"
                 />
                 <button
                   onClick={generate}
                   disabled={topic.trim().length < 3 || running}
-                  className="rounded-lg bg-brand-600 px-6 py-3 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40 shadow-lg shadow-brand-600/15 disabled:shadow-none transition-all flex items-center gap-2 shrink-0"
+                  className="rounded-lg bg-[var(--color-accent)] px-6 py-3 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40 shadow-lg shadow-brand-600/15 disabled:shadow-none transition-all flex items-center gap-2 shrink-0"
                 >
                   {running ? <Loader2 className="size-4 animate-spin" /> : <WandSparkles className="size-4" />}
                   Generate
@@ -426,33 +427,33 @@ export default function StudioPage() {
               </div>
 
               {/* AI Recommendations */}
-              <div className="space-y-4 pt-6 border-t border-slate-100">
+              <div className="space-y-4 pt-6 border-t border-[var(--color-rule)]">
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <WandSparkles className="size-3.5 text-brand-500" /> 
+                  <h3 className="text-xs font-black text-[var(--color-ink-3)] uppercase tracking-widest flex items-center gap-1.5">
+                    <WandSparkles className="size-3.5 text-[var(--color-accent)]" /> 
                     Butuh Ide Topik?
                   </h3>
-                  <p className="text-xs text-slate-500">Klik tombol di bawah untuk meminta AI memberikan ide topik yang sangat clickbait dan edukatif berdasarkan tema <span className="font-bold text-slate-700">"{THEMES.find(t => t.id === selectedTheme)?.label}"</span>.</p>
+                  <p className="text-xs text-[var(--color-ink-3)]">Klik tombol di bawah untuk meminta AI memberikan ide topik yang sangat clickbait dan edukatif berdasarkan tema <span className="font-bold text-[var(--color-ink-2)]">"{THEMES.find(t => t.id === selectedTheme)?.label}"</span>.</p>
                 </div>
                 
                 {recommendations.length === 0 && !loadingRecs ? (
                   <button
                     onClick={fetchRecommendations}
                     disabled={running}
-                    className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50"
+                    className="w-full sm:w-auto bg-[var(--color-paper)] hover:bg-[var(--color-paper-3)] text-white px-5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50"
                   >
                     <RefreshCw className="size-3.5" /> Generate Ide Topik
                   </button>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider bg-brand-50 px-2 py-1 rounded-md">
+                      <span className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-wider bg-brand-50 px-2 py-1 rounded-md">
                         Rekomendasi Tema {THEMES.find(t => t.id === selectedTheme)?.label}
                       </span>
                       <button
                         onClick={fetchRecommendations}
                         disabled={loadingRecs || running}
-                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 disabled:opacity-50 transition-all"
+                        className="text-[10px] font-bold text-[var(--color-ink-3)] hover:text-[var(--color-ink)] flex items-center gap-1 disabled:opacity-50 transition-all"
                       >
                         {loadingRecs ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
                         Generate Ulang
@@ -460,8 +461,8 @@ export default function StudioPage() {
                     </div>
                     
                     {loadingRecs ? (
-                      <div className="flex items-center gap-2 text-xs text-slate-500 py-4 justify-center bg-slate-50 rounded-xl border border-slate-100 border-dashed animate-pulse font-medium">
-                        <Loader2 className="size-4 animate-spin text-brand-600" />
+                      <div className="flex items-center gap-2 text-xs text-[var(--color-ink-3)] py-4 justify-center bg-[var(--color-paper-3)] rounded-xl border border-[var(--color-rule)] border-dashed animate-pulse font-medium">
+                        <Loader2 className="size-4 animate-spin text-[var(--color-accent)]" />
                         Menganalisis algoritma & meracik topik clickbait...
                       </div>
                     ) : (
@@ -471,9 +472,9 @@ export default function StudioPage() {
                             key={idx}
                             onClick={() => setTopic(rec)}
                             disabled={running}
-                            className="text-xs bg-white hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-600 px-4 py-3 rounded-xl border border-slate-200 transition-all font-medium text-left shadow-sm group"
+                            className="text-xs bg-[var(--color-paper-2)] hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-[var(--color-ink-2)] px-4 py-3 rounded-xl border border-[var(--color-rule)] transition-all font-medium text-left shadow-sm group"
                           >
-                            <span className="text-slate-400 group-hover:text-brand-400 mr-2 font-bold">{idx + 1}.</span>
+                            <span className="text-[var(--color-ink-3)] group-hover:text-brand-400 mr-2 font-bold">{idx + 1}.</span>
                             {rec}
                           </button>
                         ))}
@@ -487,38 +488,38 @@ export default function StudioPage() {
             
               {/* storyboard scenes */}
             {sb && (sb.scenes ?? []).length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+              <div className="bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-sm p-6 space-y-4">
+                <div className="border-b border-[var(--color-rule)] pb-4 flex items-center justify-between">
                   <div>
-                    <h3 className="font-bold text-slate-800 text-lg">{sb.title}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Daftar skrip adegan ({(sb.scenes ?? []).length} adegan) yang disusun untuk visualisasi.</p>
+                    <h3 className="font-bold text-[var(--color-ink)] text-lg">{sb.title}</h3>
+                    <p className="text-xs text-[var(--color-ink-3)] mt-1">Daftar skrip adegan ({(sb.scenes ?? []).length} adegan) yang disusun untuk visualisasi.</p>
                   </div>
                   {projectId && (
                     <button
                       onClick={() => router.push(`/projects/${projectId}`)}
-                      className="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1"
+                      className="text-xs font-bold text-[var(--color-accent)] hover:text-brand-800 flex items-center gap-1"
                     >
                       Buka Detail Adegan &rarr;
                     </button>
                   )}
                 </div>
                 
-                <div className="grid grid-cols-3 gap-3 text-xs border border-slate-100 bg-slate-50/50 p-3.5 rounded-lg">
+                <div className="grid grid-cols-3 gap-3 text-xs border border-[var(--color-rule)] bg-[var(--color-paper-3)]/50 p-3.5 rounded-lg">
                   {(['genre', 'visual_style', 'voice_style'] as const).map(k => (
                     <div key={k} className="space-y-0.5">
-                      <span className="text-slate-400 block capitalize font-medium">{k.replace('_', ' ')}</span>
-                      <span className="font-semibold text-slate-700 block">{String((sb.director as Record<string, unknown>)?.[k] ?? 'Standard')}</span>
+                      <span className="text-[var(--color-ink-3)] block capitalize font-medium">{k.replace('_', ' ')}</span>
+                      <span className="font-semibold text-[var(--color-ink-2)] block">{String((sb.director as Record<string, unknown>)?.[k] ?? 'Standard')}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-slate-50/20">
+                <div className="divide-y divide-[var(--color-rule)] border border-[var(--color-rule)] rounded-xl overflow-hidden bg-[var(--color-paper-3)]/20">
                   {(sb.scenes ?? []).map((scene) => (
                     <div key={scene.id} className="p-4 flex gap-4 text-xs">
-                      <span className="font-bold text-brand-600 shrink-0">#{scene.order_index + 1}</span>
+                      <span className="font-bold text-[var(--color-accent)] shrink-0">#{scene.order_index + 1}</span>
                       <div className="space-y-1">
-                        <p className="text-slate-700 font-medium leading-relaxed">{scene.narration}</p>
-                        <p className="text-[10px] text-slate-400 font-mono italic">Prompt: {scene.image_prompt}</p>
+                        <p className="text-[var(--color-ink-2)] font-medium leading-relaxed">{scene.narration}</p>
+                        <p className="text-[10px] text-[var(--color-ink-3)] font-mono italic">Prompt: {scene.image_prompt}</p>
                       </div>
                     </div>
                   ))}
@@ -532,13 +533,13 @@ export default function StudioPage() {
             <div className="lg:col-span-5 space-y-6 sticky top-6">
               {/* video result */}
             {videoUrl && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-brand-50 text-brand-600 rounded-md">
+                    <div className="p-1.5 bg-brand-50 text-[var(--color-accent)] rounded-md">
                       <Video className="size-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-800">Hasil Video Siap Ditonton</h3>
+                    <h3 className="font-semibold text-[var(--color-ink)]">Hasil Video Siap Ditonton</h3>
                   </div>
                   <span className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 font-medium">Rendered successfully</span>
                 </div>
@@ -549,14 +550,14 @@ export default function StudioPage() {
                   <a
                     href={videoUrl}
                     download
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-5 py-2.5 text-sm font-medium hover:bg-slate-800 transition-all shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-paper)] text-white px-5 py-2.5 text-sm font-medium hover:bg-[var(--color-paper-3)] transition-all shadow-sm"
                   >
                     Download MP4
                   </a>
                   {projectId && (
                     <button
                       onClick={() => router.push(`/projects/${projectId}`)}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-5 py-2.5 text-sm font-medium transition-all shadow-sm"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] text-[var(--color-ink-2)] px-5 py-2.5 text-sm font-medium transition-all shadow-sm"
                     >
                       Buka Detail & Publish Storyboard
                     </button>
@@ -574,13 +575,13 @@ export default function StudioPage() {
             
               {/* pipeline progress */}
             {hasStarted && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
-                <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Pipeline Progress</span>
-                  {running && <span className="text-xs text-brand-600 font-medium animate-pulse flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Sedang memproses...</span>}
+              <div className="bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-sm overflow-hidden divide-y divide-[var(--color-rule)]">
+                <div className="px-5 py-3.5 bg-[var(--color-paper-3)]/50 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--color-ink-3)] uppercase tracking-wider">AI Pipeline Progress</span>
+                  {running && <span className="text-xs text-[var(--color-accent)] font-medium animate-pulse flex items-center gap-1"><Loader2 className="size-3 animate-spin" /> Sedang memproses...</span>}
                 </div>
                 
-                <div className="px-6 py-3 divide-y divide-slate-100">
+                <div className="px-6 py-3 divide-y divide-[var(--color-rule)]">
                   {stages.map((stage: Stage) => <StageRow key={stage.key} stage={stage} />)}
 
                   {/* render row */}
@@ -588,11 +589,11 @@ export default function StudioPage() {
                     <div className="py-3 space-y-2">
                       <div className="flex items-center gap-3">
                         <div className="w-5 shrink-0 flex justify-center">
-                          {(renderStatus === 'pending' || renderStatus === 'processing') && <Loader2 className="size-4 animate-spin text-brand-600" />}
+                          {(renderStatus === 'pending' || renderStatus === 'processing') && <Loader2 className="size-4 animate-spin text-[var(--color-accent)]" />}
                           {renderStatus === 'completed' && <CheckCircle2 className="size-4 text-emerald-600" />}
                           {renderStatus === 'failed' && <XCircle className="size-4 text-rose-500" />}
                         </div>
-                        <span className={`text-sm font-medium flex-1 ${renderStatus === 'failed' ? 'text-rose-500 font-semibold' : 'text-slate-700'}`}>
+                        <span className={`text-sm font-medium flex-1 ${renderStatus === 'failed' ? 'text-rose-500 font-semibold' : 'text-[var(--color-ink-2)]'}`}>
                           Render Video (GitHub Actions)
                         </span>
                         <a
@@ -601,14 +602,14 @@ export default function StudioPage() {
                             : `https://github.com/${GITHUB_REPO}/actions`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 font-medium transition-all"
+                          className="flex items-center gap-1 text-xs text-[var(--color-accent)] hover:text-brand-800 font-medium transition-all"
                         >
                           <ExternalLink className="size-3" />
                           Live Log
                         </a>
                       </div>
                       {renderLog && (
-                        <p className={`text-xs pl-8 font-mono ${renderStatus === 'failed' ? 'text-rose-500' : renderStatus === 'completed' ? 'text-emerald-600 font-semibold' : 'text-brand-600 animate-pulse'}`}>
+                        <p className={`text-xs pl-8 font-mono ${renderStatus === 'failed' ? 'text-rose-500' : renderStatus === 'completed' ? 'text-emerald-600 font-semibold' : 'text-[var(--color-accent)] animate-pulse'}`}>
                           {renderLog}
                         </p>
                       )}
@@ -616,20 +617,20 @@ export default function StudioPage() {
                       {renderStatus === 'processing' && renderDetail.totalScenes > 0 && (
                         <div className="pl-8 space-y-1.5">
                           <div className="space-y-0.5">
-                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                            <div className="flex justify-between text-[10px] font-bold text-[var(--color-ink-3)]">
                               <span>Images</span>
                               <span>{renderDetail.imagesDone}/{renderDetail.totalScenes}</span>
                             </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.imagesDone / renderDetail.totalScenes) * 100}%` }} />
+                            <div className="h-1.5 bg-[var(--color-paper-3)] rounded-full overflow-hidden">
+                              <div className="h-full bg-[var(--color-accent)] rounded-full transition-all duration-500" style={{ width: `${(renderDetail.imagesDone / renderDetail.totalScenes) * 100}%` }} />
                             </div>
                           </div>
                           <div className="space-y-0.5">
-                            <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                            <div className="flex justify-between text-[10px] font-bold text-[var(--color-ink-3)]">
                               <span>Voices (TTS)</span>
                               <span>{renderDetail.voicesDone}/{renderDetail.totalScenes}</span>
                             </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-[var(--color-paper-3)] rounded-full overflow-hidden">
                               <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${(renderDetail.voicesDone / renderDetail.totalScenes) * 100}%` }} />
                             </div>
                           </div>

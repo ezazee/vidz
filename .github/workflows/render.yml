@@ -23,6 +23,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Tandai job sudah mulai jalan. Tanpa ini status melompat langsung dari
+      # 'pending' ke 'completed'/'failed', sehingga render yang sedang berjalan
+      # tetap terbaca "Antre" di Render Queue sampai selesai.
+      - name: Update job processing
+        run: node scripts/update-job.js --status=processing
+        continue-on-error: true
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET: ${{ secrets.API_SECRET }}
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+          CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+
       - name: Install FFmpeg
         run: |
           if ! command -v ffmpeg &> /dev/null; then
@@ -190,6 +203,7 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           CHANNEL_ID: ${{ github.event.client_payload.channel_id }}
 
   status-failure:
@@ -199,10 +213,41 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      # Tahap mana yang gagal sudah tersedia lewat needs.*.result — sebelumnya
+      # dibuang dan diganti satu kalimat generik, jadi di UI semua kegagalan
+      # kelihatan sama dan harus dicek manual ke Actions. Sekarang dilaporkan.
       - name: Update job failed
-        run: node scripts/update-job.js --status=failed --error="Pipeline failed or was cancelled. Check Actions logs."
+        run: |
+          PREPARE="${{ needs.prepare.result }}"
+          RENDER="${{ needs.render.result }}"
+          MERGE="${{ needs.merge.result }}"
+
+          if [ "$PREPARE" = "failure" ] || [ "$PREPARE" = "cancelled" ]; then
+            STAGE="Prepare (storyboard, gambar & suara)"
+            RESULT="$PREPARE"
+          elif [ "$RENDER" = "failure" ] || [ "$RENDER" = "cancelled" ]; then
+            STAGE="Render chunk (Remotion)"
+            RESULT="$RENDER"
+          elif [ "$MERGE" = "failure" ] || [ "$MERGE" = "cancelled" ]; then
+            STAGE="Merge & upload (FFmpeg, R2)"
+            RESULT="$MERGE"
+          else
+            STAGE="Tidak diketahui"
+            RESULT="failure"
+          fi
+
+          if [ "$RESULT" = "cancelled" ]; then
+            REASON="dibatalkan"
+          else
+            REASON="gagal"
+          fi
+
+          echo "Tahap $REASON: $STAGE"
+          node scripts/update-job.js --status=failed \
+            --error="Tahap $REASON: $STAGE (run #${{ github.run_number }})"
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET: ${{ secrets.API_SECRET }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           CHANNEL_ID: ${{ github.event.client_payload.channel_id }}

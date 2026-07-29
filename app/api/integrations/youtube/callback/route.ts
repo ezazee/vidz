@@ -11,12 +11,12 @@ export async function GET(request: Request) {
 
   if (!accountId) {
     console.error('Callback error: Missing account ID in query parameters', request.url)
-    return NextResponse.redirect(new URL('/?tab=integrations&error=missing_account_id', request.url))
+    return NextResponse.redirect(new URL('/dashboard?integration_error=missing_account_id', request.url))
   }
 
   if (status === 'failed') {
     console.error('Callback error: Zernio OAuth connection failed', request.url)
-    return NextResponse.redirect(new URL('/?tab=integrations&error=oauth_failed', request.url))
+    return NextResponse.redirect(new URL('/dashboard?integration_error=oauth_failed', request.url))
   }
 
   try {
@@ -88,9 +88,9 @@ export async function GET(request: Request) {
     console.log(`YouTube channel ${channelName} successfully integrated!`)
 
     // 4. Redirect kembali ke tab Integrasi di halaman utama
-    return NextResponse.redirect(new URL('/?tab=integrations&success=youtube_connected', request.url))
+    return NextResponse.redirect(new URL('/dashboard?integration_success=youtube_connected', request.url))
   } catch (error) {
     console.error('Error handling YouTube connection callback:', error)
-    return NextResponse.redirect(new URL('/?tab=integrations&error=callback_processing_failed', request.url))
+    return NextResponse.redirect(new URL('/dashboard?integration_error=callback_processing_failed', request.url))
   }
 }

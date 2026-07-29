@@ -3,12 +3,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
+  LayoutDashboard,
   WandSparkles,
   Library,
-  LayoutDashboard,
-  Plug,
-  CalendarClock,
-  X
+  ListVideo,
+  CalendarRange,
+  Radio,
+  Workflow,
+  X,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -16,127 +18,79 @@ interface SidebarProps {
   onClose?: () => void
 }
 
+const MENU = [
+  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard, group: 'Produksi' },
+  { label: 'Studio', href: '/studio', icon: WandSparkles, group: 'Produksi' },
+  { label: 'Library', href: '/library', icon: Library, group: 'Produksi' },
+  { label: 'Render Queue', href: '/render-queue', icon: ListVideo, group: 'Produksi' },
+  { label: 'Content Planner', href: '/planner', icon: CalendarRange, group: 'Perencanaan' },
+  { label: 'Channels', href: '/channels', icon: Radio, group: 'Perencanaan' },
+  { label: 'Automation', href: '/schedule', icon: Workflow, group: 'Sistem' },
+] as const
+
+const GROUPS = ['Produksi', 'Perencanaan', 'Sistem'] as const
+
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
 
-  // Helper untuk mengecek apakah menu aktif
-  const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return pathname === '/dashboard'
-    }
-    if (path === '/library') {
-      return pathname === '/library' || pathname.startsWith('/projects')
-    }
-    return pathname.startsWith(path)
+  const isActive = (href: string) => {
+    if (href === '/library') return pathname === '/library' || pathname.startsWith('/projects')
+    return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const menuItems = [
-    {
-      label: 'Analytics Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-      active: isActive('/dashboard'),
-    },
-    {
-      label: 'AI Video Studio',
-      href: '/studio',
-      icon: WandSparkles,
-      active: isActive('/studio'),
-    },
-    {
-      label: 'Video Library',
-      href: '/library',
-      icon: Library,
-      active: isActive('/library'),
-    },
-    {
-      label: 'Integrations',
-      href: '/integrations',
-      icon: Plug,
-      active: isActive('/integrations'),
-    },
-    {
-      label: 'Automation',
-      href: '/schedule',
-      icon: CalendarClock,
-      active: isActive('/schedule'),
-    },
-  ]
-
-  const sidebarContent = (
-    <div className="flex flex-col h-full justify-between bg-slate-900 text-slate-100 border-r border-slate-800">
-      <div className="flex flex-col">
-        {/* Header Logo */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-950/40">
-          <div className="flex items-center gap-3">
-            <Image src="/logo_icon.png" alt="StoryZ" width={36} height={36} className="size-9 rounded-lg" priority />
-            <div>
-              <h1 className="text-base font-bold leading-none tracking-wide text-white">StoryZ</h1>
-              <p className="text-xs text-slate-400 mt-1">AI Video Studio</p>
-            </div>
-          </div>
-          {onClose && (
-            <button 
-              onClick={onClose} 
-              className="text-slate-400 hover:text-white md:hidden transition-colors"
-              aria-label="Tutup Menu"
-            >
-              <X className="size-5" />
-            </button>
-          )}
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
-          {menuItems.map((item, index) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={index}
-                href={item.href}
-                onClick={onClose}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  item.active
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                }`}
-              >
-                <Icon className="size-4 shrink-0" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
+  const content = (
+    <div className="sb">
+      <div className="sb__head">
+        <Link href="/dashboard" className="sb__brand" onClick={onClose}>
+          <Image src="/logo_icon.png" alt="" width={30} height={30} className="sb__logo" priority />
+          <span className="sb__wordmark">StoryZ</span>
+        </Link>
+        {onClose && (
+          <button className="sb__close" onClick={onClose} aria-label="Tutup menu">
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/20">
-        <div className="rounded-lg bg-slate-800/40 p-3.5 border border-slate-800/80">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-brand-400 block">Render Engine</span>
-          <span className="text-xs font-semibold text-slate-200 mt-1 block">GitHub Parallel Matrix</span>
-          <div className="mt-2.5 flex items-center gap-2">
-            <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] text-slate-400">8 runner active</span>
+      <nav className="sb__nav">
+        {GROUPS.map((group) => (
+          <div className="sb__group" key={group}>
+            <span className="sb__grouplabel">{group}</span>
+            {MENU.filter((m) => m.group === group).map((item) => {
+              const Icon = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  aria-current={active ? 'page' : undefined}
+                  className={`sb__link${active ? ' sb__link--active' : ''}`}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              )
+            })}
           </div>
-        </div>
+        ))}
+      </nav>
+
+      <div className="sb__foot">
+        <span className="sb__footlabel">Render engine</span>
+        <span className="sb__footvalue">GitHub Actions · matrix</span>
       </div>
     </div>
   )
 
   return (
     <>
-      {/* Desktop Sidebar (Fixed Sidebar) */}
-      <aside className="hidden md:flex w-64 flex-col shrink-0 h-full">
-        {sidebarContent}
-      </aside>
+      <aside className="sb__desktop">{content}</aside>
 
-      {/* Mobile Drawer Sidebar */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden bg-slate-950/60 backdrop-blur-sm">
-          <aside className="w-64 h-full shadow-2xl flex flex-col shrink-0 animate-in slide-in-from-left duration-200">
-            {sidebarContent}
-          </aside>
-          <div className="flex-1" onClick={onClose} />
+        <div className="sb__overlay" role="dialog" aria-modal="true" aria-label="Menu navigasi">
+          <aside className="sb__drawer">{content}</aside>
+          <button className="sb__scrim" onClick={onClose} aria-label="Tutup menu" />
         </div>
       )}
     </>

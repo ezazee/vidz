@@ -11,6 +11,9 @@ async function main() {
   const status = readArg('status')
   const videoUrl = readArg('video-url')
   const error = readArg('error')
+  // GITHUB_RUN_ID otomatis tersedia di setiap runner — dipakai UI Render Queue
+  // untuk menautkan job ke log Actions-nya.
+  const ghRunId = readArg('gh-run-id') || process.env.GITHUB_RUN_ID
 
   if (!baseUrl || !apiSecret || !jobId || !status) {
     throw new Error('API_BASE_URL, API_SECRET, JOB_ID, and --status are required')
@@ -27,6 +30,7 @@ async function main() {
       status,
       video_url: videoUrl,
       error,
+      gh_run_id: ghRunId,
     }),
   })
 
