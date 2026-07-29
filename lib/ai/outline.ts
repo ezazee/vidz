@@ -33,7 +33,11 @@ Structure: ${channel.prompts.outlineStructure}
 Output JSON exactly like this (5 sections: 1 intro + 3 chapter + 1 ending):
 {"sections":[{"type":"intro","title":"...","order":0,"description":"..."},{"type":"chapter","title":"...","order":1,"description":"..."},{"type":"chapter","title":"...","order":2,"description":"..."},{"type":"chapter","title":"...","order":3,"description":"..."},{"type":"ending","title":"...","order":4,"description":"..."}]}
 
-Titles must be provocative with specific numbers/names. Start output with { and nothing else.`
+Titles must be provocative with specific numbers/names — never generic ("The Beginning",
+"What Happened Next"). Good register (imitate the energy, not the wording): "The 3
+Neurotransmitters That Control Your Phone Addiction" · "How Evolution Wired Us to Be
+Addicted: The 2-Million-Year-Old Brain in a 21st-Century World". Start output with { and
+nothing else.`
     : `Buat outline video YouTube viral tentang: "${topic}"
 ${openingLine}
 Ringkasan riset:
@@ -44,7 +48,11 @@ Struktur: ${channel.prompts.outlineStructure}
 WAJIB output JSON persis seperti ini (5 sections: 1 intro + 3 chapter + 1 ending):
 {"sections":[{"type":"intro","title":"...","order":0,"description":"..."},{"type":"chapter","title":"...","order":1,"description":"..."},{"type":"chapter","title":"...","order":2,"description":"..."},{"type":"chapter","title":"...","order":3,"description":"..."},{"type":"ending","title":"...","order":4,"description":"..."}]}
 
-Judul harus provokatif dengan angka/nama spesifik. Mulai output dengan karakter { dan tidak ada teks lain.`
+Judul harus provokatif dengan angka/nama spesifik — jangan generik ("Awal Mula", "Apa
+yang Terjadi Selanjutnya"). Contoh gaya yang benar (tiru energinya, bukan kata-katanya
+persis): "203 Tahun Tanpa Penjajahan: Bagaimana Jika Indonesia Lebih Maju?" · "Titik
+Balik: Kejutan yang Tak Terduga". Mulai output dengan karakter { dan tidak ada teks
+lain.`
 
   const messages = [
     {

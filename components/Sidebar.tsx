@@ -21,8 +21,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   // Helper untuk mengecek apakah menu aktif
   const isActive = (path: string) => {
-    if (path === '/') {
-      return pathname === '/'
+    if (path === '/dashboard') {
+      return pathname === '/dashboard'
     }
     if (path === '/library') {
       return pathname === '/library' || pathname.startsWith('/projects')
@@ -33,9 +33,9 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const menuItems = [
     {
       label: 'Analytics Dashboard',
-      href: '/',
+      href: '/dashboard',
       icon: LayoutDashboard,
-      active: isActive('/') && !pathname.startsWith('/studio') && !pathname.startsWith('/library') && !pathname.startsWith('/integrations'),
+      active: isActive('/dashboard'),
     },
     {
       label: 'AI Video Studio',

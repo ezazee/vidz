@@ -4,8 +4,8 @@ import { authToken, AUTH_COOKIE } from '@/lib/auth'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Login page & login API selalu boleh
-  if (pathname === '/login' || pathname === '/api/auth/login') {
+  // Landing ("/"), login page & login API selalu boleh (pintu depan sebelum auth)
+  if (pathname === '/' || pathname === '/login' || pathname === '/api/auth/login') {
     return NextResponse.next()
   }
 
@@ -32,10 +32,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const loginUrl = request.nextUrl.clone()
-  loginUrl.pathname = '/login'
-  loginUrl.search = ''
-  return NextResponse.redirect(loginUrl)
+  // Belum login & bukan lewat API → arahkan ke landing ("/"), bukan langsung
+  // ke form password.
+  const landingUrl = request.nextUrl.clone()
+  landingUrl.pathname = '/'
+  landingUrl.search = ''
+  return NextResponse.redirect(landingUrl)
 }
 
 export const config = {

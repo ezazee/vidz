@@ -1,0 +1,14 @@
+[
+  {
+    "date": "2026-07-28",
+    "macrostructure": "Marquee Hero",
+    "theme": "custom",
+    "theme_axes": "dark paper / grotesk-sans display / warm accent",
+    "vibe": "dark studio, one mark branching into three",
+    "enrichment": "Tier-B hand-built 3D (Three.js tube geometry, drag-interactive)",
+    "nav": "N9 edge-aligned minimal",
+    "footer": "Ft2 inline single line",
+    "sections": "stage · what · pipeline · engine · qa · channels · close",
+    "brief": "StoryZ landing — scroll story 3D, penjelasan produk (pipeline 8 tahap, Director Engine, QA), tiga channel, CTA ke /login"
+  }
+]
