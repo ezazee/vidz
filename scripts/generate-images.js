@@ -81,11 +81,29 @@ function styleFor(channelId) {
 // sebagai "generic wall poster/insignia" filler di background, bahkan di scene yang
 // topiknya tidak berkaitan sejarah/perang sama sekali. Negative prompt lama tidak cukup —
 // diperkuat + eksplisit larang elemen dekorasi dinding yang jadi sumber masalahnya.
+// Diperluas lagi: kategori terpisah per jenis masalah (teks/watermark, rendering
+// tidak diinginkan, simbol kebencian, distorsi anatomi) supaya tiap larangan jelas
+// alasannya dan gampang di-audit/ditambah tanpa jadi satu kalimat panjang campur aduk.
 const SAFETY_NEGATIVE =
-  'no text, no watermark, no logo, no signature, no gibberish text, no photorealism, not monochrome, ' +
+  // Teks & watermark — FLUX sering halusinasi tulisan gibberish di background
+  'no text, no watermark, no logo, no signature, no caption, no subtitle, no speech bubble, no gibberish text, no letters, ' +
+  // Rendering yang tidak diinginkan — harus tetap gaya kartun channel, bukan drift ke gaya lain
+  'no photorealism, no 3D render, no CGI look, not monochrome, no sepia filter overlay, no blurry or low-detail rendering, ' +
+  // Distorsi anatomi — masalah umum model diffusion di scene dengan banyak orang
+  'no extra limbs, no distorted hands, no deformed faces, no duplicate characters, ' +
+  // Simbol kebencian/politik — hard block, tidak boleh muncul di kategori topik apa pun
   'no swastika, no nazi symbols, no hate symbols, no political symbols, no national flags, ' +
   'no religious symbols, no propaganda imagery, no offensive symbols, ' +
   'no wall posters with symbols or insignia, no framed wall art with symbols, no banners with emblems'
+
+// Booster kualitas sinematik — ditempel otomatis di SETIAP prompt terlepas dari seberapa
+// detail image_prompt yang ditulis AI (Groq kadang nulis 1 kalimat generik). Ini jaring
+// pengaman supaya output tetap "diarahkan" (lighting/depth/framing), bukan flat & datar.
+const CINEMATIC_BOOST =
+  'cinematic film still framing, dramatic directional lighting with visible light source, ' +
+  'strong depth with foreground/midground/background separation, subtle atmospheric particles ' +
+  '(dust, mist, or floating embers matching the scene mood), rich texture detail on fabric and ' +
+  'surfaces, purposeful camera angle (not a flat frontal shot)'
 
 function buildImagePrompt(scene, director, category) {
   const style = styleFor(process.env.CHANNEL_ID)
@@ -95,8 +113,10 @@ function buildImagePrompt(scene, director, category) {
   const palette = (category && style.categoryPalette[category]) ? `, ${style.categoryPalette[category]}` : ''
   // "EXACTLY as described" + "do not redesign" ditambahkan setelah uji lokal menunjukkan FLUX
   // kadang mengganti desain karakter jadi gaya webcomic detail penuh (rambut, wajah realistis)
-  // alih-alih anchor stickman sederhana yang diminta.
-  return `${style.cartoonStyle}${palette}. Main subject: EXACTLY as described, do not redesign or add extra facial/hair details — ${character}. Action: ${action}. Keep background props plain and generic (plants, furniture, blank windows) — avoid wall posters, flags, or decorative insignia. ${SAFETY_NEGATIVE}`
+  // alih-alih anchor stickman sederhana yang diminta. Diperkuat dengan larangan eksplisit
+  // per elemen (jangan ganti warna/proporsi/wajah) supaya karakter TETAP SAMA persis di
+  // setiap scene — konsistensi karakter antar-scene adalah requirement inti, bukan opsional.
+  return `${style.cartoonStyle}${palette}. Main subject — CHARACTER CONSISTENCY IS CRITICAL: render EXACTLY as described below, identical design every time — do NOT redesign, do NOT change proportions, do NOT change colors, do NOT add facial features or hair not explicitly described, do NOT reinterpret into a more detailed/realistic style. Character: ${character}. Action: ${action}. ${CINEMATIC_BOOST}. Keep background props plain and generic (plants, furniture, blank windows) — avoid wall posters, flags, or decorative insignia. ${SAFETY_NEGATIVE}`
 }
 
 async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret, apiBaseUrl, projectId, category) {
@@ -122,6 +142,10 @@ async function generateImageForScene(scene, director, baseUrl, apiKey, apiSecret
           n: 1,
           size: '1792x1024',
           response_format: 'url',
+          // FLUX 1 Schnell (Cloudflare Workers AI): default 4 step, maksimal 8 step
+          // (batas keras model ini — di atas 8 ditolak/di-clamp). 8 = kualitas terbaik
+          // yang bisa didapat dari varian "schnell" tanpa ganti model.
+          steps: 8,
         }),
       })
 

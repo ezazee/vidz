@@ -74,7 +74,7 @@ const CABANG_SEJARAH: ChannelConfig = {
   titlePrefix: 'Bagaimana Jika',
   mascotName: 'Si Cabang',
   mascotAnchor: 'a simple white stickman character with plain round white head and two black dot eyes',
-  cartoonStyle: 'vibrant colorful hand-drawn cartoon illustration, webcomic style, thick black ink outlines, rich saturated colors, flat cel shading, richly detailed scenery background, lively composition, children storybook art',
+  cartoonStyle: 'vibrant colorful hand-drawn cartoon illustration, webcomic style, consistent thick black ink outlines of uniform weight, rich saturated colors, flat cel shading with clean 2-tone shadow blocks (no soft airbrush gradients), richly detailed scenery background with layered depth, dynamic lively composition, dramatic historical epic children storybook art, textured paper-grain background feel',
   openingStyles: [
     { id: 'pertanyaan_retoris', instruction: 'Buka dengan pertanyaan retoris yang menohok langsung ke penonton.' },
     { id: 'statement_kontroversial', instruction: 'Buka dengan pernyataan berani/kontroversial yang memancing perdebatan.' },
@@ -103,7 +103,7 @@ const CABANG_SEJARAH: ChannelConfig = {
   prompts: {
     narratorPersona: 'Kamu adalah showrunner video "what-if" sejarah alternatif (storytelling naratif yang seru, bukan dokumenter formal). Semua output dalam Bahasa Indonesia.',
     outlineStructure: '5 sections: 1 intro (sejarah asli & titik krusial) + 3 chapter (percabangan → konsekuensi langsung → efek domino jangka panjang) + 1 ending (refleksi & pertanyaan terbuka).',
-    sceneImageRules: 'Format: "[AKSI karakter utama sesuai narasi], [orang/kerumunan/tokoh lain di scene — boleh sebut tokoh nyata seperti Hitler, Gajah Mada, dll], [setting & mood]". Karakter utama JANGAN dideskripsikan fisiknya dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Buat scene HIDUP: ada orang, aksi, interaksi — bukan pemandangan kosong.',
+    sceneImageRules: 'Format: "[AKSI karakter utama sesuai narasi], [orang/kerumunan/tokoh lain di scene — boleh sebut tokoh nyata seperti Hitler, Gajah Mada, dll], [setting & mood], [pencahayaan spesifik], [sudut kamera/framing], [1-2 detail atmosfer: asap/debu/kabut/tekstur kain bergerak]". Karakter utama JANGAN dideskripsikan fisiknya dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Tulis seperti arahan sutradara film, BUKAN kalimat generik satu baris — sebutkan sumber cahaya (golden hour, obor, mendung), posisi kamera (low angle, wide shot, close-up), dan detail kecil yang bikin scene terasa hidup. Buat scene HIDUP: ada orang, aksi, interaksi — bukan pemandangan kosong.',
   },
 }
 
@@ -132,7 +132,7 @@ const BRAINWHY: ChannelConfig = {
   titlePrefix: null,
   mascotName: 'Why',
   mascotAnchor: 'a simple stickman character with a round white head, two black dot eyes, a small smile, and an orange/coral brain-shaped icon glowing on top of its head like a lightbulb',
-  cartoonStyle: 'clean modern flat vector illustration, minimal geometric style, thin bold outlines, deep indigo and soft lavender background tones with coral accent highlights, smooth flat shading, uncluttered composition, modern educational explainer art',
+  cartoonStyle: 'clean modern flat vector illustration, minimal geometric style, consistent thin bold outlines of uniform weight, deep indigo and soft lavender background tones with coral accent highlights, smooth flat shading with sharp 2-tone color blocks (no gradients, no texture noise), simplified geometric shapes for background elements, generous negative space, uncluttered composition, modern educational explainer art in the style of a premium SaaS product illustration',
   openingStyles: [
     { id: 'rhetorical_question', instruction: 'Open with a sharp rhetorical question that hits the viewer directly.' },
     { id: 'bold_claim', instruction: 'Open with a bold, slightly controversial claim that challenges common assumptions.' },
@@ -166,7 +166,7 @@ const BRAINWHY: ChannelConfig = {
   prompts: {
     narratorPersona: 'You are a sharp, curious science communicator explaining human psychology and behavior in short, punchy explainer videos — engaging like a smart friend, not a textbook. All output in English.',
     outlineStructure: '5 sections: 1 intro (a relatable hook phenomenon) + 3 chapter (what\'s actually happening in the brain → why evolution/psychology wired us this way → real-life everyday examples) + 1 ending (practical takeaway + a thought-provoking question).',
-    sceneImageRules: 'Format: "[main character\'s action matching the narration], [other people/context relevant to the scene], [setting & mood]". Do NOT describe the main character\'s physical appearance or art style — added automatically by the system. Make each scene feel ALIVE: people, action, interaction — not an empty background.',
+    sceneImageRules: 'Format: "[main character\'s action matching the narration], [other people/context relevant to the scene], [setting & mood], [specific lighting], [camera angle/framing], [1-2 atmosphere details: dust/steam/fabric movement/reflections]". Do NOT describe the main character\'s physical appearance or art style — added automatically by the system. Write like a film director\'s shot description, NOT a generic one-liner — name the light source (window light, screen glow, overcast), camera position (low angle, wide shot, close-up), and a small detail that makes the scene feel alive. Make each scene feel ALIVE: people, action, interaction — not an empty background.',
   },
 }
 
@@ -195,7 +195,7 @@ const CERITA_TETANGGA: ChannelConfig = {
   titlePrefix: null,
   mascotName: 'Warga',
   mascotAnchor: 'ordinary Indonesian kampung residents in everyday clothing, warm expressive faces — no single fixed narrator character, each scene features whichever character the story is about',
-  cartoonStyle: 'warm hand-drawn cartoon illustration, soft rounded ink outlines, golden-hour and lamplight color grading, cozy kampung storybook art, expressive faces, gentle cel shading',
+  cartoonStyle: 'warm hand-drawn cartoon illustration, soft rounded ink outlines of consistent weight, golden-hour and warm lamplight color grading with soft glow, cozy kampung storybook art, highly expressive faces showing clear emotion, gentle cel shading with warm-toned shadows (no harsh black shadows), lived-in domestic texture detail (worn fabric, faded paint, everyday clutter)',
   openingStyles: [
     { id: 'pertanyaan_retoris', instruction: 'Buka dengan pertanyaan retoris yang bikin penonton penasaran soal nasib tokoh.' },
     { id: 'statement_kontroversial', instruction: 'Buka dengan pernyataan yang bikin geram/penasaran soal kejadian di lingkungan.' },
@@ -226,7 +226,7 @@ const CERITA_TETANGGA: ChannelConfig = {
   prompts: {
     narratorPersona: 'Kamu adalah pencerita kisah hidup/drama warga gaya obrolan tetangga yang hangat dan santai — bukan berita formal. SELALU jelas ini kisah FIKSI yang terinspirasi kejadian nyata (nama, tempat, dan detail identitas disamarkan/dikomposit dari beberapa kejadian). Semua output dalam Bahasa Indonesia.',
     outlineStructure: '5 sections: 1 intro (perkenalan situasi & hook awal masalah) + 3 chapter (memburuknya situasi → titik krusial/konflik memuncak → jalan keluar atau kebenaran terungkap) + 1 ending (pelajaran hidup/moral, bukan cuma penutup).',
-    sceneImageRules: 'Format: "[aksi tokoh sesuai narasi], [orang lain/keluarga/tetangga di scene], [setting rumah/gang/lingkungan & mood]". Karakter JANGAN dideskripsikan fisiknya secara detail dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Buat scene HIDUP dan personal — ekspresi wajah, interaksi, suasana rumah/kampung yang relatable.',
+    sceneImageRules: 'Format: "[aksi tokoh sesuai narasi], [orang lain/keluarga/tetangga di scene], [setting rumah/gang/lingkungan & mood], [pencahayaan spesifik], [sudut kamera/framing], [1-2 detail atmosfer: uap dari masakan/cahaya lampu teras/pakaian dijemur]". Karakter JANGAN dideskripsikan fisiknya secara detail dan JANGAN sebut gaya gambar — ditambahkan otomatis sistem. Tulis seperti arahan sutradara film, BUKAN kalimat generik satu baris — sebutkan sumber cahaya (lampu teras, senja, cahaya dapur), posisi kamera (close-up ekspresi, wide shot rumah, over-the-shoulder), dan detail kecil yang bikin scene terasa personal. Buat scene HIDUP dan personal — ekspresi wajah, interaksi, suasana rumah/kampung yang relatable.',
   },
 }
 
