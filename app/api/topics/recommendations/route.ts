@@ -78,12 +78,34 @@ export async function GET(request: Request) {
       })
     }
 
+    // Validasi kualitas minimum — AI kadang tidak patuh instruksi (mis. cuma balas "Bencana"
+    // alih-alih topik lengkap "Bagaimana Jika ..."). Tanpa gate ini, topik sampah lolos ke
+    // seluruh pipeline (research → scenes → SEO) sampai KEPUBLISH PUBLIC dengan judul rusak
+    // (nyata terjadi: project "Bencana (1)" live di YouTube, lihat percakapan terkait).
+    const isValidTopic = (t: string) => {
+      if (!t || typeof t !== 'string') return false
+      const trimmed = t.trim()
+      // Minimal 5 kata — topik viral yang layak selalu berupa kalimat, bukan 1-2 kata
+      if (trimmed.split(/\s+/).filter(Boolean).length < 5) return false
+      // Kalau channel wajib prefix tetap (mis. "Bagaimana Jika"), topik HARUS diawali itu
+      if (channel.titlePrefix && !trimmed.toLowerCase().startsWith(channel.titlePrefix.toLowerCase())) return false
+      return true
+    }
+
     const rawTopics: string[] = result.topics || []
-    const freshTopics = rawTopics.filter(t => !isDuplicate(t))
+    const qualityTopics = rawTopics.filter(isValidTopic)
+    const freshTopics = qualityTopics.filter(t => !isDuplicate(t))
+
+    // Kalau SEMUA kandidat AI gagal validasi kualitas, jangan kirim topik sampah ke pipeline —
+    // fallback ke pool topik statis channel yang sudah pasti valid.
+    if (qualityTopics.length === 0) {
+      console.warn(`Semua topik AI gagal validasi kualitas untuk ${channel.id}, fallback ke pool statis. Raw: ${JSON.stringify(rawTopics)}`)
+      return NextResponse.json({ success: true, topics: channel.fallbackTopics, isFallback: true })
+    }
 
     return NextResponse.json({
       success: true,
-      topics: freshTopics.length > 0 ? freshTopics : rawTopics,
+      topics: freshTopics.length > 0 ? freshTopics : qualityTopics,
       filteredOut: rawTopics.length - freshTopics.length
     })
 
